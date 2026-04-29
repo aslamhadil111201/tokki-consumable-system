@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useRef, useEffect } from "react";
 
-const API = "http://localhost:3001/api";
+const API = import.meta.env.VITE_API_URL ?? "https://tokki-consumable-system.vercel.app/api";
 
 // ─── DESIGN TOKENS (FIXED) ────────────────────────────────────────
 const getT = (dark) => dark ? {
@@ -337,6 +337,8 @@ export default function App(){
     .page-title{font-size:22px;font-weight:900;color:${T.text}}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
     .tb-btn:hover{border-color:${T.borderHover};color:${T.text}}
+    .tb-logout{display:none}
+    .tb-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
 
     /* TOGGLE — smooth cubic */
     .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:30px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s}
@@ -452,6 +454,7 @@ export default function App(){
       .backdrop-mob{display:block}
       .topbar{padding:0 12px;gap:8px}
       .page-title{font-size:16px}
+      .tb-logout{display:inline-flex}
       .body-area{padding:14px 12px 40px}
       .stock-g{grid-template-columns:1fr 1fr}
       .two-col{grid-template-columns:1fr}
@@ -641,6 +644,7 @@ export default function App(){
                 )}
               </div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:11,display:"var(--date-display,inline-flex)"}}>📅 {todayFmt()}</div>
+              <button className="tb-btn tb-logout" onClick={logout} title="Keluar akun" style={{padding:"7px 10px"}}>⎋ Keluar</button>
             </div>
           </header>
 
