@@ -145,7 +145,8 @@ export default function App(){
   const [departments,setDepartments]=useState([]);
   const [employees,setEmployees]=useState([]);
   const [workOrders,setWorkOrders]=useState([]);
-  const [loading,setLoading]=useState(false);
+  const [loadingCount,setLoadingCount]=useState(0);
+  const [loadingText,setLoadingText]=useState("Sedang memproses data");
   const [catF,setCatF]=useState("Semua");
   const [searchQ,setSearchQ]=useState("");
   const [trxDate,setTrxDate]=useState("");
@@ -170,12 +171,22 @@ export default function App(){
   const [historyTab,setHistoryTab]=useState("out");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const notifRef=useRef(null);
+  const loading=loadingCount>0;
 
   T=getT(dark);
 
   // ── FETCH SEMUA DATA ─────────────────────────────────────────────
-  const fetchAll=async()=>{
-    setLoading(true);
+  const withLoading=async(task,message="Sedang memproses data")=>{
+    setLoadingText(message);
+    setLoadingCount(c=>c+1);
+    try{
+      return await task();
+    }finally{
+      setLoadingCount(c=>Math.max(0,c-1));
+    }
+  };
+
+  const fetchAll=async()=>withLoading(async()=>{
     try{
       const [it,tr,adm,dep,emp,wo,rcv]=await Promise.all([
         fetch(`${API}/items`).then(r=>r.json()),
@@ -188,8 +199,7 @@ export default function App(){
       ]);
       setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv);
     }catch(e){toast$("Gagal terhubung ke server","err");}
-    setLoading(false);
-  };
+  },"Sedang memuat data");
 
   useEffect(()=>{if(loggedIn)fetchAll();},[loggedIn]);
 
@@ -208,14 +218,14 @@ export default function App(){
   },[]);
 
   const toast$=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3200);};
-  const login=async()=>{
+  const login=async()=>withLoading(async()=>{
     try{
       const r=await fetch(`${API}/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(loginForm)});
       if(!r.ok){const e=await r.json();toast$(e.error||"Login gagal","err");return;}
       const {user:u}=await r.json();
       setLoggedIn(true);setUser(u);setTab("dashboard");toast$("Selamat datang ✓");
     }catch{toast$("Server tidak bisa dihubungi","err");}
-  };
+  },"Sedang login");
   const logout=()=>{setLoggedIn(false);setUser(null);setTab("login");setItems([]);setTrx([]);};
   const addToCart=()=>{
     if(!pickerItem||!pickerQty||+pickerQty<1){toast$("Pilih barang dan isi jumlah","err");return;}
@@ -233,63 +243,73 @@ export default function App(){
     if(!form.cart.length){toast$("Keranjang masih kosong","err");return;}
     const payload={taker:form.taker,dept:form.dept,workOrder:form.workOrder,note:form.note,date:form.date,time:nowTime(),admin:form.admin,
       items:form.cart.map(c=>{const it=items.find(i=>i.id===c.itemId);return{itemId:c.itemId,itemName:it.name,qty:c.qty,unit:it.unit};})};
-    try{
-      const r=await fetch(`${API}/transactions`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      if(!r.ok)throw new Error();
-      toast$(`Transaksi ${form.taker} tercatat`);
-      setForm(emptyForm());setPickerItem("");setPickerQty("");setShowModal(false);
-      fetchAll();
-    }catch{toast$("Gagal menyimpan transaksi","err");}
+    await withLoading(async()=>{
+      try{
+        const r=await fetch(`${API}/transactions`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+        if(!r.ok)throw new Error();
+        toast$(`Transaksi ${form.taker} tercatat`);
+        setForm(emptyForm());setPickerItem("");setPickerQty("");setShowModal(false);
+        await fetchAll();
+      }catch{toast$("Gagal menyimpan transaksi","err");}
+    },"Sedang menyimpan transaksi");
   };
   const submitAdd=async()=>{
     if(!addForm.itemId||!addForm.qty||+addForm.qty<1||!addForm.admin){toast$("Lengkapi semua field wajib","err");return;}
-    try{
-      const r=await fetch(`${API}/receives`,{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
-      if(!r.ok)throw new Error();
-      setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});setShowAdd(false);
-      toast$("Stok berhasil ditambahkan ✓");fetchAll();
-    }catch{toast$("Gagal menyimpan penerimaan","err");}
+    await withLoading(async()=>{
+      try{
+        const r=await fetch(`${API}/receives`,{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
+        if(!r.ok)throw new Error();
+        setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});setShowAdd(false);
+        toast$("Stok berhasil ditambahkan ✓");
+        await fetchAll();
+      }catch{toast$("Gagal menyimpan penerimaan","err");}
+    },"Sedang menyimpan penerimaan");
   };
   const submitNewItem=async()=>{
     if(!newItemForm.name||!newItemForm.category||!newItemForm.unit){toast$("Nama, kategori, dan satuan wajib diisi","err");return;}
     if(newItemForm.stock===""||newItemForm.minStock===""){toast$("Stok awal dan min stok wajib diisi","err");return;}
     if(+newItemForm.stock<0||+newItemForm.minStock<0){toast$("Nilai stok tidak boleh negatif","err");return;}
-    try{
-      const payload={
-        name:newItemForm.name,
-        itemCode:newItemForm.itemCode,
-        category:newItemForm.category,
-        unit:newItemForm.unit,
-        stock:+newItemForm.stock,
-        minStock:+newItemForm.minStock,
-        photo:newItemForm.photo||null,
-      };
-      const r=await fetch(`${API}/items`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      if(!r.ok){
-        if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
-        throw new Error("Gagal menambah item baru");
-      }
-      setShowNewItem(false);
-      setNewItemForm(emptyNewItem());
-      toast$("Item baru berhasil ditambahkan ✓");
-      fetchAll();
-    }catch(e){toast$(e?.message||"Gagal menambah item baru","err");}
+    await withLoading(async()=>{
+      try{
+        const payload={
+          name:newItemForm.name,
+          itemCode:newItemForm.itemCode,
+          category:newItemForm.category,
+          unit:newItemForm.unit,
+          stock:+newItemForm.stock,
+          minStock:+newItemForm.minStock,
+          photo:newItemForm.photo||null,
+        };
+        const r=await fetch(`${API}/items`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+        if(!r.ok){
+          if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
+          throw new Error("Gagal menambah item baru");
+        }
+        setShowNewItem(false);
+        setNewItemForm(emptyNewItem());
+        toast$("Item baru berhasil ditambahkan ✓");
+        await fetchAll();
+      }catch(e){toast$(e?.message||"Gagal menambah item baru","err");}
+    },"Sedang menambahkan item baru");
   };
   const submitEdit=async()=>{
     if(!editItem?.name||!editItem?.category){toast$("Nama dan kategori wajib diisi","err");return;}
-    try{
-      const r=await fetch(`${API}/items/${editItem.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({name:editItem.name,category:editItem.category,photo:editItem.photo||null})});
-      if(!r.ok){
-        if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
-        let msg="";
-        try{const e=await r.json();msg=e?.error||"";}catch{}
-        throw new Error(msg||"Gagal memperbarui item");
-      }
-      setShowEdit(false);setEditItem(null);
-      toast$("Item berhasil diperbarui ✓");fetchAll();
-    }catch(e){toast$(e?.message||"Gagal memperbarui item","err");}
+    await withLoading(async()=>{
+      try{
+        const r=await fetch(`${API}/items/${editItem.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({name:editItem.name,category:editItem.category,photo:editItem.photo||null})});
+        if(!r.ok){
+          if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
+          let msg="";
+          try{const e=await r.json();msg=e?.error||"";}catch{}
+          throw new Error(msg||"Gagal memperbarui item");
+        }
+        setShowEdit(false);setEditItem(null);
+        toast$("Item berhasil diperbarui ✓");
+        await fetchAll();
+      }catch(e){toast$(e?.message||"Gagal memperbarui item","err");}
+    },"Sedang memperbarui item");
   };
 
   // ── CSS STRING ────────────────────────────────────────────────
@@ -408,6 +428,13 @@ export default function App(){
     .toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:13px 18px;border-radius:14px;font-size:12.5px;font-weight:700;box-shadow:${T.shadowCard};animation:toastIn .22s ease;display:flex;align-items:center;gap:9px;backdrop-filter:blur(14px);border:1px solid;max-width:300px}
     @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
 
+    .busy-overlay{position:fixed;inset:0;z-index:1300;background:rgba(0,6,3,0.58);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
+    .busy-card{display:flex;flex-direction:column;align-items:center;gap:12px;background:${T.surfaceSolid};border:1px solid ${T.border};border-radius:16px;padding:18px 24px;box-shadow:${T.shadowCard};min-width:210px}
+    .busy-spin{width:34px;height:34px;border-radius:50%;border:3px solid ${T.border};border-top-color:${T.primary};animation:busySpin .85s linear infinite}
+    .busy-text{font-size:13px;font-weight:800;color:${T.text};letter-spacing:.02em}
+    .busy-sub{font-size:11px;color:${T.muted}}
+    @keyframes busySpin{to{transform:rotate(360deg)}}
+
     .backdrop-mob{display:none;position:fixed;inset:0;background:rgba(0,6,3,0.55);z-index:90}
 
     /* BOTTOM NAV — mobile only */
@@ -498,6 +525,16 @@ export default function App(){
     </div>
   );
 
+  const BusyOverlay=()=>loading?(
+    <div className="busy-overlay" role="status" aria-live="polite" aria-busy="true">
+      <div className="busy-card">
+        <div className="busy-spin"/>
+        <div className="busy-text">Mohon menunggu...</div>
+        <div className="busy-sub">{loadingText}</div>
+      </div>
+    </div>
+  ):null;
+
   // ── LOGIN ────────────────────────────────────────────────────────
   if(!loggedIn) return(
     <div style={{position:"relative"}}>
@@ -554,6 +591,7 @@ export default function App(){
       {toast&&<div className="toast" style={{background:toast.type==="err"?T.redBg:T.greenBg,border:`1px solid ${toast.type==="err"?T.redBorder:T.greenBorder}`,color:toast.type==="err"?T.redText:T.greenText}}>
         <span>{toast.type==="err"?"✕":"✓"}</span>{toast.msg}
       </div>}
+      <BusyOverlay/>
     </div>
   );
 
@@ -1187,6 +1225,7 @@ export default function App(){
           ))}
         </div>
       </nav>
+      <BusyOverlay/>
     </div>
   );
 }
