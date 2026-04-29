@@ -796,6 +796,44 @@ export default async function handler(req, res) {
       }
     }
 
+    if (parts[0] === "costing" && parts[1] === "summary" && method === "GET") {
+      if (!ensureAdmin(auth.payload, res)) return;
+      const items = await db.collection("items").find({}).sort({ id: 1 }).toArray();
+      const normalized = items.map(withCostingDefaults);
+
+      const categoriesMap = new Map();
+      for (const it of normalized) {
+        const key = String(it.category || "Uncategorized");
+        const prev = categoriesMap.get(key) || { category: key, itemCount: 0, totalQty: 0, totalValue: 0 };
+        prev.itemCount += 1;
+        prev.totalQty += toNumber(it.stock, 0);
+        prev.totalValue += toNumber(it.totalValue, 0);
+        categoriesMap.set(key, prev);
+      }
+
+      const categories = [...categoriesMap.values()]
+        .map((c) => ({
+          ...c,
+          totalValue: roundMoney(c.totalValue),
+          averageCost: c.totalQty > 0 ? roundMoney(c.totalValue / c.totalQty) : 0,
+        }))
+        .sort((a, b) => a.category.localeCompare(b.category));
+
+      const totalQty = normalized.reduce((acc, it) => acc + toNumber(it.stock, 0), 0);
+      const totalInventoryValue = roundMoney(normalized.reduce((acc, it) => acc + toNumber(it.totalValue, 0), 0));
+
+      return sendJson(res, 200, {
+        asOf: new Date().toISOString(),
+        totals: {
+          items: normalized.length,
+          totalQty,
+          totalInventoryValue,
+        },
+        categories,
+        items: normalized,
+      });
+    }
+
     return sendJson(res, 404, { error: "Endpoint tidak ditemukan" });
   } catch (error) {
     return sendJson(res, 500, {
