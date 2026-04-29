@@ -50,7 +50,7 @@ const ITEM_CATEGORIES = ["APD","Abrasif","Cutting Tool","Material","Kebersihan"]
 const MAX_STOCK_VALUE = 1000000;
 const MAX_TEXT_LEN = 120;
 
-const todayStr=()=>new Date().toISOString().split("T")[0];
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const nowTime=()=>new Date().toTimeString().slice(0,5);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):""; 
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
@@ -273,6 +273,12 @@ export default function App(){
   },"Sedang memuat data");
 
   useEffect(()=>{if(loggedIn)fetchAll();},[loggedIn]);
+  useEffect(()=>{
+    if(!loggedIn)return;
+    const onVisible=()=>{if(document.visibilityState==="visible")fetchAll();};
+    document.addEventListener("visibilitychange",onVisible);
+    return()=>document.removeEventListener("visibilitychange",onVisible);
+  },[loggedIn]);
   useEffect(()=>{
     if(!visibleTabs.some(t=>t.id===tab)) setTab("dashboard");
   },[tab,visibleTabs]);
