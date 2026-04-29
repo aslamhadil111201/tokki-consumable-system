@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { useState, useRef, useEffect } from "react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const API = (
   import.meta.env.VITE_API_URL ||
@@ -514,15 +516,26 @@ export default function App(){
     toast$("Export Excel (CSV) penerimaan berhasil");
   };
 
-  const openPrintTable=({title,subtitle,headers,rows})=>{
-    const w=window.open("","_blank","width=1000,height=800");
-    if(!w){toast$("Popup diblokir browser","err");return;}
-    const th=headers.map(h=>`<th>${h}</th>`).join("");
-    const tr=rows.map(r=>`<tr>${r.map(c=>`<td>${String(c??"").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</td>`).join("")}</tr>`).join("");
-    w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{margin:0 0 4px}p{margin:0 0 12px;color:#555}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}th{background:#efefef}</style></head><body><h2>${title}</h2>${subtitle?`<p>${subtitle}</p>`:""}<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></body></html>`);
-    w.document.close();
-    w.focus();
-    w.print();
+  const downloadPdfTable=({fileName,title,subtitle,headers,rows})=>{
+    const doc=new jsPDF({orientation:"landscape",unit:"pt",format:"a4"});
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(14);
+    doc.text(String(title||"Laporan"),40,32);
+    if(subtitle){
+      doc.setFont("helvetica","normal");
+      doc.setFontSize(10);
+      doc.text(String(subtitle),40,50);
+    }
+    autoTable(doc,{
+      startY:subtitle?62:46,
+      head:[headers.map(h=>String(h??""))],
+      body:rows.map(r=>toSafeRows(r).map(c=>String(c??""))),
+      styles:{font:"helvetica",fontSize:8,cellPadding:4,overflow:"linebreak"},
+      headStyles:{fillColor:[16,185,129],textColor:[255,255,255],fontStyle:"bold"},
+      margin:{left:40,right:40,top:40,bottom:30},
+      theme:"grid",
+    });
+    doc.save(fileName||`laporan-${todayStr()}.pdf`);
   };
 
   const exportTransactionsPdf=()=>{
@@ -531,13 +544,14 @@ export default function App(){
     const rows=toSafeRows(source).flatMap(t=>toSafeRows(t.items).map(it=>[
       t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,`${it.qty} ${it.unit}`,t.note||"",
     ]));
-    openPrintTable({
+    downloadPdfTable({
+      fileName:`riwayat-pengambilan-${todayStr()}.pdf`,
       title:`Riwayat Pengambilan - ${todayFmt()}`,
       subtitle:`Periode: ${reportPeriodLabel()} | Total data: ${source.length} | Total unit: ${unitTotal}`,
       headers:["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Ket"],
       rows,
     });
-    toast$("Export PDF pengambilan siap cetak");
+    toast$("Export PDF pengambilan berhasil");
   };
 
   const exportReceivesPdf=()=>{
@@ -546,13 +560,14 @@ export default function App(){
     const rows=toSafeRows(source).map(r=>[
       r.id,r.date,r.time,r.itemName,`${r.qty} ${r.unit}`,r.poNumber||"",r.doNumber||"",r.admin||"",
     ]);
-    openPrintTable({
+    downloadPdfTable({
+      fileName:`riwayat-penerimaan-${todayStr()}.pdf`,
       title:`Riwayat Penerimaan - ${todayFmt()}`,
       subtitle:`Periode: ${reportPeriodLabel()} | Total data: ${source.length} | Total unit: ${unitTotal}`,
       headers:["ID","Tanggal","Waktu","Item","Qty","PO","DO","Admin"],
       rows,
     });
-    toast$("Export PDF penerimaan siap cetak");
+    toast$("Export PDF penerimaan berhasil");
   };
 
   const auditPeriodLabel = () => {
@@ -603,7 +618,8 @@ export default function App(){
   const exportAuditPdf=async()=>{
     try{
       const rowsData=await fetchAuditExportRows();
-      openPrintTable({
+      downloadPdfTable({
+        fileName:`audit-log-${todayStr()}.pdf`,
         title:`Audit Log - ${todayFmt()}`,
         subtitle:`Periode: ${auditPeriodLabel()} | Total data: ${rowsData.length}`,
         headers:["ID","Timestamp","Action","Actor","Role","Target"],
@@ -616,7 +632,7 @@ export default function App(){
           a.target || "",
         ]),
       });
-      toast$("Export PDF audit siap cetak");
+      toast$("Export PDF audit berhasil");
     }catch(e){toast$(e?.message||"Gagal export audit","err");}
   };
 
