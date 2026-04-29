@@ -665,6 +665,10 @@ export default function App(){
     .page-title{font-size:22px;font-weight:900;color:${T.text}}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
     .tb-btn:hover{border-color:${T.borderHover};color:${T.text}}
+    .tb-logout{display:none}
+    .tb-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
+    .nav-item.mobile-logout{display:none;border-color:${T.redBorder};color:${T.redText};background:${T.redBg}}
+    .nav-item.mobile-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
 
     /* TOGGLE — smooth cubic */
     .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:30px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s}
@@ -780,6 +784,9 @@ export default function App(){
       .backdrop-mob{display:block}
       .topbar{padding:0 12px;gap:8px}
       .page-title{font-size:16px}
+      .tb-reset-dummy{display:none}
+      .tb-logout{display:inline-flex}
+      .nav-item.mobile-logout{display:flex}
       .body-area{padding:14px 12px 40px}
       .stock-g{grid-template-columns:1fr 1fr}
       .two-col{grid-template-columns:1fr}
@@ -907,6 +914,9 @@ export default function App(){
                 {t.id==="transaction"&&todayTrx.length>0&&<span className="nav-pill">{todayTrx.length}</span>}
               </button>
             ))}
+            <button className="nav-item mobile-logout" onClick={logout}>
+              <span className="nav-icon">⎋</span><span className="nav-text">Keluar Akun</span>
+            </button>
             <div className="sb-footer">
               <div className="sb-user-row" style={{display:"flex",alignItems:"center",gap:9,padding:"8px 6px"}}>
                 <div style={{width:32,height:32,borderRadius:9,background:`linear-gradient(135deg,${T.primary},${T.primaryLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"white",flexShrink:0}}>
@@ -937,9 +947,9 @@ export default function App(){
               </button>
               <h1 className="page-title">{TABS.find(t=>t.id===tab)?.label||"Dashboard"}</h1>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
               {isAdmin&&tab!=="login"&&(
-                <button className="tb-btn" onClick={resetDummyData} style={{fontWeight:700}}>
+                <button className="tb-btn tb-reset-dummy" onClick={resetDummyData} style={{fontWeight:700}}>
                   ♻ Reset Dummy
                 </button>
               )}
@@ -974,6 +984,7 @@ export default function App(){
                 )}
               </div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:11,display:"var(--date-display,inline-flex)"}}>📅 {todayFmt()}</div>
+              <button className="tb-btn tb-logout" onClick={logout} title="Keluar akun" style={{padding:"7px 10px"}}>⎋ Keluar</button>
             </div>
           </header>
 
