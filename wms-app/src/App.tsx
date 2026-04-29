@@ -161,12 +161,16 @@ export default function App(){
   const [newItemForm,setNewItemForm]=useState(emptyNewItem());
   const [addForm,setAddForm]=useState({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});
   const [sidebar,setSidebar]=useState(false);
-  const [loggedIn,setLoggedIn]=useState(false);
+  const [loggedIn,setLoggedIn]=useState(()=>Boolean(localStorage.getItem("wms_token")));
+  const [authToken,setAuthToken]=useState(()=>localStorage.getItem("wms_token")||"");
   const [loginForm,setLoginForm]=useState({username:"",password:""});
   const [showLoginPassword,setShowLoginPassword]=useState(false);
   const [pickerItem,setPickerItem]=useState("");
   const [pickerQty,setPickerQty]=useState("");
-  const [user,setUser]=useState(null);
+  const [user,setUser]=useState(()=>{
+    try{return JSON.parse(localStorage.getItem("wms_user")||"null");}
+    catch{return null;}
+  });
   const [showEdit,setShowEdit]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [receives,setReceives]=useState([]);
@@ -176,21 +180,42 @@ export default function App(){
 
   T=getT(dark);
 
+  const apiFetch=async(path,options={})=>{
+    const headers={...(options.headers||{})};
+    if(authToken)headers.Authorization=`Bearer ${authToken}`;
+    const r=await fetch(`${API}${path}`,{...options,headers});
+    if(r.status===401){
+      setAuthToken("");
+      setLoggedIn(false);
+      setUser(null);
+      localStorage.removeItem("wms_token");
+      localStorage.removeItem("wms_user");
+      setTab("login");
+      throw new Error("Sesi login berakhir, silakan login lagi");
+    }
+    return r;
+  };
+
+  useEffect(()=>{
+    if(authToken)localStorage.setItem("wms_token",authToken);
+    else localStorage.removeItem("wms_token");
+  },[authToken]);
+
   // ── FETCH SEMUA DATA ─────────────────────────────────────────────
   const fetchAll=async()=>{
     setLoading(true);
     try{
       const [it,tr,adm,dep,emp,wo,rcv]=await Promise.all([
-        fetch(`${API}/items`).then(r=>r.json()),
-        fetch(`${API}/transactions`).then(r=>r.json()),
-        fetch(`${API}/admins`).then(r=>r.json()),
-        fetch(`${API}/departments`).then(r=>r.json()),
-        fetch(`${API}/employees`).then(r=>r.json()),
-        fetch(`${API}/work-orders`).then(r=>r.json()),
-        fetch(`${API}/receives`).then(r=>r.json()),
+        apiFetch("/items").then(r=>r.json()),
+        apiFetch("/transactions").then(r=>r.json()),
+        apiFetch("/admins").then(r=>r.json()),
+        apiFetch("/departments").then(r=>r.json()),
+        apiFetch("/employees").then(r=>r.json()),
+        apiFetch("/work-orders").then(r=>r.json()),
+        apiFetch("/receives").then(r=>r.json()),
       ]);
       setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv);
-    }catch(e){toast$("Gagal terhubung ke server","err");}
+    }catch(e){toast$(e?.message||"Gagal terhubung ke server","err");}
     setLoading(false);
   };
 
@@ -215,11 +240,25 @@ export default function App(){
     try{
       const r=await fetch(`${API}/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(loginForm)});
       if(!r.ok){const e=await r.json();toast$(e.error||"Login gagal","err");return;}
-      const {user:u}=await r.json();
-      setLoggedIn(true);setUser(u);setTab("dashboard");toast$("Selamat datang ✓");
+      const {token,user:u}=await r.json();
+      setAuthToken(token||"");
+      setLoggedIn(true);
+      setUser(u);
+      localStorage.setItem("wms_user",JSON.stringify(u));
+      setTab("dashboard");
+      toast$("Selamat datang ✓");
     }catch{toast$("Server tidak bisa dihubungi","err");}
   };
-  const logout=()=>{setLoggedIn(false);setUser(null);setTab("login");setItems([]);setTrx([]);};
+  const logout=()=>{
+    setLoggedIn(false);
+    setUser(null);
+    setAuthToken("");
+    localStorage.removeItem("wms_user");
+    localStorage.removeItem("wms_token");
+    setTab("login");
+    setItems([]);
+    setTrx([]);
+  };
   const addToCart=()=>{
     if(!pickerItem||!pickerQty||+pickerQty<1){toast$("Pilih barang dan isi jumlah","err");return;}
     const it=items.find(i=>i.id===+pickerItem);if(!it){toast$("Barang tidak ditemukan","err");return;}
@@ -237,7 +276,7 @@ export default function App(){
     const payload={taker:form.taker,dept:form.dept,workOrder:form.workOrder,note:form.note,date:form.date,time:nowTime(),admin:form.admin,
       items:form.cart.map(c=>{const it=items.find(i=>i.id===c.itemId);return{itemId:c.itemId,itemName:it.name,qty:c.qty,unit:it.unit};})};
     try{
-      const r=await fetch(`${API}/transactions`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      const r=await apiFetch("/transactions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       if(!r.ok)throw new Error();
       toast$(`Transaksi ${form.taker} tercatat`);
       setForm(emptyForm());setPickerItem("");setPickerQty("");setShowModal(false);
@@ -247,7 +286,7 @@ export default function App(){
   const submitAdd=async()=>{
     if(!addForm.itemId||!addForm.qty||+addForm.qty<1||!addForm.admin){toast$("Lengkapi semua field wajib","err");return;}
     try{
-      const r=await fetch(`${API}/receives`,{method:"POST",headers:{"Content-Type":"application/json"},
+      const r=await apiFetch("/receives",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
       if(!r.ok)throw new Error();
       setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});setShowAdd(false);
@@ -268,9 +307,12 @@ export default function App(){
         minStock:+newItemForm.minStock,
         photo:newItemForm.photo||null,
       };
-      const r=await fetch(`${API}/items`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      const r=await apiFetch("/items",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       if(!r.ok){
         if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
+        let msg="";
+        try{const e=await r.json();msg=e?.error||"";}catch{}
+        if(msg) throw new Error(msg);
         throw new Error("Gagal menambah item baru");
       }
       setShowNewItem(false);
@@ -282,7 +324,7 @@ export default function App(){
   const submitEdit=async()=>{
     if(!editItem?.name||!editItem?.category){toast$("Nama dan kategori wajib diisi","err");return;}
     try{
-      const r=await fetch(`${API}/items/${editItem.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+      const r=await apiFetch(`/items/${editItem.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({name:editItem.name,category:editItem.category,photo:editItem.photo||null})});
       if(!r.ok){
         if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");

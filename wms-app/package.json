@@ -10,6 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.2.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
