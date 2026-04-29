@@ -508,6 +508,93 @@ export default async function handler(req, res) {
       return sendJson(res, 200, { ok: true });
     }
 
+    if (parts[0] === "admin" && parts[1] === "costing" && parts[2] === "revalue" && method === "POST") {
+      if (!ensureAdmin(auth.payload, res)) return;
+
+      const dryRun = Boolean(body?.dryRun);
+      const defaultAverageCostRaw = body?.defaultAverageCost;
+      const hasDefaultAverageCost = defaultAverageCostRaw !== undefined && defaultAverageCostRaw !== null && defaultAverageCostRaw !== "";
+      const defaultAverageCost = hasDefaultAverageCost ? Number(defaultAverageCostRaw) : null;
+      if (hasDefaultAverageCost && (!Number.isFinite(defaultAverageCost) || defaultAverageCost < 0)) {
+        return sendJson(res, 400, { error: "defaultAverageCost harus angka >= 0" });
+      }
+
+      const overrideRows = Array.isArray(body?.items) ? body.items : [];
+      const overrides = new Map();
+      for (const row of overrideRows) {
+        const itemId = Number(row?.itemId ?? row?.id);
+        const avg = Number(row?.averageCost);
+        if (!Number.isInteger(itemId) || !Number.isFinite(avg) || avg < 0) {
+          return sendJson(res, 400, { error: "Setiap override wajib berisi itemId/id dan averageCost >= 0" });
+        }
+        overrides.set(itemId, avg);
+      }
+
+      if (!hasDefaultAverageCost && overrides.size === 0) {
+        return sendJson(res, 400, { error: "Kirim defaultAverageCost atau items override" });
+      }
+
+      const itemsCol = db.collection("items");
+      const items = await itemsCol.find({}).sort({ id: 1 }).toArray();
+      const previews = [];
+
+      for (const raw of items) {
+        const it = withCostingDefaults(raw);
+        const hasOverride = overrides.has(Number(it.id));
+        const chosenAvg = hasOverride ? Number(overrides.get(Number(it.id))) : (hasDefaultAverageCost ? Number(defaultAverageCost) : null);
+        if (chosenAvg === null) continue;
+
+        const avg = roundMoney(chosenAvg);
+        const stock = toNumber(it.stock, 0);
+        const totalValue = roundMoney(stock * avg);
+        const lastPrice = toNumber(it.lastPrice, 0) > 0 ? roundMoney(it.lastPrice) : avg;
+
+        previews.push({
+          itemId: Number(it.id),
+          itemName: it.name,
+          stock,
+          averageCostBefore: roundMoney(it.averageCost),
+          averageCostAfter: avg,
+          totalValueBefore: roundMoney(it.totalValue),
+          totalValueAfter: totalValue,
+          lastPriceAfter: lastPrice,
+          source: hasOverride ? "override" : "default",
+        });
+      }
+
+      if (!dryRun) {
+        for (const p of previews) {
+          await itemsCol.updateOne(
+            { id: p.itemId },
+            {
+              $set: {
+                averageCost: p.averageCostAfter,
+                totalValue: p.totalValueAfter,
+                lastPrice: p.lastPriceAfter,
+              },
+            },
+          );
+        }
+
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "admin.costingRevalue",
+          target: "items",
+          meta: {
+            updatedCount: previews.length,
+            mode: hasDefaultAverageCost ? "default+overrides" : "overrides",
+          },
+        });
+      }
+
+      return sendJson(res, 200, {
+        ok: true,
+        dryRun,
+        updatedCount: previews.length,
+        previews,
+      });
+    }
+
     if (parts[0] in MASTER_MAP) {
       const key = MASTER_MAP[parts[0]];
       const col = db.collection(key);
