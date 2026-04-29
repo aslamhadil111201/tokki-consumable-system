@@ -19,6 +19,7 @@ const MASTER_MAP = {
   employees: "employees",
   "work-orders": "workOrders",
 };
+const ADMIN_DATA_COLLECTIONS = ["users", "admins", "departments", "employees", "workOrders", "items", "transactions", "receives", "auditLogs"];
 
 const globalForMongo = globalThis;
 
@@ -293,6 +294,47 @@ function validateNewItemPayload(body) {
   };
 }
 
+function stripMongoId(doc) {
+  if (!doc || typeof doc !== "object") return doc;
+  const { _id, ...rest } = doc;
+  return rest;
+}
+
+function normalizeBackupPayload(body) {
+  const root = body && typeof body === "object" ? body : {};
+  const payload = (root.backup && typeof root.backup === "object") ? root.backup : root;
+  const collectionsRoot = (payload.collections && typeof payload.collections === "object") ? payload.collections : payload;
+
+  const normalized = {};
+  let hasAnyCollection = false;
+  for (const name of ADMIN_DATA_COLLECTIONS) {
+    const docs = Array.isArray(collectionsRoot[name]) ? collectionsRoot[name] : [];
+    if (docs.length > 0) hasAnyCollection = true;
+    normalized[name] = docs.map(stripMongoId);
+  }
+
+  if (!hasAnyCollection) {
+    return { ok: false, error: "File backup tidak valid atau kosong" };
+  }
+
+  return { ok: true, collections: normalized };
+}
+
+async function exportBackup(db) {
+  const out = {
+    format: "tokki-wms-backup-v1",
+    generatedAt: new Date().toISOString(),
+    collections: {},
+  };
+
+  for (const name of ADMIN_DATA_COLLECTIONS) {
+    const docs = await db.collection(name).find({}).toArray();
+    out.collections[name] = docs.map(stripMongoId);
+  }
+
+  return out;
+}
+
 export default async function handler(req, res) {
   try {
     const method = req.method || "GET";
@@ -400,6 +442,48 @@ export default async function handler(req, res) {
         actor: auth.payload,
         action: "admin.resetDummy",
         target: "system",
+      });
+      return sendJson(res, 200, { ok: true });
+    }
+
+    if (parts[0] === "admin" && parts[1] === "backup" && method === "GET") {
+      if (!ensureAdmin(auth.payload, res)) return;
+      const backup = await exportBackup(db);
+      await writeAuditLog(db, {
+        actor: auth.payload,
+        action: "admin.backupExport",
+        target: "system",
+        meta: { generatedAt: backup.generatedAt },
+      });
+      return sendJson(res, 200, backup);
+    }
+
+    if (parts[0] === "admin" && parts[1] === "restore" && method === "POST") {
+      if (!ensureAdmin(auth.payload, res)) return;
+
+      const parsed = normalizeBackupPayload(body);
+      if (!parsed.ok) return sendJson(res, 400, { error: parsed.error });
+
+      for (const name of ADMIN_DATA_COLLECTIONS) {
+        await db.collection(name).deleteMany({});
+      }
+
+      for (const name of ADMIN_DATA_COLLECTIONS) {
+        const docs = parsed.collections[name] || [];
+        if (docs.length) await db.collection(name).insertMany(docs);
+      }
+
+      seedDone = true;
+      await writeAuditLog(db, {
+        actor: auth.payload,
+        action: "admin.restoreBackup",
+        target: "system",
+        meta: {
+          collections: ADMIN_DATA_COLLECTIONS.reduce((acc, name) => {
+            acc[name] = (parsed.collections[name] || []).length;
+            return acc;
+          }, {}),
+        },
       });
       return sendJson(res, 200, { ok: true });
     }

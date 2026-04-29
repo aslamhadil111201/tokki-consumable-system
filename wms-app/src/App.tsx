@@ -211,6 +211,7 @@ export default function App(){
   const [auditTo,setAuditTo]=useState("");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const notifRef=useRef(null);
+  const restoreInputRef=useRef(null);
   const loading=loadingCount>0;
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const visibleTabs = isAdmin ? TABS : TABS.filter(t=>t.id!=="history");
@@ -491,6 +492,52 @@ export default function App(){
         await fetchAll();
       }catch(e){toast$(e?.message||"Gagal reset data dummy","err");}
     },"Sedang mereset data dummy");
+  };
+
+  const downloadBackupData=async()=>{
+    if(!isAdmin){toast$("Hanya admin yang boleh backup data","err");return;}
+    await withLoading(async()=>{
+      try{
+        const r=await apiFetch("/admin/backup");
+        if(!r.ok) throw new Error("Gagal membuat backup");
+        const backup=await r.json();
+        const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+        triggerDownload(`wms-backup-${stamp}.json`,JSON.stringify(backup,null,2),"application/json;charset=utf-8;");
+        toast$("Backup data berhasil diunduh ✓");
+      }catch(e){toast$(e?.message||"Gagal backup data","err");}
+    },"Sedang menyiapkan file backup");
+  };
+
+  const restoreBackupData=async(e)=>{
+    if(!isAdmin){toast$("Hanya admin yang boleh restore data","err");return;}
+    const file=e.target.files?.[0];
+    e.target.value="";
+    if(!file) return;
+
+    try{
+      const txt=await file.text();
+      const parsed=JSON.parse(txt);
+      const yes=window.confirm("Restore backup akan menimpa data saat ini. Lanjutkan?");
+      if(!yes) return;
+
+      await withLoading(async()=>{
+        const r=await apiFetch("/admin/restore",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(parsed),
+        });
+        if(!r.ok){
+          let msg="Gagal restore backup";
+          try{const er=await r.json();msg=er?.error||msg;}catch{}
+          throw new Error(msg);
+        }
+        toast$("Restore backup berhasil ✓");
+        await fetchAll();
+      },"Sedang memulihkan data backup");
+    }catch(err){
+      if(err?.name==="SyntaxError") toast$("File backup tidak valid (JSON rusak)","err");
+      else toast$(err?.message||"Gagal restore backup","err");
+    }
   };
 
   const reportPeriodLabel = () => {
@@ -1009,10 +1056,21 @@ export default function App(){
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
               {isAdmin&&tab!=="login"&&(
+                <button className="tb-btn" onClick={downloadBackupData} style={{fontWeight:700}}>
+                  ⬇ Backup
+                </button>
+              )}
+              {isAdmin&&tab!=="login"&&(
+                <button className="tb-btn" onClick={()=>restoreInputRef.current?.click()} style={{fontWeight:700}}>
+                  ⤴ Restore
+                </button>
+              )}
+              {isAdmin&&tab!=="login"&&(
                 <button className="tb-btn tb-reset-dummy" onClick={resetDummyData} style={{fontWeight:700}}>
                   ♻ Reset Dummy
                 </button>
               )}
+              <input ref={restoreInputRef} type="file" accept="application/json,.json" style={{display:"none"}} onChange={restoreBackupData}/>
               <Toggle/>
               {/* NOTIF */}
               <div className="notif-wrap" ref={notifRef}>
@@ -1416,7 +1474,7 @@ export default function App(){
                       <select className="ifield" style={{width:180}} value={auditAction} onChange={e=>setAuditAction(e.target.value)}>
                         <option value="">Semua action</option>
                         {[
-                          "auth.login","admin.resetDummy","items.create","items.update","items.delete",
+                          "auth.login","admin.resetDummy","admin.backupExport","admin.restoreBackup","items.create","items.update","items.delete",
                           "transactions.create","transactions.delete","receives.create","receives.delete",
                           "master.create","master.delete",
                         ].map(a=><option key={a} value={a}>{a}</option>)}
