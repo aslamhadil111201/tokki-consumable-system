@@ -21,20 +21,18 @@ const MASTER_MAP = {
 const globalForMongo = globalThis;
 
 if (!globalForMongo.__tokkiMongoClientPromise) {
-  if (!MONGO_URI) {
-    throw new Error("MONGO_URI belum diset di environment");
+  if (MONGO_URI) {
+    // Keep pool small in serverless to avoid wasting Atlas connections per instance.
+    const client = new MongoClient(MONGO_URI, {
+      maxPoolSize: 5,
+      minPoolSize: 0,
+      maxIdleTimeMS: 20000,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 30000,
+    });
+    globalForMongo.__tokkiMongoClientPromise = client.connect();
   }
-
-  // Keep pool small in serverless to avoid wasting Atlas connections per instance.
-  const client = new MongoClient(MONGO_URI, {
-    maxPoolSize: 5,
-    minPoolSize: 0,
-    maxIdleTimeMS: 20000,
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 10000,
-    socketTimeoutMS: 30000,
-  });
-  globalForMongo.__tokkiMongoClientPromise = client.connect();
 }
 
 let seedDone = false;
@@ -79,6 +77,9 @@ function loadSeedDb() {
 }
 
 async function getDb() {
+  if (!globalForMongo.__tokkiMongoClientPromise) {
+    throw new Error("MONGO_URI belum diset di environment");
+  }
   const client = await globalForMongo.__tokkiMongoClientPromise;
   return client.db(DB_NAME);
 }
@@ -101,12 +102,17 @@ async function seedDatabaseIfNeeded(db) {
     name: u.name || u.username || "Admin",
   }));
 
+  const cleanedItems = (seed.items || []).map((it) => ({
+    ...it,
+    photo: typeof it.photo === "string" && it.photo.startsWith("data:image/") ? null : it.photo || null,
+  }));
+
   const collections = [
     ["admins", seed.admins || []],
     ["departments", seed.departments || []],
     ["employees", seed.employees || []],
     ["workOrders", seed.workOrders || []],
-    ["items", seed.items || []],
+    ["items", cleanedItems],
     ["transactions", seed.transactions || []],
     ["receives", seed.receives || []],
   ];
@@ -181,13 +187,22 @@ export default async function handler(req, res) {
     const method = req.method || "GET";
     const parts = parsePath(req);
     const body = parseBody(req);
-    const db = await getDb();
-
-    await seedDatabaseIfNeeded(db);
 
     if (method === "GET" && parts.length === 0) {
       return sendJson(res, 200, { ok: true, service: "wms-api" });
     }
+
+    if (method === "GET" && parts[0] === "health") {
+      return sendJson(res, 200, {
+        ok: true,
+        mongoConfigured: Boolean(MONGO_URI),
+        cloudinaryConfigured: Boolean(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET),
+        jwtConfigured: Boolean(JWT_SECRET),
+      });
+    }
+
+    const db = await getDb();
+    await seedDatabaseIfNeeded(db);
 
     if (method === "POST" && parts[0] === "login") {
       const { username, password } = body;
