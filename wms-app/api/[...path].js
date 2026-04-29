@@ -142,6 +142,40 @@ async function getDb() {
   return client.db(DB_NAME);
 }
 
+async function getMongoClient() {
+  if (!globalForMongo.__tokkiMongoClientPromise) {
+    throw new Error("MONGO_URI belum diset di environment");
+  }
+  return globalForMongo.__tokkiMongoClientPromise;
+}
+
+function withSessionOptions(session, options = {}) {
+  return session ? { ...options, session } : options;
+}
+
+async function runWithMongoTransaction(work) {
+  const client = await getMongoClient();
+  const session = client.startSession();
+
+  try {
+    let result;
+    try {
+      await session.withTransaction(async () => {
+        result = await work(session);
+      });
+      return result;
+    } catch (error) {
+      const message = String(error?.message || error || "");
+      if (/Transaction numbers are only allowed|does not support transactions/i.test(message)) {
+        return work(null);
+      }
+      throw error;
+    }
+  } finally {
+    await session.endSession();
+  }
+}
+
 async function seedDatabaseIfNeeded(db) {
   if (seedDone) return;
 
@@ -162,8 +196,12 @@ async function seedDatabaseIfNeeded(db) {
   seedDone = true;
 }
 
-async function getNextId(db, collectionName) {
-  const latest = await db.collection(collectionName).find({}, { projection: { id: 1 } }).sort({ id: -1 }).limit(1).toArray();
+async function getNextId(db, collectionName, session = null) {
+  const latest = await db.collection(collectionName)
+    .find({}, withSessionOptions(session, { projection: { id: 1 } }))
+    .sort({ id: -1 })
+    .limit(1)
+    .toArray();
   const last = Number(latest[0]?.id || 0);
   return last + 1;
 }
@@ -358,6 +396,7 @@ async function exportBackup(db) {
 export default async function handler(req, res) {
   try {
     const method = req.method || "GET";
+    const requestUrl = new URL(req.url, "http://localhost");
     const parts = parsePath(req);
     const body = parseBody(req);
 
@@ -418,7 +457,6 @@ export default async function handler(req, res) {
 
     if (parts[0] === "audit-logs" && method === "GET") {
       if (!ensureAdmin(auth.payload, res)) return;
-      const requestUrl = new URL(req.url, "http://localhost");
       const page = Math.max(1, Number(requestUrl.searchParams.get("page") || 1));
       const pageSize = Math.min(50, Math.max(5, Number(requestUrl.searchParams.get("pageSize") || 10)));
       const actor = String(requestUrl.searchParams.get("actor") || "").trim();
@@ -704,7 +742,11 @@ export default async function handler(req, res) {
       const itemsCol = db.collection("items");
 
       if (method === "GET" && parts.length === 1) {
-        const docs = await transactionsCol.find({}).sort({ id: 1 }).toArray();
+        const scope = String(requestUrl.searchParams.get("scope") || "out").toLowerCase();
+        const query = scope === "all"
+          ? {}
+          : { $or: [{ type: { $exists: false } }, { type: "out" }] };
+        const docs = await transactionsCol.find(query).sort({ id: 1 }).toArray();
         return sendJson(res, 200, docs);
       }
 
@@ -712,62 +754,71 @@ export default async function handler(req, res) {
         const reqItems = Array.isArray(body.items) ? body.items : [];
         if (reqItems.length === 0) return sendJson(res, 400, { error: "Item transaksi tidak boleh kosong" });
 
-        const resolvedItems = [];
-        for (const ci of reqItems) {
-          const itemId = Number(ci?.itemId);
-          const qtyOut = Number(ci?.qty);
-          if (!Number.isInteger(qtyOut) || qtyOut <= 0) {
-            return sendJson(res, 400, { error: "Qty keluar harus bilangan bulat > 0" });
+        const trx = await runWithMongoTransaction(async (session) => {
+          const resolvedItems = [];
+          for (const ci of reqItems) {
+            const itemId = Number(ci?.itemId);
+            const qtyOut = Number(ci?.qty);
+            if (!Number.isInteger(qtyOut) || qtyOut <= 0) {
+              throw new Error("Qty keluar harus bilangan bulat > 0");
+            }
+
+            const item = await itemsCol.findOne({ id: itemId }, withSessionOptions(session));
+            if (!item) throw new Error(`Item ID ${itemId} tidak ditemukan`);
+
+            const currentQty = toNumber(item.stock, 0);
+            if (qtyOut > currentQty) {
+              throw new Error(`Qty keluar untuk ${item.name} melebihi stok (${currentQty})`);
+            }
+
+            const averageCost = roundMoney(item.averageCost);
+            const nextQty = currentQty - qtyOut;
+            const totalCostOut = roundMoney(qtyOut * averageCost);
+            const nextTotalValue = roundMoney(nextQty * averageCost);
+
+            resolvedItems.push({
+              source: ci,
+              item,
+              qtyOut,
+              averageCost,
+              nextQty,
+              totalCostOut,
+              nextTotalValue,
+            });
           }
 
-          const item = await itemsCol.findOne({ id: itemId });
-          if (!item) return sendJson(res, 404, { error: `Item ID ${itemId} tidak ditemukan` });
-
-          const currentQty = toNumber(item.stock, 0);
-          if (qtyOut > currentQty) {
-            return sendJson(res, 400, { error: `Qty keluar untuk ${item.name} melebihi stok (${currentQty})` });
+          for (const r of resolvedItems) {
+            await itemsCol.updateOne(
+              { id: r.item.id },
+              { $set: { stock: r.nextQty, averageCost: r.averageCost, totalValue: r.nextTotalValue } },
+              withSessionOptions(session),
+            );
           }
 
-          const averageCost = roundMoney(item.averageCost);
-          const nextQty = currentQty - qtyOut;
-          const totalCostOut = roundMoney(qtyOut * averageCost);
-          const nextTotalValue = roundMoney(nextQty * averageCost);
+          const trxItems = resolvedItems.map((r) => ({
+            ...r.source,
+            itemId: Number(r.item.id),
+            itemName: r.item.name,
+            unit: r.item.unit,
+            qty: r.qtyOut,
+            averageCost: r.averageCost,
+            totalCost: r.totalCostOut,
+          }));
 
-          resolvedItems.push({
-            source: ci,
-            item,
-            qtyOut,
-            averageCost,
-            nextQty,
-            totalCostOut,
-            nextTotalValue,
-          });
-        }
+          const nextTransactionId = await getNextId(db, "transactions", session);
+          const transactionRow = {
+            id: nextTransactionId,
+            type: "out",
+            movementType: "keluar",
+            ...body,
+            items: trxItems,
+            totalCostOut: roundMoney(resolvedItems.reduce((acc, r) => acc + r.totalCostOut, 0)),
+          };
 
-        for (const r of resolvedItems) {
-          await itemsCol.updateOne(
-            { id: r.item.id },
-            { $set: { stock: r.nextQty, averageCost: r.averageCost, totalValue: r.nextTotalValue } },
-          );
-        }
+          await transactionsCol.insertOne(transactionRow, withSessionOptions(session));
+          return transactionRow;
+        });
 
-        const trxItems = resolvedItems.map((r) => ({
-          ...r.source,
-          itemId: Number(r.item.id),
-          itemName: r.item.name,
-          unit: r.item.unit,
-          qty: r.qtyOut,
-          averageCost: r.averageCost,
-          totalCost: r.totalCostOut,
-        }));
-        const trx = {
-          id: await getNextId(db, "transactions"),
-          ...body,
-          items: trxItems,
-          totalCostOut: roundMoney(resolvedItems.reduce((acc, r) => acc + r.totalCostOut, 0)),
-        };
-
-        await transactionsCol.insertOne(trx);
         await writeAuditLog(db, {
           actor: auth.payload,
           action: "transactions.create",
@@ -780,7 +831,44 @@ export default async function handler(req, res) {
       if (method === "DELETE" && parts.length === 2) {
         if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
-        await transactionsCol.deleteOne({ id });
+
+        const trx = await runWithMongoTransaction(async (session) => {
+          const existing = await transactionsCol.findOne({ id }, withSessionOptions(session));
+          if (!existing) return null;
+
+          const trxType = String(existing.type || "out").toLowerCase();
+          if (trxType === "in") {
+            throw new Error("Gunakan hapus riwayat penerimaan untuk transaksi masuk");
+          }
+
+          for (const line of Array.isArray(existing.items) ? existing.items : []) {
+            const itemId = Number(line?.itemId);
+            const qtyRestore = Number(line?.qty);
+            if (!Number.isInteger(itemId) || !Number.isInteger(qtyRestore) || qtyRestore <= 0) continue;
+
+            const item = await itemsCol.findOne({ id: itemId }, withSessionOptions(session));
+            if (!item) continue;
+
+            const averageCost = roundMoney(line?.averageCost ?? item.averageCost);
+            const nextQty = toNumber(item.stock, 0) + qtyRestore;
+            await itemsCol.updateOne(
+              { id: itemId },
+              {
+                $set: {
+                  stock: nextQty,
+                  averageCost,
+                  totalValue: roundMoney(nextQty * averageCost),
+                },
+              },
+              withSessionOptions(session),
+            );
+          }
+
+          await transactionsCol.deleteOne({ id }, withSessionOptions(session));
+          return existing;
+        });
+
+        if (!trx) return sendJson(res, 404, { error: "Transaksi tidak ditemukan" });
         await writeAuditLog(db, {
           actor: auth.payload,
           action: "transactions.delete",
@@ -794,6 +882,7 @@ export default async function handler(req, res) {
     if (parts[0] === "receives") {
       const receivesCol = db.collection("receives");
       const itemsCol = db.collection("items");
+      const transactionsCol = db.collection("transactions");
 
       if (method === "GET" && parts.length === 1) {
         const docs = await receivesCol.find({}).sort({ id: 1 }).toArray();
@@ -811,46 +900,88 @@ export default async function handler(req, res) {
         if (!Number.isFinite(purchasePrice) || purchasePrice < 0) {
           return sendJson(res, 400, { error: "Harga beli harus angka >= 0" });
         }
-        const item = await itemsCol.findOne({ id: Number(itemId) });
-        if (!item) return sendJson(res, 404, { error: "Item tidak ditemukan" });
 
-        const qtyOld = toNumber(item.stock, 0);
-        const avgOld = roundMoney(item.averageCost);
-        const avgNew = qtyOld <= 0
-          ? roundMoney(purchasePrice)
-          : roundMoney(((qtyOld * avgOld) + (qtyIn * purchasePrice)) / (qtyOld + qtyIn));
-        const qtyNew = qtyOld + qtyIn;
-        const totalValue = roundMoney(qtyNew * avgNew);
+        const record = await runWithMongoTransaction(async (session) => {
+          const item = await itemsCol.findOne({ id: Number(itemId) }, withSessionOptions(session));
+          if (!item) throw new Error("Item tidak ditemukan");
 
-        await itemsCol.updateOne(
-          { id: item.id },
-          {
-            $set: {
-              stock: qtyNew,
-              averageCost: avgNew,
-              lastPrice: roundMoney(purchasePrice),
-              totalValue,
+          const qtyOld = toNumber(item.stock, 0);
+          const avgOld = roundMoney(item.averageCost);
+          const avgNew = qtyOld <= 0
+            ? roundMoney(purchasePrice)
+            : roundMoney(((qtyOld * avgOld) + (qtyIn * purchasePrice)) / (qtyOld + qtyIn));
+          const qtyNew = qtyOld + qtyIn;
+          const totalValue = roundMoney(qtyNew * avgNew);
+          const receiveId = await getNextId(db, "receives", session);
+          const transactionId = await getNextId(db, "transactions", session);
+          const time = new Date().toTimeString().slice(0, 5);
+
+          await itemsCol.updateOne(
+            { id: item.id },
+            {
+              $set: {
+                stock: qtyNew,
+                averageCost: avgNew,
+                lastPrice: roundMoney(purchasePrice),
+                totalValue,
+              },
             },
-          },
-        );
+            withSessionOptions(session),
+          );
 
-        const record = {
-          id: await getNextId(db, "receives"),
-          itemId: Number(itemId),
-          itemName: item.name,
-          unit: item.unit,
-          qty: qtyIn,
-          buyPrice: roundMoney(purchasePrice),
-          averageCostBefore: avgOld,
-          averageCostAfter: avgNew,
-          totalValueAfter: totalValue,
-          poNumber,
-          doNumber,
-          date,
-          admin,
-          time: new Date().toTimeString().slice(0, 5),
-        };
-        await receivesCol.insertOne(record);
+          const receiveRow = {
+            id: receiveId,
+            transactionId,
+            itemId: Number(itemId),
+            itemName: item.name,
+            unit: item.unit,
+            qty: qtyIn,
+            buyPrice: roundMoney(purchasePrice),
+            averageCostBefore: avgOld,
+            averageCostAfter: avgNew,
+            totalValueAfter: totalValue,
+            poNumber,
+            doNumber,
+            date,
+            admin,
+            time,
+          };
+          const transactionRow = {
+            id: transactionId,
+            type: "in",
+            movementType: "masuk",
+            receiveId,
+            itemId: Number(itemId),
+            itemName: item.name,
+            unit: item.unit,
+            qty: qtyIn,
+            buyPrice: roundMoney(purchasePrice),
+            averageCostBefore: avgOld,
+            averageCostAfter: avgNew,
+            totalValueAfter: totalValue,
+            totalCostIn: roundMoney(qtyIn * purchasePrice),
+            poNumber,
+            doNumber,
+            date,
+            admin,
+            time,
+            items: [{
+              itemId: Number(itemId),
+              itemName: item.name,
+              unit: item.unit,
+              qty: qtyIn,
+              buyPrice: roundMoney(purchasePrice),
+              averageCostBefore: avgOld,
+              averageCostAfter: avgNew,
+              totalValueAfter: totalValue,
+            }],
+          };
+
+          await receivesCol.insertOne(receiveRow, withSessionOptions(session));
+          await transactionsCol.insertOne(transactionRow, withSessionOptions(session));
+          return receiveRow;
+        });
+
         await writeAuditLog(db, {
           actor: auth.payload,
           action: "receives.create",
@@ -863,16 +994,35 @@ export default async function handler(req, res) {
       if (method === "DELETE" && parts.length === 2) {
         if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
-        const rec = await receivesCol.findOne({ id });
-        if (rec) {
-          const item = await itemsCol.findOne({ id: Number(rec.itemId) });
+
+        const rec = await runWithMongoTransaction(async (session) => {
+          const existing = await receivesCol.findOne({ id }, withSessionOptions(session));
+          if (!existing) return null;
+
+          const item = await itemsCol.findOne({ id: Number(existing.itemId) }, withSessionOptions(session));
           if (item) {
-            const nextStock = Math.max(0, Number(item.stock || 0) - Number(rec.qty || 0));
-            const avg = roundMoney(item.averageCost);
-            await itemsCol.updateOne({ id: item.id }, { $set: { stock: nextStock, averageCost: avg, totalValue: roundMoney(nextStock * avg) } });
+            const qtyIn = Number(existing.qty || 0);
+            const nextStock = Math.max(0, Number(item.stock || 0) - qtyIn);
+            const averageCost = roundMoney(existing.averageCostBefore ?? item.averageCost);
+            await itemsCol.updateOne(
+              { id: item.id },
+              {
+                $set: {
+                  stock: nextStock,
+                  averageCost,
+                  totalValue: roundMoney(nextStock * averageCost),
+                },
+              },
+              withSessionOptions(session),
+            );
           }
-          await receivesCol.deleteOne({ id });
-        }
+
+          await receivesCol.deleteOne({ id }, withSessionOptions(session));
+          await transactionsCol.deleteOne({ type: "in", receiveId: id }, withSessionOptions(session));
+          return existing;
+        });
+
+        if (!rec) return sendJson(res, 404, { error: "Riwayat penerimaan tidak ditemukan" });
         await writeAuditLog(db, {
           actor: auth.payload,
           action: "receives.delete",

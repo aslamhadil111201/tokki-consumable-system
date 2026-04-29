@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment, react-hooks/set-state-in-effect, react-hooks/static-components, react-hooks/globals, react-hooks/exhaustive-deps */
 // @ts-nocheck
 import { useState, useRef, useEffect } from "react";
 import { jsPDF } from "jspdf";
@@ -54,8 +55,9 @@ const nowTime=()=>new Date().toTimeString().slice(0,5);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):""; 
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
 const fmtMoney=n=>`Rp ${Number(n||0).toLocaleString("id-ID")}`;
-const emptyForm=()=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[]});
+const emptyForm=(overrides={})=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[],...overrides});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",photo:null});
+const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",...overrides});
 const toSafeRows = (rows) => Array.isArray(rows) ? rows : (rows ? [rows] : []);
 const csvEscape = (v) => {
   const s = String(v ?? "").replace(/"/g, '""');
@@ -180,7 +182,7 @@ export default function App(){
   const [notif,setNotif]=useState(false);
   const [form,setForm]=useState(emptyForm());
   const [newItemForm,setNewItemForm]=useState(emptyNewItem());
-  const [addForm,setAddForm]=useState({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:""});
+  const [addForm,setAddForm]=useState(emptyAddForm());
   const [sidebar,setSidebar]=useState(false);
   const [loggedIn,setLoggedIn]=useState(()=>Boolean(localStorage.getItem("wms_token")));
   const [authToken,setAuthToken]=useState(()=>localStorage.getItem("wms_token")||"");
@@ -195,6 +197,7 @@ export default function App(){
   const [showEdit,setShowEdit]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [receives,setReceives]=useState([]);
+  const [allHistory,setAllHistory]=useState([]);
   const [historyTab,setHistoryTab]=useState("out");
   const [historyQuery,setHistoryQuery]=useState("");
   const [historyFrom,setHistoryFrom]=useState("");
@@ -250,10 +253,12 @@ export default function App(){
     }
   };
 
+  const toast$=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3200);};
+
   // ── FETCH SEMUA DATA ─────────────────────────────────────────────
   const fetchAll=async()=>withLoading(async()=>{
     try{
-      const [it,tr,adm,dep,emp,wo,rcv]=await Promise.all([
+      const [it,tr,adm,dep,emp,wo,rcv,allMovements]=await Promise.all([
         apiFetch("/items").then(r=>r.json()),
         apiFetch("/transactions").then(r=>r.json()),
         apiFetch("/admins").then(r=>r.json()),
@@ -261,8 +266,9 @@ export default function App(){
         apiFetch("/employees").then(r=>r.json()),
         apiFetch("/work-orders").then(r=>r.json()),
         apiFetch("/receives").then(r=>r.json()),
+        apiFetch("/transactions?scope=all").then(r=>r.json()),
       ]);
-      setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv);
+      setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv); setAllHistory(allMovements);
     }catch(e){toast$(e?.message||"Gagal terhubung ke server","err");}
   },"Sedang memuat data");
 
@@ -288,15 +294,30 @@ export default function App(){
   const q=historyQuery.trim().toLowerCase();
   const filteredOut=[...trx].filter(t=>dateMatch(t.date)&&(q===""||[t.taker,t.dept,t.admin,t.workOrder,t.note,...(t.items||[]).map(i=>i.itemName)].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
   const filteredIn=[...receives].filter(r=>dateMatch(r.date)&&(q===""||[r.itemName,r.poNumber,r.doNumber,r.admin].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
+  const filteredAll=[...allHistory].filter(t=>dateMatch(t.date)&&(q===""||[
+    t.type,
+    t.movementType,
+    t.taker,
+    t.dept,
+    t.admin,
+    t.workOrder,
+    t.note,
+    t.itemName,
+    t.poNumber,
+    t.doNumber,
+    ...(t.items||[]).map(i=>i.itemName),
+  ].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
   const outTotalPages=Math.max(1,Math.ceil(filteredOut.length/historyPageSize));
   const inTotalPages=Math.max(1,Math.ceil(filteredIn.length/historyPageSize));
+  const allTotalPages=Math.max(1,Math.ceil(filteredAll.length/historyPageSize));
   const pagedOut=filteredOut.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
   const pagedIn=filteredIn.slice((historyInPage-1)*historyPageSize,historyInPage*historyPageSize);
+  const pagedAll=filteredAll.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
   const auditTotalPages=Math.max(1,Math.ceil(auditTotal/auditPageSize));
 
   useEffect(()=>{document.body.style.background=T.bg;document.body.style.transition="background .4s,color .3s";},[dark]);
   useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize]);
-  useEffect(()=>{if(historyOutPage>outTotalPages)setHistoryOutPage(outTotalPages);},[historyOutPage,outTotalPages]);
+  useEffect(()=>{if(historyOutPage>(historyTab==="all"?allTotalPages:outTotalPages))setHistoryOutPage(historyTab==="all"?allTotalPages:outTotalPages);},[historyOutPage,outTotalPages,allTotalPages,historyTab]);
   useEffect(()=>{if(historyInPage>inTotalPages)setHistoryInPage(inTotalPages);},[historyInPage,inTotalPages]);
   useEffect(()=>{setAuditPage(1);},[auditActor,auditAction,auditFrom,auditTo,auditPageSize]);
 
@@ -325,8 +346,6 @@ export default function App(){
     const h=e=>{if(notifRef.current&&!notifRef.current.contains(e.target))setNotif(false);};
     document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);
   },[]);
-
-  const toast$=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3200);};
   const login=async()=>withLoading(async()=>{
     try{
       const r=await fetch(`${API}/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(loginForm)});
@@ -376,22 +395,33 @@ export default function App(){
       }catch{toast$("Gagal menyimpan transaksi","err");}
     },"Sedang menyimpan transaksi");
   };
+  const openQuickOut=item=>{
+    setForm(prev=>{
+      const existing=prev.cart.find(c=>c.itemId===Number(item.id));
+      return emptyForm({
+        ...prev,
+        cart: existing ? prev.cart : [...prev.cart,{itemId:Number(item.id),qty:1}],
+      });
+    });
+    setPickerItem(String(item.id));
+    setPickerQty("1");
+    setShowModal(true);
+  };
+  const openQuickIn=item=>{
+    setAddForm(emptyAddForm({itemId:String(item.id),buyPrice:item.lastPrice?String(item.lastPrice):"",qty:"1"}));
+    setShowAdd(true);
+  };
   const submitAdd=async()=>{
     if(!isAdmin){toast$("Hanya admin yang boleh menambah stok","err");return;}
     if(!addForm.itemId||!addForm.qty||+addForm.qty<1||!addForm.admin){toast$("Lengkapi semua field wajib","err");return;}
-    let effectiveBuyPrice=Number(addForm.buyPrice);
-    if(!Number.isFinite(effectiveBuyPrice)||effectiveBuyPrice<0){
-      const ans=window.prompt("Masukkan harga beli per unit", "0");
-      if(ans===null) return;
-      effectiveBuyPrice=Number(ans);
-      if(!Number.isFinite(effectiveBuyPrice)||effectiveBuyPrice<0){toast$("Harga beli wajib angka >= 0","err");return;}
-    }
+    const effectiveBuyPrice=Number(addForm.buyPrice);
+    if(!Number.isFinite(effectiveBuyPrice)||effectiveBuyPrice<0){toast$("Harga beli wajib angka >= 0","err");return;}
     await withLoading(async()=>{
       try{
         const r=await apiFetch("/receives",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,buyPrice:effectiveBuyPrice,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
         if(!r.ok)throw new Error();
-        setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:""});setShowAdd(false);
+        setAddForm(emptyAddForm());setShowAdd(false);
         toast$("Stok berhasil ditambahkan ✓");
         await fetchAll();
       }catch{toast$("Gagal menyimpan penerimaan","err");}
@@ -429,7 +459,7 @@ export default function App(){
         if(!r.ok){
           if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
           let msg="";
-          try{const e=await r.json();msg=e?.error||"";}catch{}
+          try{const e=await r.json();msg=e?.error||"";}catch{msg="";}
           if(msg) throw new Error(msg);
           throw new Error("Gagal menambah item baru");
         }
@@ -450,7 +480,7 @@ export default function App(){
         if(!r.ok){
           if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
           let msg="";
-          try{const e=await r.json();msg=e?.error||"";}catch{}
+          try{const e=await r.json();msg=e?.error||"";}catch{msg="";}
           throw new Error(msg||"Gagal memperbarui item");
         }
         setShowEdit(false);setEditItem(null);
@@ -494,7 +524,7 @@ export default function App(){
         const r=await apiFetch("/admin/reset-dummy",{method:"POST"});
         if(!r.ok){
           let msg="Gagal reset data dummy";
-          try{const e=await r.json();msg=e?.error||msg;}catch{}
+          try{const e=await r.json();msg=e?.error||msg;}catch{msg="Gagal reset data dummy";}
           throw new Error(msg);
         }
         toast$("Reset data dummy berhasil ✓");
@@ -537,7 +567,7 @@ export default function App(){
         });
         if(!r.ok){
           let msg="Gagal restore backup";
-          try{const er=await r.json();msg=er?.error||msg;}catch{}
+          try{const er=await r.json();msg=er?.error||msg;}catch{msg="Gagal restore backup";}
           throw new Error(msg);
         }
         toast$("Restore backup berhasil ✓");
@@ -1304,10 +1334,15 @@ export default function App(){
                           <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Min</div><div style={{fontSize:22,fontWeight:900,lineHeight:1,color:T.text}}>{it.minStock}</div></div>
                           <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Satuan</div><div style={{fontSize:11,fontWeight:700,color:T.muted,marginTop:5,wordBreak:"break-word"}}>{it.unit}</div></div>
                         </div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                           <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Harga Avg</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.averageCost)}</div></div>
+                                  <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Last Price</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.lastPrice)}</div></div>
                           <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Total Value</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.totalValue)}</div></div>
                         </div>
+                                <div style={{display:"flex",gap:8,marginTop:2}}>
+                                  {isAdmin&&<BtnP onClick={()=>openQuickIn(it)} style={{flex:1,padding:"9px 12px",fontSize:12,borderRadius:10}}>+ Masuk</BtnP>}
+                                  <BtnG onClick={()=>openQuickOut(it)} style={{flex:1,padding:"9px 12px",fontSize:12,borderRadius:10}}>- Keluar</BtnG>
+                                </div>
                         <Prog pct={pct} color={s.dot}/>
                       </div>
                     );
@@ -1322,6 +1357,7 @@ export default function App(){
                 {/* Sub-tab toggle */}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:22}}>
                   <div style={{display:"flex",gap:6,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
+                    <button onClick={()=>setHistoryTab("all")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="all"?T.primary:"transparent",color:historyTab==="all"?"white":T.muted,boxShadow:historyTab==="all"?`0 4px 12px ${T.primaryGlow}`:"none"}}>🧾 Semua ({allHistory.length})</button>
                     <button onClick={()=>setHistoryTab("out")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="out"?T.primary:"transparent",color:historyTab==="out"?"white":T.muted,boxShadow:historyTab==="out"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📤 Pengambilan ({trx.length})</button>
                     <button onClick={()=>setHistoryTab("in")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="in"?T.primary:"transparent",color:historyTab==="in"?"white":T.muted,boxShadow:historyTab==="in"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📥 Penerimaan ({receives.length})</button>
                     {isAdmin&&<button onClick={()=>setHistoryTab("audit")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="audit"?T.primary:"transparent",color:historyTab==="audit"?"white":T.muted,boxShadow:historyTab==="audit"?`0 4px 12px ${T.primaryGlow}`:"none"}}>🛡 Audit ({auditTotal})</button>}
@@ -1347,6 +1383,74 @@ export default function App(){
                       {[6,10,15,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
                     </select>
                     <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setHistoryQuery("");setHistoryFrom("");setHistoryTo("");}}>✕ Reset</BtnG>
+                  </div>
+                )}
+
+                {/* ─ TAB SEMUA ─ */}
+                {historyTab==="all"&&(
+                  <div>
+                    <p style={{fontSize:12.5,color:T.muted,fontWeight:500,marginBottom:16}}>Riwayat transaksi gabungan masuk dan keluar dengan tipe pergerakan barang.</p>
+                    {filteredAll.length===0
+                      ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🧾</div>Belum ada riwayat transaksi</div>
+                      :pagedAll.map(row=>{
+                        const isIn=String(row.type||"").toLowerCase()==="in";
+                        const badgeBg=isIn?T.greenBg:T.navActive;
+                        const badgeColor=isIn?T.greenText:T.navActiveText;
+                        const badgeBorder=isIn?T.greenBorder:T.navActiveBorder;
+                        const totalCost=isIn
+                          ?Number(row.totalCostIn ?? ((Number(row.qty)||0)*(Number(row.buyPrice)||0)))
+                          :Number(row.totalCostOut ?? 0);
+                        return(
+                          <div key={`${row.type||"legacy"}-${row.id}`} className="trx-card">
+                            <div className="trx-head">
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:7}}>
+                                  <Badge bg={badgeBg} color={badgeColor} border={badgeBorder}>{isIn?"MASUK":"KELUAR"}</Badge>
+                                  <span style={{fontSize:13.5,fontWeight:700,color:T.text}}>{isIn?(row.itemName||row.items?.[0]?.itemName||"-"):(row.taker||"-")}</span>
+                                  {isIn
+                                    ?<span style={{fontSize:11.5,color:T.muted}}>Admin: {row.admin||"-"}</span>
+                                    :<span style={{fontSize:11.5,color:T.muted}}>{row.dept||"-"}</span>
+                                  }
+                                </div>
+                                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                                  <Badge bg={T.surface} color={T.muted} border={T.border}>📅 {fmtDate(row.date)}</Badge>
+                                  <Badge bg={T.surface} color={T.muted} border={T.border}>⏰ {row.time||"-"}</Badge>
+                                  {row.admin&&<Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>👤 {row.admin}</Badge>}
+                                  {row.poNumber&&<Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>PO: {row.poNumber}</Badge>}
+                                  {row.doNumber&&<Badge bg={T.surface} color={T.muted} border={T.border}>DO: {row.doNumber}</Badge>}
+                                  <Badge bg={T.surface} color={T.muted} border={T.border}>Total: {fmtMoney(totalCost)}</Badge>
+                                </div>
+                              </div>
+                              {isIn
+                                ?isAdmin&&<button onClick={()=>deleteReceive(row.receiveId ?? row.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>
+                                :isAdmin&&<button onClick={()=>deleteTransaction(row.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>
+                              }
+                            </div>
+                            <div className="trx-body">
+                              {(row.items||[]).map((it,ii)=>(
+                                <div key={ii} className="itm-pill" title={isIn?`Buy ${fmtMoney(it.buyPrice ?? row.buyPrice)} · Avg ${fmtMoney(it.averageCostAfter ?? row.averageCostAfter ?? 0)}`:`Avg ${fmtMoney(it.averageCost ?? 0)} · Cost ${fmtMoney(it.totalCost ?? 0)}`}>
+                                  <span style={{fontSize:12,fontWeight:700,color:T.sub}}>{it.itemName}</span>
+                                  <span style={{fontSize:10.5,fontWeight:800,color:badgeColor,background:badgeBg,padding:"1px 7px",borderRadius:5,border:`1px solid ${badgeBorder}`}}>{isIn?"+":"×"}{it.qty} {it.unit}</span>
+                                  {isIn
+                                    ?<span style={{fontSize:10.5,color:T.muted,fontWeight:700}}>· Buy {fmtMoney(it.buyPrice ?? row.buyPrice)}</span>
+                                    :<span style={{fontSize:10.5,color:T.muted,fontWeight:700}}>· {fmtMoney(it.totalCost ?? 0)}</span>
+                                  }
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {filteredAll.length>0&&(
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredAll.length)} dari {filteredAll.length}</span>
+                        <div style={{display:"flex",gap:8}}>
+                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1} style={{padding:"7px 12px",opacity:historyOutPage<=1?0.55:1}}>← Prev</BtnG>
+                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyOutPage}/{allTotalPages}</Badge>
+                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.min(allTotalPages,p+1))} disabled={historyOutPage>=allTotalPages} style={{padding:"7px 12px",opacity:historyOutPage>=allTotalPages?0.55:1}}>Next →</BtnG>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1707,6 +1811,22 @@ export default function App(){
                   <input className="ifield" type="number" min="1" placeholder="0"
                     value={addForm.qty} onChange={e=>setAddForm({...addForm,qty:e.target.value})}/>
                 </div>
+                <div><FL>Harga Beli / Unit *</FL>
+                  <input className="ifield" type="number" min="0" placeholder="0"
+                    value={addForm.buyPrice} onChange={e=>setAddForm({...addForm,buyPrice:e.target.value})}/>
+                </div>
+                {addForm.itemId&&(()=>{const it=items.find(i=>i.id===+addForm.itemId);return it?(
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <div style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:10,padding:"10px 13px"}}>
+                      <div style={{fontSize:10,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Harga Avg Saat Ini</div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.navActiveText}}>{fmtMoney(it.averageCost)}</div>
+                    </div>
+                    <div style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:10,padding:"10px 13px"}}>
+                      <div style={{fontSize:10,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Last Price</div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.navActiveText}}>{fmtMoney(it.lastPrice)}</div>
+                    </div>
+                  </div>
+                ):null;})()}
               </div>
             </div>
             <div style={{display:"flex",gap:10}}>
