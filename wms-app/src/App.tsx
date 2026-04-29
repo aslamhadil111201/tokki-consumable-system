@@ -43,6 +43,9 @@ const TABS = [
   {id:"stock",label:"Stok Barang",icon:"◉"},
   {id:"history",label:"Riwayat",icon:"◎"},
 ];
+const ITEM_CATEGORIES = ["APD","Abrasif","Cutting Tool","Material","Kebersihan"];
+const MAX_STOCK_VALUE = 1000000;
+const MAX_TEXT_LEN = 120;
 
 const todayStr=()=>new Date().toISOString().split("T")[0];
 const nowTime=()=>new Date().toTimeString().slice(0,5);
@@ -50,6 +53,20 @@ const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-di
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
 const emptyForm=()=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[]});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",photo:null});
+const toSafeRows = (rows) => Array.isArray(rows) ? rows : (rows ? [rows] : []);
+const csvEscape = (v) => {
+  const s = String(v ?? "").replace(/"/g, '""');
+  return /[",\n]/.test(s) ? `"${s}"` : s;
+};
+const triggerDownload = (filename, content, mime) => {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 const stockStatus=it=>{
   if(it.stock===0) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis"};
@@ -177,6 +194,8 @@ export default function App(){
   const [historyTab,setHistoryTab]=useState("out");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const notifRef=useRef(null);
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
+  const visibleTabs = isAdmin ? TABS : TABS.filter(t=>t.id!=="history");
 
   T=getT(dark);
 
@@ -220,6 +239,9 @@ export default function App(){
   };
 
   useEffect(()=>{if(loggedIn)fetchAll();},[loggedIn]);
+  useEffect(()=>{
+    if(!visibleTabs.some(t=>t.id===tab)) setTab("dashboard");
+  },[tab,visibleTabs]);
 
   const lowStock=items.filter(i=>i.stock<=i.minStock);
   const todayTrx=trx.filter(t=>t.date===todayStr());
@@ -284,6 +306,7 @@ export default function App(){
     }catch{toast$("Gagal menyimpan transaksi","err");}
   };
   const submitAdd=async()=>{
+    if(!isAdmin){toast$("Hanya admin yang boleh menambah stok","err");return;}
     if(!addForm.itemId||!addForm.qty||+addForm.qty<1||!addForm.admin){toast$("Lengkapi semua field wajib","err");return;}
     try{
       const r=await apiFetch("/receives",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -294,17 +317,30 @@ export default function App(){
     }catch{toast$("Gagal menyimpan penerimaan","err");}
   };
   const submitNewItem=async()=>{
-    if(!newItemForm.name||!newItemForm.category||!newItemForm.unit){toast$("Nama, kategori, dan satuan wajib diisi","err");return;}
+    if(!isAdmin){toast$("Hanya admin yang boleh menambah item","err");return;}
+    const name = String(newItemForm.name || "").trim();
+    const itemCode = String(newItemForm.itemCode || "").trim();
+    const unit = String(newItemForm.unit || "").trim();
+    const stock = Number(newItemForm.stock);
+    const minStock = Number(newItemForm.minStock);
+
+    if(!name||!newItemForm.category||!unit){toast$("Nama, kategori, dan satuan wajib diisi","err");return;}
+    if(!ITEM_CATEGORIES.includes(newItemForm.category)){toast$("Kategori tidak valid","err");return;}
+    if(name.length<3||name.length>MAX_TEXT_LEN){toast$("Nama barang harus 3-120 karakter","err");return;}
+    if(itemCode.length>40){toast$("Item kode maksimal 40 karakter","err");return;}
+    if(unit.length<1||unit.length>20){toast$("Satuan harus 1-20 karakter","err");return;}
     if(newItemForm.stock===""||newItemForm.minStock===""){toast$("Stok awal dan min stok wajib diisi","err");return;}
-    if(+newItemForm.stock<0||+newItemForm.minStock<0){toast$("Nilai stok tidak boleh negatif","err");return;}
+    if(!Number.isInteger(stock)||!Number.isInteger(minStock)){toast$("Stok harus bilangan bulat","err");return;}
+    if(stock<0||minStock<0){toast$("Nilai stok tidak boleh negatif","err");return;}
+    if(stock>MAX_STOCK_VALUE||minStock>MAX_STOCK_VALUE){toast$(`Stok maksimal ${MAX_STOCK_VALUE.toLocaleString("id-ID")}`,"err");return;}
     try{
       const payload={
-        name:newItemForm.name,
-        itemCode:newItemForm.itemCode,
+        name,
+        itemCode,
         category:newItemForm.category,
-        unit:newItemForm.unit,
-        stock:+newItemForm.stock,
-        minStock:+newItemForm.minStock,
+        unit,
+        stock,
+        minStock,
         photo:newItemForm.photo||null,
       };
       const r=await apiFetch("/items",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
@@ -322,6 +358,7 @@ export default function App(){
     }catch(e){toast$(e?.message||"Gagal menambah item baru","err");}
   };
   const submitEdit=async()=>{
+    if(!isAdmin){toast$("Hanya admin yang boleh mengubah item","err");return;}
     if(!editItem?.name||!editItem?.category){toast$("Nama dan kategori wajib diisi","err");return;}
     try{
       const r=await apiFetch(`/items/${editItem.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
@@ -335,6 +372,102 @@ export default function App(){
       setShowEdit(false);setEditItem(null);
       toast$("Item berhasil diperbarui ✓");fetchAll();
     }catch(e){toast$(e?.message||"Gagal memperbarui item","err");}
+  };
+
+  const deleteTransaction=async(id)=>{
+    if(!isAdmin){toast$("Hanya admin yang boleh menghapus transaksi","err");return;}
+    if(!window.confirm("Hapus transaksi ini?")) return;
+    try{
+      const r=await apiFetch(`/transactions/${id}`,{method:"DELETE"});
+      if(!r.ok) throw new Error("Gagal menghapus transaksi");
+      toast$("Transaksi dihapus");
+      fetchAll();
+    }catch(e){toast$(e?.message||"Gagal menghapus transaksi","err");}
+  };
+
+  const deleteReceive=async(id)=>{
+    if(!isAdmin){toast$("Hanya admin yang boleh menghapus riwayat penerimaan","err");return;}
+    if(!window.confirm("Hapus riwayat penerimaan ini?")) return;
+    try{
+      const r=await apiFetch(`/receives/${id}`,{method:"DELETE"});
+      if(!r.ok) throw new Error("Gagal menghapus riwayat");
+      toast$("Riwayat penerimaan dihapus");
+      fetchAll();
+    }catch(e){toast$(e?.message||"Gagal menghapus riwayat","err");}
+  };
+
+  const resetDummyData=async()=>{
+    if(!isAdmin){toast$("Hanya admin yang boleh reset data dummy","err");return;}
+    if(!window.confirm("Reset data dummy sekarang? Data transaksi, penerimaan, stok, dan master akan dikembalikan ke seed awal.")) return;
+    try{
+      const r=await apiFetch("/admin/reset-dummy",{method:"POST"});
+      if(!r.ok){
+        let msg="Gagal reset data dummy";
+        try{const e=await r.json();msg=e?.error||msg;}catch{}
+        throw new Error(msg);
+      }
+      toast$("Reset data dummy berhasil ✓");
+      fetchAll();
+    }catch(e){toast$(e?.message||"Gagal reset data dummy","err");}
+  };
+
+  const exportTransactionsExcel=()=>{
+    const rows=[
+      ["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Unit","Keterangan"],
+      ...toSafeRows(trx).flatMap(t=>toSafeRows(t.items).map(it=>[
+        t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,it.qty,it.unit,t.note||"",
+      ])),
+    ];
+    const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+    triggerDownload(`riwayat-pengambilan-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
+    toast$("Export Excel (CSV) pengambilan berhasil");
+  };
+
+  const exportReceivesExcel=()=>{
+    const rows=[
+      ["ID","Tanggal","Waktu","Item","Qty","Unit","PO","DO","Admin"],
+      ...toSafeRows(receives).map(r=>[
+        r.id,r.date,r.time,r.itemName,r.qty,r.unit,r.poNumber||"",r.doNumber||"",r.admin||"",
+      ]),
+    ];
+    const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+    triggerDownload(`riwayat-penerimaan-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
+    toast$("Export Excel (CSV) penerimaan berhasil");
+  };
+
+  const openPrintTable=({title,headers,rows})=>{
+    const w=window.open("","_blank","width=1000,height=800");
+    if(!w){toast$("Popup diblokir browser","err");return;}
+    const th=headers.map(h=>`<th>${h}</th>`).join("");
+    const tr=rows.map(r=>`<tr>${r.map(c=>`<td>${String(c??"").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</td>`).join("")}</tr>`).join("");
+    w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{margin:0 0 12px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}th{background:#efefef}</style></head><body><h2>${title}</h2><table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
+  const exportTransactionsPdf=()=>{
+    const rows=toSafeRows(trx).flatMap(t=>toSafeRows(t.items).map(it=>[
+      t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,`${it.qty} ${it.unit}`,t.note||"",
+    ]));
+    openPrintTable({
+      title:`Riwayat Pengambilan - ${todayFmt()}`,
+      headers:["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Ket"],
+      rows,
+    });
+    toast$("Export PDF pengambilan siap cetak");
+  };
+
+  const exportReceivesPdf=()=>{
+    const rows=toSafeRows(receives).map(r=>[
+      r.id,r.date,r.time,r.itemName,`${r.qty} ${r.unit}`,r.poNumber||"",r.doNumber||"",r.admin||"",
+    ]);
+    openPrintTable({
+      title:`Riwayat Penerimaan - ${todayFmt()}`,
+      headers:["ID","Tanggal","Waktu","Item","Qty","PO","DO","Admin"],
+      rows,
+    });
+    toast$("Export PDF penerimaan siap cetak");
   };
 
   // ── CSS STRING ────────────────────────────────────────────────
@@ -618,7 +751,7 @@ export default function App(){
               </div>
             </button>
             <div className="nav-label">Menu Utama</div>
-            {TABS.map(t=>(
+            {visibleTabs.map(t=>(
               <button key={t.id} className={`nav-item${tab===t.id?" active":""}`} onClick={()=>{setTab(t.id);setSidebar(false);}}>
                 <span className="nav-icon">{t.icon}</span><span className="nav-text">{t.label}</span>
                 {t.id==="transaction"&&todayTrx.length>0&&<span className="nav-pill">{todayTrx.length}</span>}
@@ -631,7 +764,7 @@ export default function App(){
                 </div>
                 <div className="sb-user-meta" style={{minWidth:0}}>
                   <div style={{fontSize:12.5,fontWeight:700,color:T.text}}>{user?.username||"Admin"}</div>
-                  <div style={{fontSize:10,color:T.green,fontWeight:700}}>● Online</div>
+                  <div style={{fontSize:10,color:T.green,fontWeight:700}}>● Online · {(user?.role||"operator").toLowerCase()}</div>
                 </div>
               </div>
               <button className="sb-logout-btn" onClick={logout} title="Keluar" style={{marginTop:8,width:"100%",padding:"9px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:10,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,color:T.muted,cursor:"pointer",transition:"all .2s"}}
@@ -655,6 +788,11 @@ export default function App(){
               <h1 className="page-title">{TABS.find(t=>t.id===tab)?.label||"Dashboard"}</h1>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
+              {isAdmin&&tab!=="login"&&(
+                <button className="tb-btn" onClick={resetDummyData} style={{fontWeight:700}}>
+                  ♻ Reset Dummy
+                </button>
+              )}
               <Toggle/>
               {/* NOTIF */}
               <div className="notif-wrap" ref={notifRef}>
@@ -777,7 +915,11 @@ export default function App(){
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:14,marginBottom:20,flexWrap:"wrap"}}>
                   <p style={{fontSize:12.5,color:T.muted,fontWeight:500}}>Catat pengambilan barang oleh karyawan. Satu transaksi bisa beberapa barang.</p>
-                  <BtnP onClick={()=>setShowModal(true)}>+ Catat Pengambilan</BtnP>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {isAdmin&&<BtnG onClick={exportTransactionsExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
+                    {isAdmin&&<BtnG onClick={exportTransactionsPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
+                    <BtnP onClick={()=>setShowModal(true)}>+ Catat Pengambilan</BtnP>
+                  </div>
                 </div>
                 <div className="fbar">
                   <span style={{fontSize:11.5,color:T.muted,fontWeight:700,flexShrink:0}}>Filter tanggal:</span>
@@ -803,6 +945,9 @@ export default function App(){
                           <div style={{fontSize:26,fontWeight:900,color:T.primaryLight,lineHeight:1}}>{t.items.length}</div>
                           <div style={{fontSize:10,color:T.muted,fontWeight:600}}>jenis</div>
                           <div style={{fontSize:11.5,fontWeight:700,color:T.green,marginTop:3}}>{t.items.reduce((a,i)=>a+i.qty,0)} unit</div>
+                          {isAdmin&&(
+                            <button onClick={()=>deleteTransaction(t.id)} style={{marginTop:8,background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>
+                          )}
                         </div>
                       </div>
                       <div className="trx-body">
@@ -824,8 +969,8 @@ export default function App(){
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
                   <p style={{fontSize:12.5,color:T.muted,fontWeight:500}}>Kelola inventaris barang consumable gudang.</p>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800}}>➕ Add New Item</BtnG>
-                    <BtnP onClick={()=>setShowAdd(true)}>📥 Receive New</BtnP>
+                    {isAdmin&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800}}>➕ Add New Item</BtnG>}
+                    {isAdmin&&<BtnP onClick={()=>setShowAdd(true)}>📥 Receive New</BtnP>}
                   </div>
                 </div>
                 <div className="fbar">
@@ -856,12 +1001,14 @@ export default function App(){
                           </div>
                           <div style={{display:"flex",flexDirection:"column",gap:5,alignItems:"flex-end",flexShrink:0}}>
                             <Badge bg={s.bg} color={s.text} border={s.border}><span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block"}}/> {s.label}</Badge>
-                            <button onClick={e=>{e.stopPropagation();setEditItem({...it});setShowEdit(true);}}
-                              style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10,fontWeight:700,color:T.navActiveText,transition:"all .15s"}}
-                              onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="white";e.currentTarget.style.borderColor=T.primary;}}
-                              onMouseLeave={e=>{e.currentTarget.style.background=T.navActive;e.currentTarget.style.color=T.navActiveText;e.currentTarget.style.borderColor=T.navActiveBorder;}}>
-                              ✏️ Edit
-                            </button>
+                            {isAdmin&&(
+                              <button onClick={e=>{e.stopPropagation();setEditItem({...it});setShowEdit(true);}}
+                                style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10,fontWeight:700,color:T.navActiveText,transition:"all .15s"}}
+                                onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="white";e.currentTarget.style.borderColor=T.primary;}}
+                                onMouseLeave={e=>{e.currentTarget.style.background=T.navActive;e.currentTarget.style.color=T.navActiveText;e.currentTarget.style.borderColor=T.navActiveBorder;}}>
+                                ✏️ Edit
+                              </button>
+                            )}
                           </div>
                         </div>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
@@ -881,9 +1028,17 @@ export default function App(){
             {tab==="history"&&(
               <div>
                 {/* Sub-tab toggle */}
-                <div style={{display:"flex",gap:6,marginBottom:22,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
-                  <button onClick={()=>setHistoryTab("out")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="out"?T.primary:"transparent",color:historyTab==="out"?"white":T.muted,boxShadow:historyTab==="out"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📤 Pengambilan ({trx.length})</button>
-                  <button onClick={()=>setHistoryTab("in")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="in"?T.primary:"transparent",color:historyTab==="in"?"white":T.muted,boxShadow:historyTab==="in"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📥 Penerimaan ({receives.length})</button>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:22}}>
+                  <div style={{display:"flex",gap:6,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
+                    <button onClick={()=>setHistoryTab("out")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="out"?T.primary:"transparent",color:historyTab==="out"?"white":T.muted,boxShadow:historyTab==="out"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📤 Pengambilan ({trx.length})</button>
+                    <button onClick={()=>setHistoryTab("in")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="in"?T.primary:"transparent",color:historyTab==="in"?"white":T.muted,boxShadow:historyTab==="in"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📥 Penerimaan ({receives.length})</button>
+                  </div>
+                  {isAdmin&&(
+                    <div style={{display:"flex",gap:8}}>
+                      <BtnG onClick={historyTab==="out"?exportTransactionsExcel:exportReceivesExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>
+                      <BtnG onClick={historyTab==="out"?exportTransactionsPdf:exportReceivesPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>
+                    </div>
+                  )}
                 </div>
 
                 {/* ─ TAB PENGAMBILAN ─ */}
@@ -934,7 +1089,10 @@ export default function App(){
                             </div>
                             <div style={{fontSize:11,color:T.muted,marginTop:3}}>{fmtDate(t.date)} · {t.time} · Admin: {t.admin}{t.workOrder&&` · ${t.workOrder}`}</div>
                           </div>
-                          <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>{t.items.length} item · {t.items.reduce((a,i)=>a+i.qty,0)} unit</Badge>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>{t.items.length} item · {t.items.reduce((a,i)=>a+i.qty,0)} unit</Badge>
+                            {isAdmin&&<button onClick={()=>deleteTransaction(t.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
+                          </div>
                         </div>
                         <div className="trx-body">
                           {t.items.map((it,ii)=>(
@@ -984,6 +1142,7 @@ export default function App(){
                                 <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>👤 {r.admin}</Badge>
                               </div>
                             </div>
+                            {isAdmin&&<button onClick={()=>deleteReceive(r.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
                           </div>
                         </div>
                       ))
@@ -1097,7 +1256,7 @@ export default function App(){
                 <div><FL>Item Kode</FL><input className="ifield" placeholder="Contoh: AS21205" value={newItemForm.itemCode} onChange={e=>setNewItemForm(p=>({...p,itemCode:e.target.value}))}/></div>
                 <div><FL>Kategori *</FL>
                   <select className="ifield" value={newItemForm.category} onChange={e=>setNewItemForm(p=>({...p,category:e.target.value}))}>
-                    {["APD","Abrasif","Cutting Tool","Material","Kebersihan"].map(c=><option key={c} value={c}>{c}</option>)}
+                    {ITEM_CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div><FL>Satuan *</FL><input className="ifield" placeholder="pcs / box / set" value={newItemForm.unit} onChange={e=>setNewItemForm(p=>({...p,unit:e.target.value}))}/></div>
@@ -1198,7 +1357,7 @@ export default function App(){
                 <div><FL>Nama Barang *</FL><input className="ifield" value={editItem.name} onChange={e=>setEditItem(p=>({...p,name:e.target.value}))} placeholder="Nama barang..."/></div>
                 <div><FL>Kategori *</FL>
                   <select className="ifield" value={editItem.category} onChange={e=>setEditItem(p=>({...p,category:e.target.value}))}>
-                    {["APD","Abrasif","Cutting Tool","Material","Kebersihan"].map(c=><option key={c} value={c}>{c}</option>)}
+                    {ITEM_CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
@@ -1219,7 +1378,7 @@ export default function App(){
       {/* BOTTOM NAV — mobile only */}
       <nav className="bottom-nav">
         <div className="bn-inner">
-          {TABS.map(t=>(
+          {visibleTabs.map(t=>(
             <button key={t.id} className={`bn-item${tab===t.id?" active":""}`} onClick={()=>{setTab(t.id);setSidebar(false);}}>
               {t.id==="transaction"&&todayTrx.length>0&&<span className="bn-pill">{todayTrx.length}</span>}
               <span className="bn-item-icon">{t.icon}</span>

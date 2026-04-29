@@ -76,6 +76,54 @@ function loadSeedDb() {
   }
 }
 
+function buildSeedDocuments(seed) {
+  const users = (seed.users || []).map((u) => ({
+    id: Number(u.id),
+    username: String(u.username || "").trim(),
+    passwordHash: bcrypt.hashSync(String(u.password || "admin123"), 10),
+    role: (u.role || "operator").toLowerCase() === "admin" ? "admin" : "operator",
+    name: u.name || u.username || "User",
+  })).filter((u) => u.username);
+
+  if (!users.some((u) => u.role === "admin")) {
+    users.push({
+      id: users.reduce((m, u) => Math.max(m, Number(u.id || 0)), 0) + 1,
+      username: "admin",
+      passwordHash: bcrypt.hashSync("admin123", 10),
+      role: "admin",
+      name: "Administrator",
+    });
+  }
+
+  if (!users.some((u) => u.role === "operator")) {
+    users.push({
+      id: users.reduce((m, u) => Math.max(m, Number(u.id || 0)), 0) + 1,
+      username: "operator",
+      passwordHash: bcrypt.hashSync("operator123", 10),
+      role: "operator",
+      name: "Operator",
+    });
+  }
+
+  const cleanedItems = (seed.items || []).map((it) => ({
+    ...it,
+    photo: typeof it.photo === "string" && it.photo.startsWith("data:image/") ? null : it.photo || null,
+  }));
+
+  return {
+    users,
+    collections: [
+      ["admins", seed.admins || []],
+      ["departments", seed.departments || []],
+      ["employees", seed.employees || []],
+      ["workOrders", seed.workOrders || []],
+      ["items", cleanedItems],
+      ["transactions", seed.transactions || []],
+      ["receives", seed.receives || []],
+    ],
+  };
+}
+
 async function getDb() {
   if (!globalForMongo.__tokkiMongoClientPromise) {
     throw new Error("MONGO_URI belum diset di environment");
@@ -94,28 +142,7 @@ async function seedDatabaseIfNeeded(db) {
   }
 
   const seed = loadSeedDb();
-  const users = (seed.users || []).map((u) => ({
-    id: Number(u.id),
-    username: u.username,
-    passwordHash: bcrypt.hashSync(String(u.password || "admin123"), 10),
-    role: u.role || "admin",
-    name: u.name || u.username || "Admin",
-  }));
-
-  const cleanedItems = (seed.items || []).map((it) => ({
-    ...it,
-    photo: typeof it.photo === "string" && it.photo.startsWith("data:image/") ? null : it.photo || null,
-  }));
-
-  const collections = [
-    ["admins", seed.admins || []],
-    ["departments", seed.departments || []],
-    ["employees", seed.employees || []],
-    ["workOrders", seed.workOrders || []],
-    ["items", cleanedItems],
-    ["transactions", seed.transactions || []],
-    ["receives", seed.receives || []],
-  ];
+  const { users, collections } = buildSeedDocuments(seed);
 
   if (users.length) await db.collection("users").insertMany(users);
   for (const [name, docs] of collections) {
@@ -149,6 +176,16 @@ function verifyAuth(req) {
   }
 }
 
+function isAdminUser(payload) {
+  return String(payload?.role || "").toLowerCase() === "admin";
+}
+
+function ensureAdmin(payload, res) {
+  if (isAdminUser(payload)) return true;
+  sendJson(res, 403, { error: "Forbidden: admin only" });
+  return false;
+}
+
 function maybeConfigureCloudinary() {
   if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     return false;
@@ -180,6 +217,47 @@ async function normalizePhoto(photoValue) {
     resource_type: "image",
   });
   return uploaded.secure_url;
+}
+
+function validateNewItemPayload(body) {
+  const name = String(body?.name || "").trim();
+  const itemCode = String(body?.itemCode || "").trim();
+  const category = String(body?.category || "").trim();
+  const unit = String(body?.unit || "").trim();
+  const stock = Number(body?.stock);
+  const minStock = Number(body?.minStock);
+  const categories = ["APD", "Abrasif", "Cutting Tool", "Material", "Kebersihan"];
+
+  if (!name || name.length < 3 || name.length > 120) {
+    return { ok: false, error: "Nama barang harus 3-120 karakter" };
+  }
+  if (itemCode.length > 40) {
+    return { ok: false, error: "Item kode maksimal 40 karakter" };
+  }
+  if (!categories.includes(category)) {
+    return { ok: false, error: "Kategori tidak valid" };
+  }
+  if (!unit || unit.length > 20) {
+    return { ok: false, error: "Satuan harus 1-20 karakter" };
+  }
+  if (!Number.isInteger(stock) || !Number.isInteger(minStock)) {
+    return { ok: false, error: "Stok harus bilangan bulat" };
+  }
+  if (stock < 0 || minStock < 0 || stock > 1000000 || minStock > 1000000) {
+    return { ok: false, error: "Nilai stok harus 0-1000000" };
+  }
+
+  return {
+    ok: true,
+    value: {
+      name,
+      itemCode,
+      category,
+      unit,
+      stock,
+      minStock,
+    },
+  };
 }
 
 export default async function handler(req, res) {
@@ -237,6 +315,26 @@ export default async function handler(req, res) {
     const auth = verifyAuth(req);
     if (!auth.ok) return sendJson(res, 401, { error: auth.error });
 
+    if (parts[0] === "admin" && parts[1] === "reset-dummy" && method === "POST") {
+      if (!ensureAdmin(auth.payload, res)) return;
+
+      const seed = loadSeedDb();
+      const { users, collections } = buildSeedDocuments(seed);
+      const collectionNames = ["users", "admins", "departments", "employees", "workOrders", "items", "transactions", "receives"];
+
+      for (const name of collectionNames) {
+        await db.collection(name).deleteMany({});
+      }
+
+      if (users.length) await db.collection("users").insertMany(users);
+      for (const [name, docs] of collections) {
+        if (docs.length) await db.collection(name).insertMany(docs);
+      }
+
+      seedDone = true;
+      return sendJson(res, 200, { ok: true });
+    }
+
     if (parts[0] in MASTER_MAP) {
       const key = MASTER_MAP[parts[0]];
       const col = db.collection(key);
@@ -247,12 +345,14 @@ export default async function handler(req, res) {
       }
 
       if (method === "POST" && parts.length === 1) {
+        if (!ensureAdmin(auth.payload, res)) return;
         const item = { id: await getNextId(db, key), ...body };
         await col.insertOne(item);
         return sendJson(res, 201, item);
       }
 
       if (method === "DELETE" && parts.length === 2) {
+        if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         await col.deleteOne({ id });
         return sendJson(res, 200, { ok: true });
@@ -268,10 +368,13 @@ export default async function handler(req, res) {
       }
 
       if (method === "POST" && parts.length === 1) {
+        if (!ensureAdmin(auth.payload, res)) return;
+        const valid = validateNewItemPayload(body);
+        if (!valid.ok) return sendJson(res, 400, { error: valid.error });
         const photo = await normalizePhoto(body.photo);
         const item = {
           id: await getNextId(db, "items"),
-          ...body,
+          ...valid.value,
           photo,
         };
         await itemsCol.insertOne(item);
@@ -279,6 +382,7 @@ export default async function handler(req, res) {
       }
 
       if (method === "PUT" && parts.length === 2) {
+        if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         const prev = await itemsCol.findOne({ id });
         if (!prev) return sendJson(res, 404, { error: "Item tidak ditemukan" });
@@ -294,6 +398,7 @@ export default async function handler(req, res) {
       }
 
       if (method === "DELETE" && parts.length === 2) {
+        if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         await itemsCol.deleteOne({ id });
         return sendJson(res, 200, { ok: true });
@@ -324,6 +429,7 @@ export default async function handler(req, res) {
       }
 
       if (method === "DELETE" && parts.length === 2) {
+        if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         await transactionsCol.deleteOne({ id });
         return sendJson(res, 200, { ok: true });
@@ -340,6 +446,7 @@ export default async function handler(req, res) {
       }
 
       if (method === "POST" && parts.length === 1) {
+        if (!ensureAdmin(auth.payload, res)) return;
         const { itemId, qty, poNumber, doNumber, date, admin } = body;
         const item = await itemsCol.findOne({ id: Number(itemId) });
         if (!item) return sendJson(res, 404, { error: "Item tidak ditemukan" });
@@ -364,6 +471,7 @@ export default async function handler(req, res) {
       }
 
       if (method === "DELETE" && parts.length === 2) {
+        if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         const rec = await receivesCol.findOne({ id });
         if (rec) {
