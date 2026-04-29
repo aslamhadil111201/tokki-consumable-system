@@ -10,6 +10,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "change-this-secret-in-vercel";
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
+const AUDIT_RETENTION_DAYS = Math.max(1, Number(process.env.AUDIT_RETENTION_DAYS || 90));
+const AUDIT_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 const MASTER_MAP = {
   admins: "admins",
@@ -36,6 +38,7 @@ if (!globalForMongo.__tokkiMongoClientPromise) {
 }
 
 let seedDone = false;
+let lastAuditCleanupAt = 0;
 
 function sendJson(res, status, payload) {
   res.status(status).json(payload);
@@ -188,6 +191,7 @@ function ensureAdmin(payload, res) {
 
 async function writeAuditLog(db, { actor, action, target, meta }) {
   try {
+    await maybeCleanupAuditLogs(db);
     const entry = {
       id: await getNextId(db, "auditLogs"),
       action: String(action || "unknown"),
@@ -204,6 +208,15 @@ async function writeAuditLog(db, { actor, action, target, meta }) {
   } catch {
     // Ignore audit write failures so main flow remains available.
   }
+}
+
+async function maybeCleanupAuditLogs(db) {
+  const now = Date.now();
+  if (now - lastAuditCleanupAt < AUDIT_CLEANUP_INTERVAL_MS) return;
+  lastAuditCleanupAt = now;
+
+  const cutoffIso = new Date(now - AUDIT_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  await db.collection("auditLogs").deleteMany({ createdAt: { $lt: cutoffIso } });
 }
 
 function maybeConfigureCloudinary() {
@@ -348,10 +361,17 @@ export default async function handler(req, res) {
       const pageSize = Math.min(50, Math.max(5, Number(requestUrl.searchParams.get("pageSize") || 10)));
       const actor = String(requestUrl.searchParams.get("actor") || "").trim();
       const action = String(requestUrl.searchParams.get("action") || "").trim();
+      const from = String(requestUrl.searchParams.get("from") || "").trim();
+      const to = String(requestUrl.searchParams.get("to") || "").trim();
 
       const q = {};
       if (actor) q["actor.username"] = actor;
       if (action) q.action = action;
+      if (from || to) {
+        q.createdAt = {};
+        if (from) q.createdAt.$gte = new Date(`${from}T00:00:00`).toISOString();
+        if (to) q.createdAt.$lte = new Date(`${to}T23:59:59.999`).toISOString();
+      }
 
       const col = db.collection("auditLogs");
       const total = await col.countDocuments(q);

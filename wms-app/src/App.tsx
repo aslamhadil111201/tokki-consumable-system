@@ -204,6 +204,8 @@ export default function App(){
   const [auditPageSize,setAuditPageSize]=useState(8);
   const [auditActor,setAuditActor]=useState("");
   const [auditAction,setAuditAction]=useState("");
+  const [auditFrom,setAuditFrom]=useState("");
+  const [auditTo,setAuditTo]=useState("");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const notifRef=useRef(null);
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
@@ -281,7 +283,7 @@ export default function App(){
   useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize]);
   useEffect(()=>{if(historyOutPage>outTotalPages)setHistoryOutPage(outTotalPages);},[historyOutPage,outTotalPages]);
   useEffect(()=>{if(historyInPage>inTotalPages)setHistoryInPage(inTotalPages);},[historyInPage,inTotalPages]);
-  useEffect(()=>{setAuditPage(1);},[auditActor,auditAction,auditPageSize]);
+  useEffect(()=>{setAuditPage(1);},[auditActor,auditAction,auditFrom,auditTo,auditPageSize]);
 
   useEffect(()=>{
     if(!loggedIn||!isAdmin||tab!=="history"||historyTab!=="audit") return;
@@ -291,6 +293,8 @@ export default function App(){
         const sp=new URLSearchParams({page:String(auditPage),pageSize:String(auditPageSize)});
         if(auditActor.trim()) sp.set("actor",auditActor.trim());
         if(auditAction) sp.set("action",auditAction);
+        if(auditFrom) sp.set("from",auditFrom);
+        if(auditTo) sp.set("to",auditTo);
         const r=await apiFetch(`/audit-logs?${sp.toString()}`);
         if(!r.ok) throw new Error("Gagal memuat audit log");
         const data=await r.json();
@@ -300,7 +304,7 @@ export default function App(){
       }catch(e){if(!canceled) toast$(e?.message||"Gagal memuat audit log","err");}
     })();
     return()=>{canceled=true;};
-  },[loggedIn,isAdmin,tab,historyTab,auditPage,auditPageSize,auditActor,auditAction]);
+  },[loggedIn,isAdmin,tab,historyTab,auditPage,auditPageSize,auditActor,auditAction,auditFrom,auditTo]);
 
   useEffect(()=>{
     const h=e=>{if(notifRef.current&&!notifRef.current.contains(e.target))setNotif(false);};
@@ -549,6 +553,71 @@ export default function App(){
       rows,
     });
     toast$("Export PDF penerimaan siap cetak");
+  };
+
+  const auditPeriodLabel = () => {
+    if(auditFrom&&auditTo) return `${fmtDate(auditFrom)} - ${fmtDate(auditTo)}`;
+    if(auditFrom) return `>= ${fmtDate(auditFrom)}`;
+    if(auditTo) return `<= ${fmtDate(auditTo)}`;
+    return "Semua Periode";
+  };
+
+  const fetchAuditExportRows=async()=>{
+    const sp=new URLSearchParams({page:"1",pageSize:"5000"});
+    if(auditActor.trim()) sp.set("actor",auditActor.trim());
+    if(auditAction) sp.set("action",auditAction);
+    if(auditFrom) sp.set("from",auditFrom);
+    if(auditTo) sp.set("to",auditTo);
+    const r=await apiFetch(`/audit-logs?${sp.toString()}`);
+    if(!r.ok) throw new Error("Gagal mengambil data audit untuk export");
+    const d=await r.json();
+    return toSafeRows(d.rows);
+  };
+
+  const exportAuditExcel=async()=>{
+    try{
+      const rowsData=await fetchAuditExportRows();
+      const rows=[
+        ["TOKKI Consumable System"],
+        ["Laporan Audit Log"],
+        ["Periode",auditPeriodLabel()],
+        ["Dibuat",`${todayFmt()} ${nowTime()}`],
+        ["Total Data",rowsData.length],
+        [],
+        ["ID","Timestamp","Action","Actor","Role","Target"],
+        ...rowsData.map(a=>[
+          a.id,
+          a.createdAt ? new Date(a.createdAt).toLocaleString("id-ID") : "",
+          a.action || "",
+          a.actor?.username || "",
+          a.actor?.role || "",
+          a.target || "",
+        ]),
+      ];
+      const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+      triggerDownload(`audit-log-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
+      toast$("Export Excel (CSV) audit berhasil");
+    }catch(e){toast$(e?.message||"Gagal export audit","err");}
+  };
+
+  const exportAuditPdf=async()=>{
+    try{
+      const rowsData=await fetchAuditExportRows();
+      openPrintTable({
+        title:`Audit Log - ${todayFmt()}`,
+        subtitle:`Periode: ${auditPeriodLabel()} | Total data: ${rowsData.length}`,
+        headers:["ID","Timestamp","Action","Actor","Role","Target"],
+        rows: rowsData.map(a=>[
+          a.id,
+          a.createdAt ? new Date(a.createdAt).toLocaleString("id-ID") : "",
+          a.action || "",
+          a.actor?.username || "",
+          a.actor?.role || "",
+          a.target || "",
+        ]),
+      });
+      toast$("Export PDF audit siap cetak");
+    }catch(e){toast$(e?.message||"Gagal export audit","err");}
   };
 
   // ── CSS STRING ────────────────────────────────────────────────
@@ -1119,6 +1188,8 @@ export default function App(){
                     <div style={{display:"flex",gap:8}}>
                       {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsExcel:exportReceivesExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
                       {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsPdf:exportReceivesPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
+                      {historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
+                      {historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
                     </div>
                   )}
                 </div>
@@ -1279,10 +1350,14 @@ export default function App(){
                           "master.create","master.delete",
                         ].map(a=><option key={a} value={a}>{a}</option>)}
                       </select>
+                      <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Dari</span>
+                      <input type="date" className="ifield" style={{width:160}} value={auditFrom} onChange={e=>setAuditFrom(e.target.value)}/>
+                      <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Sampai</span>
+                      <input type="date" className="ifield" style={{width:160}} value={auditTo} onChange={e=>setAuditTo(e.target.value)}/>
                       <select className="ifield" style={{width:120}} value={auditPageSize} onChange={e=>setAuditPageSize(Number(e.target.value)||8)}>
                         {[8,12,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
                       </select>
-                      <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setAuditActor("");setAuditAction("");}}>✕ Reset</BtnG>
+                      <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setAuditActor("");setAuditAction("");setAuditFrom("");setAuditTo("");}}>✕ Reset</BtnG>
                     </div>
                     {auditRows.length===0
                       ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🛡</div>Belum ada audit log</div>
