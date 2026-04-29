@@ -1,12 +1,7 @@
 // @ts-nocheck
 import { useState, useRef, useEffect } from "react";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
-const API = (
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "http://localhost:3001/api" : "/api")
-).replace(/\/$/, "");
+const API = import.meta.env.VITE_API_URL ?? "https://tokki-consumable-system.vercel.app/api";
 
 // ─── DESIGN TOKENS (FIXED) ────────────────────────────────────────
 const getT = (dark) => dark ? {
@@ -45,9 +40,6 @@ const TABS = [
   {id:"stock",label:"Stok Barang",icon:"◉"},
   {id:"history",label:"Riwayat",icon:"◎"},
 ];
-const ITEM_CATEGORIES = ["APD","Abrasif","Cutting Tool","Material","Kebersihan"];
-const MAX_STOCK_VALUE = 1000000;
-const MAX_TEXT_LEN = 120;
 
 const todayStr=()=>new Date().toISOString().split("T")[0];
 const nowTime=()=>new Date().toTimeString().slice(0,5);
@@ -55,20 +47,6 @@ const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-di
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
 const emptyForm=()=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[]});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",photo:null});
-const toSafeRows = (rows) => Array.isArray(rows) ? rows : (rows ? [rows] : []);
-const csvEscape = (v) => {
-  const s = String(v ?? "").replace(/"/g, '""');
-  return /[",\n]/.test(s) ? `"${s}"` : s;
-};
-const triggerDownload = (filename, content, mime) => {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-};
 
 const stockStatus=it=>{
   if(it.stock===0) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis"};
@@ -167,7 +145,8 @@ export default function App(){
   const [departments,setDepartments]=useState([]);
   const [employees,setEmployees]=useState([]);
   const [workOrders,setWorkOrders]=useState([]);
-  const [loading,setLoading]=useState(false);
+  const [loadingCount,setLoadingCount]=useState(0);
+  const [loadingText,setLoadingText]=useState("Sedang memproses data");
   const [catF,setCatF]=useState("Semua");
   const [searchQ,setSearchQ]=useState("");
   const [trxDate,setTrxDate]=useState("");
@@ -180,84 +159,49 @@ export default function App(){
   const [newItemForm,setNewItemForm]=useState(emptyNewItem());
   const [addForm,setAddForm]=useState({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});
   const [sidebar,setSidebar]=useState(false);
-  const [loggedIn,setLoggedIn]=useState(()=>Boolean(localStorage.getItem("wms_token")));
-  const [authToken,setAuthToken]=useState(()=>localStorage.getItem("wms_token")||"");
+  const [loggedIn,setLoggedIn]=useState(false);
   const [loginForm,setLoginForm]=useState({username:"",password:""});
   const [showLoginPassword,setShowLoginPassword]=useState(false);
   const [pickerItem,setPickerItem]=useState("");
   const [pickerQty,setPickerQty]=useState("");
-  const [user,setUser]=useState(()=>{
-    try{return JSON.parse(localStorage.getItem("wms_user")||"null");}
-    catch{return null;}
-  });
+  const [user,setUser]=useState(null);
   const [showEdit,setShowEdit]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [receives,setReceives]=useState([]);
   const [historyTab,setHistoryTab]=useState("out");
-  const [historyQuery,setHistoryQuery]=useState("");
-  const [historyFrom,setHistoryFrom]=useState("");
-  const [historyTo,setHistoryTo]=useState("");
-  const [historyOutPage,setHistoryOutPage]=useState(1);
-  const [historyInPage,setHistoryInPage]=useState(1);
-  const [historyPageSize,setHistoryPageSize]=useState(6);
-  const [auditRows,setAuditRows]=useState([]);
-  const [auditTotal,setAuditTotal]=useState(0);
-  const [auditPage,setAuditPage]=useState(1);
-  const [auditPageSize,setAuditPageSize]=useState(8);
-  const [auditActor,setAuditActor]=useState("");
-  const [auditAction,setAuditAction]=useState("");
-  const [auditFrom,setAuditFrom]=useState("");
-  const [auditTo,setAuditTo]=useState("");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const notifRef=useRef(null);
-  const isAdmin = (user?.role || "").toLowerCase() === "admin";
-  const visibleTabs = isAdmin ? TABS : TABS.filter(t=>t.id!=="history");
+  const loading=loadingCount>0;
 
   T=getT(dark);
 
-  const apiFetch=async(path,options={})=>{
-    const headers={...(options.headers||{})};
-    if(authToken)headers.Authorization=`Bearer ${authToken}`;
-    const r=await fetch(`${API}${path}`,{...options,headers});
-    if(r.status===401){
-      setAuthToken("");
-      setLoggedIn(false);
-      setUser(null);
-      localStorage.removeItem("wms_token");
-      localStorage.removeItem("wms_user");
-      setTab("login");
-      throw new Error("Sesi login berakhir, silakan login lagi");
+  // ── FETCH SEMUA DATA ─────────────────────────────────────────────
+  const withLoading=async(task,message="Sedang memproses data")=>{
+    setLoadingText(message);
+    setLoadingCount(c=>c+1);
+    try{
+      return await task();
+    }finally{
+      setLoadingCount(c=>Math.max(0,c-1));
     }
-    return r;
   };
 
-  useEffect(()=>{
-    if(authToken)localStorage.setItem("wms_token",authToken);
-    else localStorage.removeItem("wms_token");
-  },[authToken]);
-
-  // ── FETCH SEMUA DATA ─────────────────────────────────────────────
-  const fetchAll=async()=>{
-    setLoading(true);
+  const fetchAll=async()=>withLoading(async()=>{
     try{
       const [it,tr,adm,dep,emp,wo,rcv]=await Promise.all([
-        apiFetch("/items").then(r=>r.json()),
-        apiFetch("/transactions").then(r=>r.json()),
-        apiFetch("/admins").then(r=>r.json()),
-        apiFetch("/departments").then(r=>r.json()),
-        apiFetch("/employees").then(r=>r.json()),
-        apiFetch("/work-orders").then(r=>r.json()),
-        apiFetch("/receives").then(r=>r.json()),
+        fetch(`${API}/items`).then(r=>r.json()),
+        fetch(`${API}/transactions`).then(r=>r.json()),
+        fetch(`${API}/admins`).then(r=>r.json()),
+        fetch(`${API}/departments`).then(r=>r.json()),
+        fetch(`${API}/employees`).then(r=>r.json()),
+        fetch(`${API}/work-orders`).then(r=>r.json()),
+        fetch(`${API}/receives`).then(r=>r.json()),
       ]);
       setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv);
-    }catch(e){toast$(e?.message||"Gagal terhubung ke server","err");}
-    setLoading(false);
-  };
+    }catch(e){toast$("Gagal terhubung ke server","err");}
+  },"Sedang memuat data");
 
   useEffect(()=>{if(loggedIn)fetchAll();},[loggedIn]);
-  useEffect(()=>{
-    if(!visibleTabs.some(t=>t.id===tab)) setTab("dashboard");
-  },[tab,visibleTabs]);
 
   const lowStock=items.filter(i=>i.stock<=i.minStock);
   const todayTrx=trx.filter(t=>t.date===todayStr());
@@ -266,77 +210,23 @@ export default function App(){
   const totalIn=receives.reduce((a,r)=>a+r.qty,0);
   const filtItems=items.filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()));
   const filtTrx=[...trx].reverse().filter(t=>!trxDate||t.date===trxDate);
-  const dateMatch=(d)=>{
-    if(!d) return true;
-    if(historyFrom&&d<historyFrom) return false;
-    if(historyTo&&d>historyTo) return false;
-    return true;
-  };
-  const q=historyQuery.trim().toLowerCase();
-  const filteredOut=[...trx].filter(t=>dateMatch(t.date)&&(q===""||[t.taker,t.dept,t.admin,t.workOrder,t.note,...(t.items||[]).map(i=>i.itemName)].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
-  const filteredIn=[...receives].filter(r=>dateMatch(r.date)&&(q===""||[r.itemName,r.poNumber,r.doNumber,r.admin].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
-  const outTotalPages=Math.max(1,Math.ceil(filteredOut.length/historyPageSize));
-  const inTotalPages=Math.max(1,Math.ceil(filteredIn.length/historyPageSize));
-  const pagedOut=filteredOut.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
-  const pagedIn=filteredIn.slice((historyInPage-1)*historyPageSize,historyInPage*historyPageSize);
-  const auditTotalPages=Math.max(1,Math.ceil(auditTotal/auditPageSize));
 
   useEffect(()=>{document.body.style.background=T.bg;document.body.style.transition="background .4s,color .3s";},[dark]);
-  useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize]);
-  useEffect(()=>{if(historyOutPage>outTotalPages)setHistoryOutPage(outTotalPages);},[historyOutPage,outTotalPages]);
-  useEffect(()=>{if(historyInPage>inTotalPages)setHistoryInPage(inTotalPages);},[historyInPage,inTotalPages]);
-  useEffect(()=>{setAuditPage(1);},[auditActor,auditAction,auditFrom,auditTo,auditPageSize]);
-
-  useEffect(()=>{
-    if(!loggedIn||!isAdmin||tab!=="history"||historyTab!=="audit") return;
-    let canceled=false;
-    (async()=>{
-      try{
-        const sp=new URLSearchParams({page:String(auditPage),pageSize:String(auditPageSize)});
-        if(auditActor.trim()) sp.set("actor",auditActor.trim());
-        if(auditAction) sp.set("action",auditAction);
-        if(auditFrom) sp.set("from",auditFrom);
-        if(auditTo) sp.set("to",auditTo);
-        const r=await apiFetch(`/audit-logs?${sp.toString()}`);
-        if(!r.ok) throw new Error("Gagal memuat audit log");
-        const data=await r.json();
-        if(canceled) return;
-        setAuditRows(Array.isArray(data.rows)?data.rows:[]);
-        setAuditTotal(Number(data.total||0));
-      }catch(e){if(!canceled) toast$(e?.message||"Gagal memuat audit log","err");}
-    })();
-    return()=>{canceled=true;};
-  },[loggedIn,isAdmin,tab,historyTab,auditPage,auditPageSize,auditActor,auditAction,auditFrom,auditTo]);
-
   useEffect(()=>{
     const h=e=>{if(notifRef.current&&!notifRef.current.contains(e.target))setNotif(false);};
     document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);
   },[]);
 
   const toast$=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3200);};
-  const login=async()=>{
+  const login=async()=>withLoading(async()=>{
     try{
       const r=await fetch(`${API}/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(loginForm)});
       if(!r.ok){const e=await r.json();toast$(e.error||"Login gagal","err");return;}
-      const {token,user:u}=await r.json();
-      setAuthToken(token||"");
-      setLoggedIn(true);
-      setUser(u);
-      localStorage.setItem("wms_user",JSON.stringify(u));
-      setTab("dashboard");
-      toast$("Selamat datang ✓");
+      const {user:u}=await r.json();
+      setLoggedIn(true);setUser(u);setTab("dashboard");toast$("Selamat datang ✓");
     }catch{toast$("Server tidak bisa dihubungi","err");}
-  };
-  const logout=()=>{
-    setLoggedIn(false);
-    setUser(null);
-    setAuthToken("");
-    localStorage.removeItem("wms_user");
-    localStorage.removeItem("wms_token");
-    setTab("login");
-    setItems([]);
-    setTrx([]);
-  };
+  },"Sedang login");
+  const logout=()=>{setLoggedIn(false);setUser(null);setTab("login");setItems([]);setTrx([]);};
   const addToCart=()=>{
     if(!pickerItem||!pickerQty||+pickerQty<1){toast$("Pilih barang dan isi jumlah","err");return;}
     const it=items.find(i=>i.id===+pickerItem);if(!it){toast$("Barang tidak ditemukan","err");return;}
@@ -353,287 +243,73 @@ export default function App(){
     if(!form.cart.length){toast$("Keranjang masih kosong","err");return;}
     const payload={taker:form.taker,dept:form.dept,workOrder:form.workOrder,note:form.note,date:form.date,time:nowTime(),admin:form.admin,
       items:form.cart.map(c=>{const it=items.find(i=>i.id===c.itemId);return{itemId:c.itemId,itemName:it.name,qty:c.qty,unit:it.unit};})};
-    try{
-      const r=await apiFetch("/transactions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      if(!r.ok)throw new Error();
-      toast$(`Transaksi ${form.taker} tercatat`);
-      setForm(emptyForm());setPickerItem("");setPickerQty("");setShowModal(false);
-      fetchAll();
-    }catch{toast$("Gagal menyimpan transaksi","err");}
+    await withLoading(async()=>{
+      try{
+        const r=await fetch(`${API}/transactions`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+        if(!r.ok)throw new Error();
+        toast$(`Transaksi ${form.taker} tercatat`);
+        setForm(emptyForm());setPickerItem("");setPickerQty("");setShowModal(false);
+        await fetchAll();
+      }catch{toast$("Gagal menyimpan transaksi","err");}
+    },"Sedang menyimpan transaksi");
   };
   const submitAdd=async()=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh menambah stok","err");return;}
     if(!addForm.itemId||!addForm.qty||+addForm.qty<1||!addForm.admin){toast$("Lengkapi semua field wajib","err");return;}
-    try{
-      const r=await apiFetch("/receives",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
-      if(!r.ok)throw new Error();
-      setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});setShowAdd(false);
-      toast$("Stok berhasil ditambahkan ✓");fetchAll();
-    }catch{toast$("Gagal menyimpan penerimaan","err");}
+    await withLoading(async()=>{
+      try{
+        const r=await fetch(`${API}/receives`,{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
+        if(!r.ok)throw new Error();
+        setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});setShowAdd(false);
+        toast$("Stok berhasil ditambahkan ✓");
+        await fetchAll();
+      }catch{toast$("Gagal menyimpan penerimaan","err");}
+    },"Sedang menyimpan penerimaan");
   };
   const submitNewItem=async()=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh menambah item","err");return;}
-    const name = String(newItemForm.name || "").trim();
-    const itemCode = String(newItemForm.itemCode || "").trim();
-    const unit = String(newItemForm.unit || "").trim();
-    const stock = Number(newItemForm.stock);
-    const minStock = Number(newItemForm.minStock);
-
-    if(!name||!newItemForm.category||!unit){toast$("Nama, kategori, dan satuan wajib diisi","err");return;}
-    if(!ITEM_CATEGORIES.includes(newItemForm.category)){toast$("Kategori tidak valid","err");return;}
-    if(name.length<3||name.length>MAX_TEXT_LEN){toast$("Nama barang harus 3-120 karakter","err");return;}
-    if(itemCode.length>40){toast$("Item kode maksimal 40 karakter","err");return;}
-    if(unit.length<1||unit.length>20){toast$("Satuan harus 1-20 karakter","err");return;}
+    if(!newItemForm.name||!newItemForm.category||!newItemForm.unit){toast$("Nama, kategori, dan satuan wajib diisi","err");return;}
     if(newItemForm.stock===""||newItemForm.minStock===""){toast$("Stok awal dan min stok wajib diisi","err");return;}
-    if(!Number.isInteger(stock)||!Number.isInteger(minStock)){toast$("Stok harus bilangan bulat","err");return;}
-    if(stock<0||minStock<0){toast$("Nilai stok tidak boleh negatif","err");return;}
-    if(stock>MAX_STOCK_VALUE||minStock>MAX_STOCK_VALUE){toast$(`Stok maksimal ${MAX_STOCK_VALUE.toLocaleString("id-ID")}`,"err");return;}
-    try{
-      const payload={
-        name,
-        itemCode,
-        category:newItemForm.category,
-        unit,
-        stock,
-        minStock,
-        photo:newItemForm.photo||null,
-      };
-      const r=await apiFetch("/items",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      if(!r.ok){
-        if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
-        let msg="";
-        try{const e=await r.json();msg=e?.error||"";}catch{}
-        if(msg) throw new Error(msg);
-        throw new Error("Gagal menambah item baru");
-      }
-      setShowNewItem(false);
-      setNewItemForm(emptyNewItem());
-      toast$("Item baru berhasil ditambahkan ✓");
-      fetchAll();
-    }catch(e){toast$(e?.message||"Gagal menambah item baru","err");}
+    if(+newItemForm.stock<0||+newItemForm.minStock<0){toast$("Nilai stok tidak boleh negatif","err");return;}
+    await withLoading(async()=>{
+      try{
+        const payload={
+          name:newItemForm.name,
+          itemCode:newItemForm.itemCode,
+          category:newItemForm.category,
+          unit:newItemForm.unit,
+          stock:+newItemForm.stock,
+          minStock:+newItemForm.minStock,
+          photo:newItemForm.photo||null,
+        };
+        const r=await fetch(`${API}/items`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+        if(!r.ok){
+          if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
+          throw new Error("Gagal menambah item baru");
+        }
+        setShowNewItem(false);
+        setNewItemForm(emptyNewItem());
+        toast$("Item baru berhasil ditambahkan ✓");
+        await fetchAll();
+      }catch(e){toast$(e?.message||"Gagal menambah item baru","err");}
+    },"Sedang menambahkan item baru");
   };
   const submitEdit=async()=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh mengubah item","err");return;}
     if(!editItem?.name||!editItem?.category){toast$("Nama dan kategori wajib diisi","err");return;}
-    try{
-      const r=await apiFetch(`/items/${editItem.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({name:editItem.name,category:editItem.category,photo:editItem.photo||null})});
-      if(!r.ok){
-        if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
-        let msg="";
-        try{const e=await r.json();msg=e?.error||"";}catch{}
-        throw new Error(msg||"Gagal memperbarui item");
-      }
-      setShowEdit(false);setEditItem(null);
-      toast$("Item berhasil diperbarui ✓");fetchAll();
-    }catch(e){toast$(e?.message||"Gagal memperbarui item","err");}
-  };
-
-  const deleteTransaction=async(id)=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh menghapus transaksi","err");return;}
-    if(!window.confirm("Hapus transaksi ini?")) return;
-    try{
-      const r=await apiFetch(`/transactions/${id}`,{method:"DELETE"});
-      if(!r.ok) throw new Error("Gagal menghapus transaksi");
-      toast$("Transaksi dihapus");
-      fetchAll();
-    }catch(e){toast$(e?.message||"Gagal menghapus transaksi","err");}
-  };
-
-  const deleteReceive=async(id)=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh menghapus riwayat penerimaan","err");return;}
-    if(!window.confirm("Hapus riwayat penerimaan ini?")) return;
-    try{
-      const r=await apiFetch(`/receives/${id}`,{method:"DELETE"});
-      if(!r.ok) throw new Error("Gagal menghapus riwayat");
-      toast$("Riwayat penerimaan dihapus");
-      fetchAll();
-    }catch(e){toast$(e?.message||"Gagal menghapus riwayat","err");}
-  };
-
-  const resetDummyData=async()=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh reset data dummy","err");return;}
-    if(!window.confirm("Reset data dummy sekarang? Data transaksi, penerimaan, stok, dan master akan dikembalikan ke seed awal.")) return;
-    try{
-      const r=await apiFetch("/admin/reset-dummy",{method:"POST"});
-      if(!r.ok){
-        let msg="Gagal reset data dummy";
-        try{const e=await r.json();msg=e?.error||msg;}catch{}
-        throw new Error(msg);
-      }
-      toast$("Reset data dummy berhasil ✓");
-      fetchAll();
-    }catch(e){toast$(e?.message||"Gagal reset data dummy","err");}
-  };
-
-  const reportPeriodLabel = () => {
-    if(historyFrom&&historyTo) return `${fmtDate(historyFrom)} - ${fmtDate(historyTo)}`;
-    if(historyFrom) return `>= ${fmtDate(historyFrom)}`;
-    if(historyTo) return `<= ${fmtDate(historyTo)}`;
-    return "Semua Periode";
-  };
-
-  const exportTransactionsExcel=()=>{
-    const source=filteredOut;
-    const unitTotal=source.reduce((acc,t)=>acc+toSafeRows(t.items).reduce((x,it)=>x+Number(it.qty||0),0),0);
-    const rows=[
-      ["TOKKI Consumable System"],
-      ["Laporan Riwayat Pengambilan"],
-      [`Periode`,reportPeriodLabel()],
-      [`Dibuat`,`${todayFmt()} ${nowTime()}`],
-      [`Total Data`,source.length],
-      [`Total Unit`,unitTotal],
-      [],
-      ["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Unit","Keterangan"],
-      ...toSafeRows(source).flatMap(t=>toSafeRows(t.items).map(it=>[
-        t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,it.qty,it.unit,t.note||"",
-      ])),
-    ];
-    const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
-    triggerDownload(`riwayat-pengambilan-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
-    toast$("Export Excel (CSV) pengambilan berhasil");
-  };
-
-  const exportReceivesExcel=()=>{
-    const source=filteredIn;
-    const unitTotal=source.reduce((a,r)=>a+Number(r.qty||0),0);
-    const rows=[
-      ["TOKKI Consumable System"],
-      ["Laporan Riwayat Penerimaan"],
-      [`Periode`,reportPeriodLabel()],
-      [`Dibuat`,`${todayFmt()} ${nowTime()}`],
-      [`Total Data`,source.length],
-      [`Total Unit`,unitTotal],
-      [],
-      ["ID","Tanggal","Waktu","Item","Qty","Unit","PO","DO","Admin"],
-      ...toSafeRows(source).map(r=>[
-        r.id,r.date,r.time,r.itemName,r.qty,r.unit,r.poNumber||"",r.doNumber||"",r.admin||"",
-      ]),
-    ];
-    const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
-    triggerDownload(`riwayat-penerimaan-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
-    toast$("Export Excel (CSV) penerimaan berhasil");
-  };
-
-  const downloadPdfTable=({fileName,title,subtitle,headers,rows})=>{
-    const doc=new jsPDF({orientation:"landscape",unit:"pt",format:"a4"});
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(14);
-    doc.text(String(title||"Laporan"),40,32);
-    if(subtitle){
-      doc.setFont("helvetica","normal");
-      doc.setFontSize(10);
-      doc.text(String(subtitle),40,50);
-    }
-    autoTable(doc,{
-      startY:subtitle?62:46,
-      head:[headers.map(h=>String(h??""))],
-      body:rows.map(r=>toSafeRows(r).map(c=>String(c??""))),
-      styles:{font:"helvetica",fontSize:8,cellPadding:4,overflow:"linebreak"},
-      headStyles:{fillColor:[16,185,129],textColor:[255,255,255],fontStyle:"bold"},
-      margin:{left:40,right:40,top:40,bottom:30},
-      theme:"grid",
-    });
-    doc.save(fileName||`laporan-${todayStr()}.pdf`);
-  };
-
-  const exportTransactionsPdf=()=>{
-    const source=filteredOut;
-    const unitTotal=source.reduce((acc,t)=>acc+toSafeRows(t.items).reduce((x,it)=>x+Number(it.qty||0),0),0);
-    const rows=toSafeRows(source).flatMap(t=>toSafeRows(t.items).map(it=>[
-      t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,`${it.qty} ${it.unit}`,t.note||"",
-    ]));
-    downloadPdfTable({
-      fileName:`riwayat-pengambilan-${todayStr()}.pdf`,
-      title:`Riwayat Pengambilan - ${todayFmt()}`,
-      subtitle:`Periode: ${reportPeriodLabel()} | Total data: ${source.length} | Total unit: ${unitTotal}`,
-      headers:["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Ket"],
-      rows,
-    });
-    toast$("Export PDF pengambilan berhasil");
-  };
-
-  const exportReceivesPdf=()=>{
-    const source=filteredIn;
-    const unitTotal=source.reduce((a,r)=>a+Number(r.qty||0),0);
-    const rows=toSafeRows(source).map(r=>[
-      r.id,r.date,r.time,r.itemName,`${r.qty} ${r.unit}`,r.poNumber||"",r.doNumber||"",r.admin||"",
-    ]);
-    downloadPdfTable({
-      fileName:`riwayat-penerimaan-${todayStr()}.pdf`,
-      title:`Riwayat Penerimaan - ${todayFmt()}`,
-      subtitle:`Periode: ${reportPeriodLabel()} | Total data: ${source.length} | Total unit: ${unitTotal}`,
-      headers:["ID","Tanggal","Waktu","Item","Qty","PO","DO","Admin"],
-      rows,
-    });
-    toast$("Export PDF penerimaan berhasil");
-  };
-
-  const auditPeriodLabel = () => {
-    if(auditFrom&&auditTo) return `${fmtDate(auditFrom)} - ${fmtDate(auditTo)}`;
-    if(auditFrom) return `>= ${fmtDate(auditFrom)}`;
-    if(auditTo) return `<= ${fmtDate(auditTo)}`;
-    return "Semua Periode";
-  };
-
-  const fetchAuditExportRows=async()=>{
-    const sp=new URLSearchParams({page:"1",pageSize:"5000"});
-    if(auditActor.trim()) sp.set("actor",auditActor.trim());
-    if(auditAction) sp.set("action",auditAction);
-    if(auditFrom) sp.set("from",auditFrom);
-    if(auditTo) sp.set("to",auditTo);
-    const r=await apiFetch(`/audit-logs?${sp.toString()}`);
-    if(!r.ok) throw new Error("Gagal mengambil data audit untuk export");
-    const d=await r.json();
-    return toSafeRows(d.rows);
-  };
-
-  const exportAuditExcel=async()=>{
-    try{
-      const rowsData=await fetchAuditExportRows();
-      const rows=[
-        ["TOKKI Consumable System"],
-        ["Laporan Audit Log"],
-        ["Periode",auditPeriodLabel()],
-        ["Dibuat",`${todayFmt()} ${nowTime()}`],
-        ["Total Data",rowsData.length],
-        [],
-        ["ID","Timestamp","Action","Actor","Role","Target"],
-        ...rowsData.map(a=>[
-          a.id,
-          a.createdAt ? new Date(a.createdAt).toLocaleString("id-ID") : "",
-          a.action || "",
-          a.actor?.username || "",
-          a.actor?.role || "",
-          a.target || "",
-        ]),
-      ];
-      const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
-      triggerDownload(`audit-log-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
-      toast$("Export Excel (CSV) audit berhasil");
-    }catch(e){toast$(e?.message||"Gagal export audit","err");}
-  };
-
-  const exportAuditPdf=async()=>{
-    try{
-      const rowsData=await fetchAuditExportRows();
-      downloadPdfTable({
-        fileName:`audit-log-${todayStr()}.pdf`,
-        title:`Audit Log - ${todayFmt()}`,
-        subtitle:`Periode: ${auditPeriodLabel()} | Total data: ${rowsData.length}`,
-        headers:["ID","Timestamp","Action","Actor","Role","Target"],
-        rows: rowsData.map(a=>[
-          a.id,
-          a.createdAt ? new Date(a.createdAt).toLocaleString("id-ID") : "",
-          a.action || "",
-          a.actor?.username || "",
-          a.actor?.role || "",
-          a.target || "",
-        ]),
-      });
-      toast$("Export PDF audit berhasil");
-    }catch(e){toast$(e?.message||"Gagal export audit","err");}
+    await withLoading(async()=>{
+      try{
+        const r=await fetch(`${API}/items/${editItem.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({name:editItem.name,category:editItem.category,photo:editItem.photo||null})});
+        if(!r.ok){
+          if(r.status===413) throw new Error("Foto terlalu besar untuk diproses server");
+          let msg="";
+          try{const e=await r.json();msg=e?.error||"";}catch{}
+          throw new Error(msg||"Gagal memperbarui item");
+        }
+        setShowEdit(false);setEditItem(null);
+        toast$("Item berhasil diperbarui ✓");
+        await fetchAll();
+      }catch(e){toast$(e?.message||"Gagal memperbarui item","err");}
+    },"Sedang memperbarui item");
   };
 
   // ── CSS STRING ────────────────────────────────────────────────
@@ -681,10 +357,8 @@ export default function App(){
     .page-title{font-size:22px;font-weight:900;color:${T.text}}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
     .tb-btn:hover{border-color:${T.borderHover};color:${T.text}}
-    .tb-logout{display:none !important}
+    .tb-logout{display:none}
     .tb-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
-    .nav-item.mobile-logout{display:none;border-color:${T.redBorder};color:${T.redText};background:${T.redBg}}
-    .nav-item.mobile-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
 
     /* TOGGLE — smooth cubic */
     .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:30px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s}
@@ -754,10 +428,17 @@ export default function App(){
     .toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:13px 18px;border-radius:14px;font-size:12.5px;font-weight:700;box-shadow:${T.shadowCard};animation:toastIn .22s ease;display:flex;align-items:center;gap:9px;backdrop-filter:blur(14px);border:1px solid;max-width:300px}
     @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
 
+    .busy-overlay{position:fixed;inset:0;z-index:1300;background:rgba(0,6,3,0.58);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
+    .busy-card{display:flex;flex-direction:column;align-items:center;gap:12px;background:${T.surfaceSolid};border:1px solid ${T.border};border-radius:16px;padding:18px 24px;box-shadow:${T.shadowCard};min-width:210px}
+    .busy-spin{width:34px;height:34px;border-radius:50%;border:3px solid ${T.border};border-top-color:${T.primary};animation:busySpin .85s linear infinite}
+    .busy-text{font-size:13px;font-weight:800;color:${T.text};letter-spacing:.02em}
+    .busy-sub{font-size:11px;color:${T.muted}}
+    @keyframes busySpin{to{transform:rotate(360deg)}}
+
     .backdrop-mob{display:none;position:fixed;inset:0;background:rgba(0,6,3,0.55);z-index:90}
 
     /* BOTTOM NAV — mobile only */
-    .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:180;background:${T.sidebarBg};border-top:1px solid ${T.border};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:0 4px env(safe-area-inset-bottom,0)}
+    .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:${T.sidebarBg};border-top:1px solid ${T.border};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:0 4px env(safe-area-inset-bottom,0)}
     .bn-inner{display:flex;align-items:stretch;height:58px}
     .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;cursor:pointer;color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;transition:color .2s;position:relative;padding:0}
     .bn-item.active{color:${T.primary}}
@@ -795,14 +476,12 @@ export default function App(){
       .body-area{padding:20px 16px 44px}
     }
     @media(max-width:660px){
-      .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);box-shadow:20px 0 50px rgba(0,0,0,.5);z-index:260}
+      .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);box-shadow:20px 0 50px rgba(0,0,0,.5);z-index:100}
       .sidebar.open{transform:translateX(0)}
-      .sb-inner{padding-bottom:88px}
       .backdrop-mob{display:block}
       .topbar{padding:0 12px;gap:8px}
       .page-title{font-size:16px}
-      .tb-reset-dummy{display:none}
-      .nav-item.mobile-logout{display:flex}
+      .tb-logout{display:inline-flex}
       .body-area{padding:14px 12px 40px}
       .stock-g{grid-template-columns:1fr 1fr}
       .two-col{grid-template-columns:1fr}
@@ -845,6 +524,16 @@ export default function App(){
       <div className="toggle-track"><div className="toggle-thumb"/></div>
     </div>
   );
+
+  const BusyOverlay=()=>loading?(
+    <div className="busy-overlay" role="status" aria-live="polite" aria-busy="true">
+      <div className="busy-card">
+        <div className="busy-spin"/>
+        <div className="busy-text">Mohon menunggu...</div>
+        <div className="busy-sub">{loadingText}</div>
+      </div>
+    </div>
+  ):null;
 
   // ── LOGIN ────────────────────────────────────────────────────────
   if(!loggedIn) return(
@@ -902,6 +591,7 @@ export default function App(){
       {toast&&<div className="toast" style={{background:toast.type==="err"?T.redBg:T.greenBg,border:`1px solid ${toast.type==="err"?T.redBorder:T.greenBorder}`,color:toast.type==="err"?T.redText:T.greenText}}>
         <span>{toast.type==="err"?"✕":"✓"}</span>{toast.msg}
       </div>}
+      <BusyOverlay/>
     </div>
   );
 
@@ -924,15 +614,12 @@ export default function App(){
               </div>
             </button>
             <div className="nav-label">Menu Utama</div>
-            {visibleTabs.map(t=>(
+            {TABS.map(t=>(
               <button key={t.id} className={`nav-item${tab===t.id?" active":""}`} onClick={()=>{setTab(t.id);setSidebar(false);}}>
                 <span className="nav-icon">{t.icon}</span><span className="nav-text">{t.label}</span>
                 {t.id==="transaction"&&todayTrx.length>0&&<span className="nav-pill">{todayTrx.length}</span>}
               </button>
             ))}
-            <button className="nav-item mobile-logout" onClick={logout}>
-              <span className="nav-icon">⎋</span><span className="nav-text">Keluar Akun</span>
-            </button>
             <div className="sb-footer">
               <div className="sb-user-row" style={{display:"flex",alignItems:"center",gap:9,padding:"8px 6px"}}>
                 <div style={{width:32,height:32,borderRadius:9,background:`linear-gradient(135deg,${T.primary},${T.primaryLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"white",flexShrink:0}}>
@@ -940,7 +627,7 @@ export default function App(){
                 </div>
                 <div className="sb-user-meta" style={{minWidth:0}}>
                   <div style={{fontSize:12.5,fontWeight:700,color:T.text}}>{user?.username||"Admin"}</div>
-                  <div style={{fontSize:10,color:T.green,fontWeight:700}}>● Online · {(user?.role||"operator").toLowerCase()}</div>
+                  <div style={{fontSize:10,color:T.green,fontWeight:700}}>● Online</div>
                 </div>
               </div>
               <button className="sb-logout-btn" onClick={logout} title="Keluar" style={{marginTop:8,width:"100%",padding:"9px",background:"transparent",border:`1px solid ${T.border}`,borderRadius:10,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,color:T.muted,cursor:"pointer",transition:"all .2s"}}
@@ -963,12 +650,7 @@ export default function App(){
               </button>
               <h1 className="page-title">{TABS.find(t=>t.id===tab)?.label||"Dashboard"}</h1>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-              {isAdmin&&tab!=="login"&&(
-                <button className="tb-btn tb-reset-dummy" onClick={resetDummyData} style={{fontWeight:700}}>
-                  ♻ Reset Dummy
-                </button>
-              )}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
               <Toggle/>
               {/* NOTIF */}
               <div className="notif-wrap" ref={notifRef}>
@@ -1092,11 +774,7 @@ export default function App(){
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:14,marginBottom:20,flexWrap:"wrap"}}>
                   <p style={{fontSize:12.5,color:T.muted,fontWeight:500}}>Catat pengambilan barang oleh karyawan. Satu transaksi bisa beberapa barang.</p>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {isAdmin&&<BtnG onClick={exportTransactionsExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
-                    {isAdmin&&<BtnG onClick={exportTransactionsPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
-                    <BtnP onClick={()=>setShowModal(true)}>+ Catat Pengambilan</BtnP>
-                  </div>
+                  <BtnP onClick={()=>setShowModal(true)}>+ Catat Pengambilan</BtnP>
                 </div>
                 <div className="fbar">
                   <span style={{fontSize:11.5,color:T.muted,fontWeight:700,flexShrink:0}}>Filter tanggal:</span>
@@ -1122,9 +800,6 @@ export default function App(){
                           <div style={{fontSize:26,fontWeight:900,color:T.primaryLight,lineHeight:1}}>{t.items.length}</div>
                           <div style={{fontSize:10,color:T.muted,fontWeight:600}}>jenis</div>
                           <div style={{fontSize:11.5,fontWeight:700,color:T.green,marginTop:3}}>{t.items.reduce((a,i)=>a+i.qty,0)} unit</div>
-                          {isAdmin&&(
-                            <button onClick={()=>deleteTransaction(t.id)} style={{marginTop:8,background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>
-                          )}
                         </div>
                       </div>
                       <div className="trx-body">
@@ -1146,8 +821,8 @@ export default function App(){
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
                   <p style={{fontSize:12.5,color:T.muted,fontWeight:500}}>Kelola inventaris barang consumable gudang.</p>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    {isAdmin&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800}}>➕ Add New Item</BtnG>}
-                    {isAdmin&&<BtnP onClick={()=>setShowAdd(true)}>📥 Receive New</BtnP>}
+                    <BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800}}>➕ Add New Item</BtnG>
+                    <BtnP onClick={()=>setShowAdd(true)}>📥 Receive New</BtnP>
                   </div>
                 </div>
                 <div className="fbar">
@@ -1178,14 +853,12 @@ export default function App(){
                           </div>
                           <div style={{display:"flex",flexDirection:"column",gap:5,alignItems:"flex-end",flexShrink:0}}>
                             <Badge bg={s.bg} color={s.text} border={s.border}><span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block"}}/> {s.label}</Badge>
-                            {isAdmin&&(
-                              <button onClick={e=>{e.stopPropagation();setEditItem({...it});setShowEdit(true);}}
-                                style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10,fontWeight:700,color:T.navActiveText,transition:"all .15s"}}
-                                onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="white";e.currentTarget.style.borderColor=T.primary;}}
-                                onMouseLeave={e=>{e.currentTarget.style.background=T.navActive;e.currentTarget.style.color=T.navActiveText;e.currentTarget.style.borderColor=T.navActiveBorder;}}>
-                                ✏️ Edit
-                              </button>
-                            )}
+                            <button onClick={e=>{e.stopPropagation();setEditItem({...it});setShowEdit(true);}}
+                              style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10,fontWeight:700,color:T.navActiveText,transition:"all .15s"}}
+                              onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="white";e.currentTarget.style.borderColor=T.primary;}}
+                              onMouseLeave={e=>{e.currentTarget.style.background=T.navActive;e.currentTarget.style.color=T.navActiveText;e.currentTarget.style.borderColor=T.navActiveBorder;}}>
+                              ✏️ Edit
+                            </button>
                           </div>
                         </div>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
@@ -1205,35 +878,10 @@ export default function App(){
             {tab==="history"&&(
               <div>
                 {/* Sub-tab toggle */}
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:22}}>
-                  <div style={{display:"flex",gap:6,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
-                    <button onClick={()=>setHistoryTab("out")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="out"?T.primary:"transparent",color:historyTab==="out"?"white":T.muted,boxShadow:historyTab==="out"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📤 Pengambilan ({trx.length})</button>
-                    <button onClick={()=>setHistoryTab("in")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="in"?T.primary:"transparent",color:historyTab==="in"?"white":T.muted,boxShadow:historyTab==="in"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📥 Penerimaan ({receives.length})</button>
-                    {isAdmin&&<button onClick={()=>setHistoryTab("audit")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="audit"?T.primary:"transparent",color:historyTab==="audit"?"white":T.muted,boxShadow:historyTab==="audit"?`0 4px 12px ${T.primaryGlow}`:"none"}}>🛡 Audit ({auditTotal})</button>}
-                  </div>
-                  {isAdmin&&(
-                    <div style={{display:"flex",gap:8}}>
-                      {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsExcel:exportReceivesExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
-                      {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsPdf:exportReceivesPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
-                      {historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
-                      {historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
-                    </div>
-                  )}
+                <div style={{display:"flex",gap:6,marginBottom:22,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
+                  <button onClick={()=>setHistoryTab("out")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="out"?T.primary:"transparent",color:historyTab==="out"?"white":T.muted,boxShadow:historyTab==="out"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📤 Pengambilan ({trx.length})</button>
+                  <button onClick={()=>setHistoryTab("in")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="in"?T.primary:"transparent",color:historyTab==="in"?"white":T.muted,boxShadow:historyTab==="in"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📥 Penerimaan ({receives.length})</button>
                 </div>
-
-                {historyTab!=="audit"&&(
-                  <div className="fbar">
-                    <input className="ifield" style={{width:220}} placeholder="🔍 Cari nama/item/admin/PO/DO..." value={historyQuery} onChange={e=>setHistoryQuery(e.target.value)}/>
-                    <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Dari</span>
-                    <input type="date" className="ifield" style={{width:160}} value={historyFrom} onChange={e=>setHistoryFrom(e.target.value)}/>
-                    <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Sampai</span>
-                    <input type="date" className="ifield" style={{width:160}} value={historyTo} onChange={e=>setHistoryTo(e.target.value)}/>
-                    <select className="ifield" style={{width:120}} value={historyPageSize} onChange={e=>setHistoryPageSize(Number(e.target.value)||6)}>
-                      {[6,10,15,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
-                    </select>
-                    <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setHistoryQuery("");setHistoryFrom("");setHistoryTo("");}}>✕ Reset</BtnG>
-                  </div>
-                )}
 
                 {/* ─ TAB PENGAMBILAN ─ */}
                 {historyTab==="out"&&(
@@ -1273,7 +921,7 @@ export default function App(){
                       })()}
                     </div>
                     <div style={{fontSize:17,fontWeight:800,...gText(),marginBottom:14}}>Log Lengkap</div>
-                    {pagedOut.map(t=>(
+                    {[...trx].sort((a,b)=>b.id-a.id).map(t=>(
                       <div key={t.id} className="trx-card">
                         <div className="trx-head">
                           <div style={{flex:1,minWidth:0}}>
@@ -1283,10 +931,7 @@ export default function App(){
                             </div>
                             <div style={{fontSize:11,color:T.muted,marginTop:3}}>{fmtDate(t.date)} · {t.time} · Admin: {t.admin}{t.workOrder&&` · ${t.workOrder}`}</div>
                           </div>
-                          <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>{t.items.length} item · {t.items.reduce((a,i)=>a+i.qty,0)} unit</Badge>
-                            {isAdmin&&<button onClick={()=>deleteTransaction(t.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
-                          </div>
+                          <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>{t.items.length} item · {t.items.reduce((a,i)=>a+i.qty,0)} unit</Badge>
                         </div>
                         <div className="trx-body">
                           {t.items.map((it,ii)=>(
@@ -1298,16 +943,6 @@ export default function App(){
                         </div>
                       </div>
                     ))}
-                    {filteredOut.length>0&&(
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredOut.length)} dari {filteredOut.length}</span>
-                        <div style={{display:"flex",gap:8}}>
-                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1} style={{padding:"7px 12px",opacity:historyOutPage<=1?0.55:1}}>← Prev</BtnG>
-                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyOutPage}/{outTotalPages}</Badge>
-                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.min(outTotalPages,p+1))} disabled={historyOutPage>=outTotalPages} style={{padding:"7px 12px",opacity:historyOutPage>=outTotalPages?0.55:1}}>Next →</BtnG>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -1328,9 +963,9 @@ export default function App(){
                         </div>
                       ))}
                     </div>
-                    {filteredIn.length===0
+                    {receives.length===0
                       ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>📭</div>Belum ada riwayat penerimaan</div>
-                      :pagedIn.map(r=>(
+                      :[...receives].sort((a,b)=>b.id-a.id).map(r=>(
                         <div key={r.id} className="trx-card">
                           <div className="trx-head">
                             <div style={{flex:1,minWidth:0}}>
@@ -1346,76 +981,10 @@ export default function App(){
                                 <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>👤 {r.admin}</Badge>
                               </div>
                             </div>
-                            {isAdmin&&<button onClick={()=>deleteReceive(r.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
                           </div>
                         </div>
                       ))
                     }
-                    {filteredIn.length>0&&(
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyInPage-1)*historyPageSize+1}-{Math.min(historyInPage*historyPageSize,filteredIn.length)} dari {filteredIn.length}</span>
-                        <div style={{display:"flex",gap:8}}>
-                          <BtnG onClick={()=>setHistoryInPage(p=>Math.max(1,p-1))} disabled={historyInPage<=1} style={{padding:"7px 12px",opacity:historyInPage<=1?0.55:1}}>← Prev</BtnG>
-                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyInPage}/{inTotalPages}</Badge>
-                          <BtnG onClick={()=>setHistoryInPage(p=>Math.min(inTotalPages,p+1))} disabled={historyInPage>=inTotalPages} style={{padding:"7px 12px",opacity:historyInPage>=inTotalPages?0.55:1}}>Next →</BtnG>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {historyTab==="audit"&&isAdmin&&(
-                  <div>
-                    <p style={{fontSize:12.5,color:T.muted,fontWeight:500,marginBottom:16}}>Audit log aktivitas sistem untuk admin/operator.</p>
-                    <div className="fbar">
-                      <input className="ifield" style={{width:180}} placeholder="Filter actor username" value={auditActor} onChange={e=>setAuditActor(e.target.value)}/>
-                      <select className="ifield" style={{width:180}} value={auditAction} onChange={e=>setAuditAction(e.target.value)}>
-                        <option value="">Semua action</option>
-                        {[
-                          "auth.login","admin.resetDummy","items.create","items.update","items.delete",
-                          "transactions.create","transactions.delete","receives.create","receives.delete",
-                          "master.create","master.delete",
-                        ].map(a=><option key={a} value={a}>{a}</option>)}
-                      </select>
-                      <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Dari</span>
-                      <input type="date" className="ifield" style={{width:160}} value={auditFrom} onChange={e=>setAuditFrom(e.target.value)}/>
-                      <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Sampai</span>
-                      <input type="date" className="ifield" style={{width:160}} value={auditTo} onChange={e=>setAuditTo(e.target.value)}/>
-                      <select className="ifield" style={{width:120}} value={auditPageSize} onChange={e=>setAuditPageSize(Number(e.target.value)||8)}>
-                        {[8,12,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
-                      </select>
-                      <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setAuditActor("");setAuditAction("");setAuditFrom("");setAuditTo("");}}>✕ Reset</BtnG>
-                    </div>
-                    {auditRows.length===0
-                      ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🛡</div>Belum ada audit log</div>
-                      :auditRows.map(a=>(
-                        <div key={a.id} className="trx-card">
-                          <div className="trx-head">
-                            <div style={{flex:1,minWidth:0}}>
-                              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:7}}>
-                                <span style={{fontSize:13.5,fontWeight:700,color:T.text}}>{a.action}</span>
-                                <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>Actor: {a.actor?.username||"-"}</Badge>
-                                <Badge bg={T.surface} color={T.muted} border={T.border}>Role: {a.actor?.role||"-"}</Badge>
-                              </div>
-                              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                                <Badge bg={T.surface} color={T.muted} border={T.border}>Target: {a.target||"-"}</Badge>
-                                <Badge bg={T.surface} color={T.muted} border={T.border}>📅 {new Date(a.createdAt).toLocaleString("id-ID")}</Badge>
-                              </div>
-                            </div>
-                            <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>#{a.id}</Badge>
-                          </div>
-                        </div>
-                      ))}
-                    {auditRows.length>0&&(
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(auditPage-1)*auditPageSize+1}-{Math.min(auditPage*auditPageSize,auditTotal)} dari {auditTotal}</span>
-                        <div style={{display:"flex",gap:8}}>
-                          <BtnG onClick={()=>setAuditPage(p=>Math.max(1,p-1))} disabled={auditPage<=1} style={{padding:"7px 12px",opacity:auditPage<=1?0.55:1}}>← Prev</BtnG>
-                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {auditPage}/{auditTotalPages}</Badge>
-                          <BtnG onClick={()=>setAuditPage(p=>Math.min(auditTotalPages,p+1))} disabled={auditPage>=auditTotalPages} style={{padding:"7px 12px",opacity:auditPage>=auditTotalPages?0.55:1}}>Next →</BtnG>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -1525,7 +1094,7 @@ export default function App(){
                 <div><FL>Item Kode</FL><input className="ifield" placeholder="Contoh: AS21205" value={newItemForm.itemCode} onChange={e=>setNewItemForm(p=>({...p,itemCode:e.target.value}))}/></div>
                 <div><FL>Kategori *</FL>
                   <select className="ifield" value={newItemForm.category} onChange={e=>setNewItemForm(p=>({...p,category:e.target.value}))}>
-                    {ITEM_CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                    {["APD","Abrasif","Cutting Tool","Material","Kebersihan"].map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div><FL>Satuan *</FL><input className="ifield" placeholder="pcs / box / set" value={newItemForm.unit} onChange={e=>setNewItemForm(p=>({...p,unit:e.target.value}))}/></div>
@@ -1626,7 +1195,7 @@ export default function App(){
                 <div><FL>Nama Barang *</FL><input className="ifield" value={editItem.name} onChange={e=>setEditItem(p=>({...p,name:e.target.value}))} placeholder="Nama barang..."/></div>
                 <div><FL>Kategori *</FL>
                   <select className="ifield" value={editItem.category} onChange={e=>setEditItem(p=>({...p,category:e.target.value}))}>
-                    {ITEM_CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                    {["APD","Abrasif","Cutting Tool","Material","Kebersihan"].map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
@@ -1647,7 +1216,7 @@ export default function App(){
       {/* BOTTOM NAV — mobile only */}
       <nav className="bottom-nav">
         <div className="bn-inner">
-          {visibleTabs.map(t=>(
+          {TABS.map(t=>(
             <button key={t.id} className={`bn-item${tab===t.id?" active":""}`} onClick={()=>{setTab(t.id);setSidebar(false);}}>
               {t.id==="transaction"&&todayTrx.length>0&&<span className="bn-pill">{todayTrx.length}</span>}
               <span className="bn-item-icon">{t.icon}</span>
@@ -1656,6 +1225,7 @@ export default function App(){
           ))}
         </div>
       </nav>
+      <BusyOverlay/>
     </div>
   );
 }
