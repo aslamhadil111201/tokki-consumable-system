@@ -41,7 +41,7 @@ const TABS = [
   {id:"history",label:"Riwayat",icon:"◎"},
 ];
 
-const todayStr=()=>new Date().toISOString().split("T")[0];
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const nowTime=()=>new Date().toTimeString().slice(0,5);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):""; 
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
@@ -202,6 +202,12 @@ export default function App(){
   },"Sedang memuat data");
 
   useEffect(()=>{if(loggedIn)fetchAll();},[loggedIn]);
+  useEffect(()=>{
+    if(!loggedIn)return;
+    const onVisible=()=>{if(document.visibilityState==="visible")fetchAll();};
+    document.addEventListener("visibilitychange",onVisible);
+    return()=>document.removeEventListener("visibilitychange",onVisible);
+  },[loggedIn]);
 
   const lowStock=items.filter(i=>i.stock<=i.minStock);
   const todayTrx=trx.filter(t=>t.date===todayStr());
