@@ -1304,6 +1304,10 @@ export default function App(){
                           <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Min</div><div style={{fontSize:22,fontWeight:900,lineHeight:1,color:T.text}}>{it.minStock}</div></div>
                           <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Satuan</div><div style={{fontSize:11,fontWeight:700,color:T.muted,marginTop:5,wordBreak:"break-word"}}>{it.unit}</div></div>
                         </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                          <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Harga Avg</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.averageCost)}</div></div>
+                          <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Total Value</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.totalValue)}</div></div>
+                        </div>
                         <Prog pct={pct} color={s.dot}/>
                       </div>
                     );
