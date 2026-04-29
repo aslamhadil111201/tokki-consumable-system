@@ -53,6 +53,7 @@ const todayStr=()=>new Date().toISOString().split("T")[0];
 const nowTime=()=>new Date().toTimeString().slice(0,5);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):""; 
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
+const fmtMoney=n=>`Rp ${Number(n||0).toLocaleString("id-ID")}`;
 const emptyForm=()=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[]});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",photo:null});
 const toSafeRows = (rows) => Array.isArray(rows) ? rows : (rows ? [rows] : []);
@@ -275,6 +276,7 @@ export default function App(){
   const todayUnits=todayTrx.reduce((a,t)=>a+t.items.reduce((b,i)=>b+i.qty,0),0);
   const totalOut=trx.reduce((a,t)=>a+t.items.reduce((b,i)=>b+i.qty,0),0);
   const totalIn=receives.reduce((a,r)=>a+r.qty,0);
+  const itemMap=Object.fromEntries(items.map(i=>[Number(i.id),i]));
   const filtItems=items.filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()));
   const filtTrx=[...trx].reverse().filter(t=>!trxDate||t.date===trxDate);
   const dateMatch=(d)=>{
@@ -1394,16 +1396,21 @@ export default function App(){
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>{t.items.length} item · {t.items.reduce((a,i)=>a+i.qty,0)} unit</Badge>
+                            <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>💰 {fmtMoney(t.totalCostOut ?? t.items.reduce((acc,it)=>{const avg=Number(it.averageCost ?? itemMap[Number(it.itemId)]?.averageCost ?? 0);return acc+(Number(it.qty||0)*avg);},0))}</Badge>
                             {isAdmin&&<button onClick={()=>deleteTransaction(t.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
                           </div>
                         </div>
                         <div className="trx-body">
-                          {t.items.map((it,ii)=>(
-                            <div key={ii} className="itm-pill">
+                          {t.items.map((it,ii)=>{
+                            const avg=Number(it.averageCost ?? itemMap[Number(it.itemId)]?.averageCost ?? 0);
+                            const lineCost=Number(it.totalCost ?? (Number(it.qty||0)*avg));
+                            return(
+                            <div key={ii} className="itm-pill" title={`Avg ${fmtMoney(avg)} · Cost ${fmtMoney(lineCost)}`}>
                               <span style={{fontSize:12,fontWeight:700,color:T.sub}}>{it.itemName}</span>
                               <span style={{fontSize:10.5,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 7px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`}}>×{it.qty} {it.unit}</span>
+                              <span style={{fontSize:10.5,color:T.muted,fontWeight:700}}>· {fmtMoney(lineCost)}</span>
                             </div>
-                          ))}
+                          );})}
                         </div>
                       </div>
                     ))}
@@ -1453,6 +1460,8 @@ export default function App(){
                                 <Badge bg={T.surface} color={T.muted} border={T.border}>📅 {fmtDate(r.date)}</Badge>
                                 <Badge bg={T.surface} color={T.muted} border={T.border}>⏰ {r.time}</Badge>
                                 <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>👤 {r.admin}</Badge>
+                                <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>💵 {fmtMoney(r.buyPrice ?? itemMap[Number(r.itemId)]?.lastPrice ?? 0)}</Badge>
+                                <Badge bg={T.surface} color={T.muted} border={T.border}>Avg: {fmtMoney(r.averageCostAfter ?? itemMap[Number(r.itemId)]?.averageCost ?? 0)}</Badge>
                               </div>
                             </div>
                             {isAdmin&&<button onClick={()=>deleteReceive(r.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
