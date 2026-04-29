@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
+import seedDb from "../data/db.json" assert { type: "json" };
 
 const TMP_DB = "/tmp/wms-db.json";
-const SEED_DB = path.join(process.cwd(), "data", "db.json");
 
 function sendJson(res, status, payload) {
   res.status(status).json(payload);
@@ -22,8 +22,7 @@ function parseBody(req) {
 
 function ensureDbFile() {
   if (!fs.existsSync(TMP_DB)) {
-    const seed = fs.readFileSync(SEED_DB, "utf-8");
-    fs.writeFileSync(TMP_DB, seed, "utf-8");
+    fs.writeFileSync(TMP_DB, JSON.stringify(seedDb, null, 2), "utf-8");
   }
 }
 
