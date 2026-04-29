@@ -1,8 +1,26 @@
 import fs from "fs";
-import path from "path";
-import seedDb from "../data/db.json" assert { type: "json" };
+
+const FALLBACK_DB = {
+  users: [{ id: 1, username: "admin", password: "admin123", name: "Administrator", role: "admin" }],
+  admins: [],
+  departments: [],
+  employees: [],
+  workOrders: [],
+  items: [],
+  transactions: [],
+  receives: [],
+};
 
 const TMP_DB = "/tmp/wms-db.json";
+
+function loadSeedDb() {
+  try {
+    const raw = fs.readFileSync(new URL("../data/db.json", import.meta.url), "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return FALLBACK_DB;
+  }
+}
 
 function sendJson(res, status, payload) {
   res.status(status).json(payload);
@@ -22,6 +40,7 @@ function parseBody(req) {
 
 function ensureDbFile() {
   if (!fs.existsSync(TMP_DB)) {
+    const seedDb = loadSeedDb();
     fs.writeFileSync(TMP_DB, JSON.stringify(seedDb, null, 2), "utf-8");
   }
 }
