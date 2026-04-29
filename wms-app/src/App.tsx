@@ -179,7 +179,7 @@ export default function App(){
   const [notif,setNotif]=useState(false);
   const [form,setForm]=useState(emptyForm());
   const [newItemForm,setNewItemForm]=useState(emptyNewItem());
-  const [addForm,setAddForm]=useState({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});
+  const [addForm,setAddForm]=useState({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:""});
   const [sidebar,setSidebar]=useState(false);
   const [loggedIn,setLoggedIn]=useState(()=>Boolean(localStorage.getItem("wms_token")));
   const [authToken,setAuthToken]=useState(()=>localStorage.getItem("wms_token")||"");
@@ -377,12 +377,19 @@ export default function App(){
   const submitAdd=async()=>{
     if(!isAdmin){toast$("Hanya admin yang boleh menambah stok","err");return;}
     if(!addForm.itemId||!addForm.qty||+addForm.qty<1||!addForm.admin){toast$("Lengkapi semua field wajib","err");return;}
+    let effectiveBuyPrice=Number(addForm.buyPrice);
+    if(!Number.isFinite(effectiveBuyPrice)||effectiveBuyPrice<0){
+      const ans=window.prompt("Masukkan harga beli per unit", "0");
+      if(ans===null) return;
+      effectiveBuyPrice=Number(ans);
+      if(!Number.isFinite(effectiveBuyPrice)||effectiveBuyPrice<0){toast$("Harga beli wajib angka >= 0","err");return;}
+    }
     await withLoading(async()=>{
       try{
         const r=await apiFetch("/receives",{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
+          body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,buyPrice:effectiveBuyPrice,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
         if(!r.ok)throw new Error();
-        setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:""});setShowAdd(false);
+        setAddForm({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:""});setShowAdd(false);
         toast$("Stok berhasil ditambahkan ✓");
         await fetchAll();
       }catch{toast$("Gagal menyimpan penerimaan","err");}

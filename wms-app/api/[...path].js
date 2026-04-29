@@ -21,6 +21,12 @@ const MASTER_MAP = {
 };
 const ADMIN_DATA_COLLECTIONS = ["users", "admins", "departments", "employees", "workOrders", "items", "transactions", "receives", "auditLogs"];
 
+const toNumber = (v, fallback = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+const roundMoney = (v) => Math.round(toNumber(v) * 100) / 100;
+
 const globalForMongo = globalThis;
 
 if (!globalForMongo.__tokkiMongoClientPromise) {
@@ -294,6 +300,20 @@ function validateNewItemPayload(body) {
   };
 }
 
+function withCostingDefaults(item) {
+  const stock = toNumber(item?.stock, 0);
+  const averageCost = roundMoney(item?.averageCost);
+  const lastPrice = roundMoney(item?.lastPrice);
+  const totalValue = roundMoney(item?.totalValue ?? stock * averageCost);
+  return {
+    ...item,
+    stock,
+    averageCost,
+    lastPrice,
+    totalValue,
+  };
+}
+
 function stripMongoId(doc) {
   if (!doc || typeof doc !== "object") return doc;
   const { _id, ...rest } = doc;
@@ -529,7 +549,8 @@ export default async function handler(req, res) {
 
       if (method === "GET" && parts.length === 1) {
         const items = await itemsCol.find({}).sort({ id: 1 }).toArray();
-        return sendJson(res, 200, items);
+        const normalized = items.map(withCostingDefaults);
+        return sendJson(res, 200, normalized);
       }
 
       if (method === "POST" && parts.length === 1) {
@@ -541,6 +562,9 @@ export default async function handler(req, res) {
           id: await getNextId(db, "items"),
           ...valid.value,
           photo,
+          averageCost: 0,
+          lastPrice: 0,
+          totalValue: 0,
         };
         await itemsCol.insertOne(item);
         await writeAuditLog(db, {
@@ -598,21 +622,70 @@ export default async function handler(req, res) {
       }
 
       if (method === "POST" && parts.length === 1) {
-        const trx = { id: await getNextId(db, "transactions"), ...body };
+        const reqItems = Array.isArray(body.items) ? body.items : [];
+        if (reqItems.length === 0) return sendJson(res, 400, { error: "Item transaksi tidak boleh kosong" });
 
-        for (const ci of trx.items || []) {
-          const item = await itemsCol.findOne({ id: Number(ci.itemId) });
-          if (!item) continue;
-          const nextStock = Math.max(0, Number(item.stock || 0) - Number(ci.qty || 0));
-          await itemsCol.updateOne({ id: item.id }, { $set: { stock: nextStock } });
+        const resolvedItems = [];
+        for (const ci of reqItems) {
+          const itemId = Number(ci?.itemId);
+          const qtyOut = Number(ci?.qty);
+          if (!Number.isInteger(qtyOut) || qtyOut <= 0) {
+            return sendJson(res, 400, { error: "Qty keluar harus bilangan bulat > 0" });
+          }
+
+          const item = await itemsCol.findOne({ id: itemId });
+          if (!item) return sendJson(res, 404, { error: `Item ID ${itemId} tidak ditemukan` });
+
+          const currentQty = toNumber(item.stock, 0);
+          if (qtyOut > currentQty) {
+            return sendJson(res, 400, { error: `Qty keluar untuk ${item.name} melebihi stok (${currentQty})` });
+          }
+
+          const averageCost = roundMoney(item.averageCost);
+          const nextQty = currentQty - qtyOut;
+          const totalCostOut = roundMoney(qtyOut * averageCost);
+          const nextTotalValue = roundMoney(nextQty * averageCost);
+
+          resolvedItems.push({
+            source: ci,
+            item,
+            qtyOut,
+            averageCost,
+            nextQty,
+            totalCostOut,
+            nextTotalValue,
+          });
         }
+
+        for (const r of resolvedItems) {
+          await itemsCol.updateOne(
+            { id: r.item.id },
+            { $set: { stock: r.nextQty, averageCost: r.averageCost, totalValue: r.nextTotalValue } },
+          );
+        }
+
+        const trxItems = resolvedItems.map((r) => ({
+          ...r.source,
+          itemId: Number(r.item.id),
+          itemName: r.item.name,
+          unit: r.item.unit,
+          qty: r.qtyOut,
+          averageCost: r.averageCost,
+          totalCost: r.totalCostOut,
+        }));
+        const trx = {
+          id: await getNextId(db, "transactions"),
+          ...body,
+          items: trxItems,
+          totalCostOut: roundMoney(resolvedItems.reduce((acc, r) => acc + r.totalCostOut, 0)),
+        };
 
         await transactionsCol.insertOne(trx);
         await writeAuditLog(db, {
           actor: auth.payload,
           action: "transactions.create",
           target: "transactions",
-          meta: { id: trx.id, taker: trx.taker },
+          meta: { id: trx.id, taker: trx.taker, totalCostOut: trx.totalCostOut },
         });
         return sendJson(res, 201, trx);
       }
@@ -642,19 +715,48 @@ export default async function handler(req, res) {
 
       if (method === "POST" && parts.length === 1) {
         if (!ensureAdmin(auth.payload, res)) return;
-        const { itemId, qty, poNumber, doNumber, date, admin } = body;
+        const { itemId, qty, poNumber, doNumber, date, admin, buyPrice } = body;
+        const qtyIn = Number(qty);
+        const purchasePrice = Number(buyPrice);
+        if (!Number.isInteger(qtyIn) || qtyIn <= 0) {
+          return sendJson(res, 400, { error: "Qty masuk harus bilangan bulat > 0" });
+        }
+        if (!Number.isFinite(purchasePrice) || purchasePrice < 0) {
+          return sendJson(res, 400, { error: "Harga beli harus angka >= 0" });
+        }
         const item = await itemsCol.findOne({ id: Number(itemId) });
         if (!item) return sendJson(res, 404, { error: "Item tidak ditemukan" });
 
-        const nextStock = Number(item.stock || 0) + Number(qty || 0);
-        await itemsCol.updateOne({ id: item.id }, { $set: { stock: nextStock } });
+        const qtyOld = toNumber(item.stock, 0);
+        const avgOld = roundMoney(item.averageCost);
+        const avgNew = qtyOld <= 0
+          ? roundMoney(purchasePrice)
+          : roundMoney(((qtyOld * avgOld) + (qtyIn * purchasePrice)) / (qtyOld + qtyIn));
+        const qtyNew = qtyOld + qtyIn;
+        const totalValue = roundMoney(qtyNew * avgNew);
+
+        await itemsCol.updateOne(
+          { id: item.id },
+          {
+            $set: {
+              stock: qtyNew,
+              averageCost: avgNew,
+              lastPrice: roundMoney(purchasePrice),
+              totalValue,
+            },
+          },
+        );
 
         const record = {
           id: await getNextId(db, "receives"),
           itemId: Number(itemId),
           itemName: item.name,
           unit: item.unit,
-          qty: Number(qty || 0),
+          qty: qtyIn,
+          buyPrice: roundMoney(purchasePrice),
+          averageCostBefore: avgOld,
+          averageCostAfter: avgNew,
+          totalValueAfter: totalValue,
           poNumber,
           doNumber,
           date,
@@ -666,7 +768,7 @@ export default async function handler(req, res) {
           actor: auth.payload,
           action: "receives.create",
           target: "receives",
-          meta: { id: record.id, itemId: record.itemId, qty: record.qty },
+          meta: { id: record.id, itemId: record.itemId, qty: record.qty, buyPrice: record.buyPrice },
         });
         return sendJson(res, 201, record);
       }
@@ -679,7 +781,8 @@ export default async function handler(req, res) {
           const item = await itemsCol.findOne({ id: Number(rec.itemId) });
           if (item) {
             const nextStock = Math.max(0, Number(item.stock || 0) - Number(rec.qty || 0));
-            await itemsCol.updateOne({ id: item.id }, { $set: { stock: nextStock } });
+            const avg = roundMoney(item.averageCost);
+            await itemsCol.updateOne({ id: item.id }, { $set: { stock: nextStock, averageCost: avg, totalValue: roundMoney(nextStock * avg) } });
           }
           await receivesCol.deleteOne({ id });
         }
