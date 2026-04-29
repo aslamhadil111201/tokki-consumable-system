@@ -186,6 +186,26 @@ function ensureAdmin(payload, res) {
   return false;
 }
 
+async function writeAuditLog(db, { actor, action, target, meta }) {
+  try {
+    const entry = {
+      id: await getNextId(db, "auditLogs"),
+      action: String(action || "unknown"),
+      target: String(target || ""),
+      actor: {
+        id: Number(actor?.sub || actor?.id || 0),
+        username: String(actor?.username || ""),
+        role: String(actor?.role || ""),
+      },
+      meta: meta || {},
+      createdAt: new Date().toISOString(),
+    };
+    await db.collection("auditLogs").insertOne(entry);
+  } catch {
+    // Ignore audit write failures so main flow remains available.
+  }
+}
+
 function maybeConfigureCloudinary() {
   if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     return false;
@@ -301,6 +321,12 @@ export default async function handler(req, res) {
         { expiresIn: "12h" },
       );
 
+      await writeAuditLog(db, {
+        actor: { id: user.id, username: user.username, role: user.role || "operator" },
+        action: "auth.login",
+        target: "auth",
+      });
+
       return sendJson(res, 200, {
         token,
         user: {
@@ -315,12 +341,30 @@ export default async function handler(req, res) {
     const auth = verifyAuth(req);
     if (!auth.ok) return sendJson(res, 401, { error: auth.error });
 
+    if (parts[0] === "audit-logs" && method === "GET") {
+      if (!ensureAdmin(auth.payload, res)) return;
+      const requestUrl = new URL(req.url, "http://localhost");
+      const page = Math.max(1, Number(requestUrl.searchParams.get("page") || 1));
+      const pageSize = Math.min(50, Math.max(5, Number(requestUrl.searchParams.get("pageSize") || 10)));
+      const actor = String(requestUrl.searchParams.get("actor") || "").trim();
+      const action = String(requestUrl.searchParams.get("action") || "").trim();
+
+      const q = {};
+      if (actor) q["actor.username"] = actor;
+      if (action) q.action = action;
+
+      const col = db.collection("auditLogs");
+      const total = await col.countDocuments(q);
+      const rows = await col.find(q).sort({ id: -1 }).skip((page - 1) * pageSize).limit(pageSize).toArray();
+      return sendJson(res, 200, { rows, total, page, pageSize });
+    }
+
     if (parts[0] === "admin" && parts[1] === "reset-dummy" && method === "POST") {
       if (!ensureAdmin(auth.payload, res)) return;
 
       const seed = loadSeedDb();
       const { users, collections } = buildSeedDocuments(seed);
-      const collectionNames = ["users", "admins", "departments", "employees", "workOrders", "items", "transactions", "receives"];
+      const collectionNames = ["users", "admins", "departments", "employees", "workOrders", "items", "transactions", "receives", "auditLogs"];
 
       for (const name of collectionNames) {
         await db.collection(name).deleteMany({});
@@ -332,6 +376,11 @@ export default async function handler(req, res) {
       }
 
       seedDone = true;
+      await writeAuditLog(db, {
+        actor: auth.payload,
+        action: "admin.resetDummy",
+        target: "system",
+      });
       return sendJson(res, 200, { ok: true });
     }
 
@@ -348,6 +397,12 @@ export default async function handler(req, res) {
         if (!ensureAdmin(auth.payload, res)) return;
         const item = { id: await getNextId(db, key), ...body };
         await col.insertOne(item);
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "master.create",
+          target: key,
+          meta: { id: item.id },
+        });
         return sendJson(res, 201, item);
       }
 
@@ -355,6 +410,12 @@ export default async function handler(req, res) {
         if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         await col.deleteOne({ id });
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "master.delete",
+          target: key,
+          meta: { id },
+        });
         return sendJson(res, 200, { ok: true });
       }
     }
@@ -378,6 +439,12 @@ export default async function handler(req, res) {
           photo,
         };
         await itemsCol.insertOne(item);
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "items.create",
+          target: "items",
+          meta: { id: item.id, name: item.name },
+        });
         return sendJson(res, 201, item);
       }
 
@@ -394,6 +461,12 @@ export default async function handler(req, res) {
 
         await itemsCol.updateOne({ id }, { $set: next });
         const updated = await itemsCol.findOne({ id });
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "items.update",
+          target: "items",
+          meta: { id },
+        });
         return sendJson(res, 200, updated);
       }
 
@@ -401,6 +474,12 @@ export default async function handler(req, res) {
         if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         await itemsCol.deleteOne({ id });
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "items.delete",
+          target: "items",
+          meta: { id },
+        });
         return sendJson(res, 200, { ok: true });
       }
     }
@@ -425,6 +504,12 @@ export default async function handler(req, res) {
         }
 
         await transactionsCol.insertOne(trx);
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "transactions.create",
+          target: "transactions",
+          meta: { id: trx.id, taker: trx.taker },
+        });
         return sendJson(res, 201, trx);
       }
 
@@ -432,6 +517,12 @@ export default async function handler(req, res) {
         if (!ensureAdmin(auth.payload, res)) return;
         const id = Number(parts[1]);
         await transactionsCol.deleteOne({ id });
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "transactions.delete",
+          target: "transactions",
+          meta: { id },
+        });
         return sendJson(res, 200, { ok: true });
       }
     }
@@ -467,6 +558,12 @@ export default async function handler(req, res) {
           time: new Date().toTimeString().slice(0, 5),
         };
         await receivesCol.insertOne(record);
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "receives.create",
+          target: "receives",
+          meta: { id: record.id, itemId: record.itemId, qty: record.qty },
+        });
         return sendJson(res, 201, record);
       }
 
@@ -482,6 +579,12 @@ export default async function handler(req, res) {
           }
           await receivesCol.deleteOne({ id });
         }
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "receives.delete",
+          target: "receives",
+          meta: { id },
+        });
         return sendJson(res, 200, { ok: true });
       }
     }

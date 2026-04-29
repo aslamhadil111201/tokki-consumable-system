@@ -192,6 +192,18 @@ export default function App(){
   const [editItem,setEditItem]=useState(null);
   const [receives,setReceives]=useState([]);
   const [historyTab,setHistoryTab]=useState("out");
+  const [historyQuery,setHistoryQuery]=useState("");
+  const [historyFrom,setHistoryFrom]=useState("");
+  const [historyTo,setHistoryTo]=useState("");
+  const [historyOutPage,setHistoryOutPage]=useState(1);
+  const [historyInPage,setHistoryInPage]=useState(1);
+  const [historyPageSize,setHistoryPageSize]=useState(6);
+  const [auditRows,setAuditRows]=useState([]);
+  const [auditTotal,setAuditTotal]=useState(0);
+  const [auditPage,setAuditPage]=useState(1);
+  const [auditPageSize,setAuditPageSize]=useState(8);
+  const [auditActor,setAuditActor]=useState("");
+  const [auditAction,setAuditAction]=useState("");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const notifRef=useRef(null);
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
@@ -250,8 +262,46 @@ export default function App(){
   const totalIn=receives.reduce((a,r)=>a+r.qty,0);
   const filtItems=items.filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()));
   const filtTrx=[...trx].reverse().filter(t=>!trxDate||t.date===trxDate);
+  const dateMatch=(d)=>{
+    if(!d) return true;
+    if(historyFrom&&d<historyFrom) return false;
+    if(historyTo&&d>historyTo) return false;
+    return true;
+  };
+  const q=historyQuery.trim().toLowerCase();
+  const filteredOut=[...trx].filter(t=>dateMatch(t.date)&&(q===""||[t.taker,t.dept,t.admin,t.workOrder,t.note,...(t.items||[]).map(i=>i.itemName)].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
+  const filteredIn=[...receives].filter(r=>dateMatch(r.date)&&(q===""||[r.itemName,r.poNumber,r.doNumber,r.admin].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
+  const outTotalPages=Math.max(1,Math.ceil(filteredOut.length/historyPageSize));
+  const inTotalPages=Math.max(1,Math.ceil(filteredIn.length/historyPageSize));
+  const pagedOut=filteredOut.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
+  const pagedIn=filteredIn.slice((historyInPage-1)*historyPageSize,historyInPage*historyPageSize);
+  const auditTotalPages=Math.max(1,Math.ceil(auditTotal/auditPageSize));
 
   useEffect(()=>{document.body.style.background=T.bg;document.body.style.transition="background .4s,color .3s";},[dark]);
+  useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize]);
+  useEffect(()=>{if(historyOutPage>outTotalPages)setHistoryOutPage(outTotalPages);},[historyOutPage,outTotalPages]);
+  useEffect(()=>{if(historyInPage>inTotalPages)setHistoryInPage(inTotalPages);},[historyInPage,inTotalPages]);
+  useEffect(()=>{setAuditPage(1);},[auditActor,auditAction,auditPageSize]);
+
+  useEffect(()=>{
+    if(!loggedIn||!isAdmin||tab!=="history"||historyTab!=="audit") return;
+    let canceled=false;
+    (async()=>{
+      try{
+        const sp=new URLSearchParams({page:String(auditPage),pageSize:String(auditPageSize)});
+        if(auditActor.trim()) sp.set("actor",auditActor.trim());
+        if(auditAction) sp.set("action",auditAction);
+        const r=await apiFetch(`/audit-logs?${sp.toString()}`);
+        if(!r.ok) throw new Error("Gagal memuat audit log");
+        const data=await r.json();
+        if(canceled) return;
+        setAuditRows(Array.isArray(data.rows)?data.rows:[]);
+        setAuditTotal(Number(data.total||0));
+      }catch(e){if(!canceled) toast$(e?.message||"Gagal memuat audit log","err");}
+    })();
+    return()=>{canceled=true;};
+  },[loggedIn,isAdmin,tab,historyTab,auditPage,auditPageSize,auditActor,auditAction]);
+
   useEffect(()=>{
     const h=e=>{if(notifRef.current&&!notifRef.current.contains(e.target))setNotif(false);};
     document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);
@@ -411,10 +461,26 @@ export default function App(){
     }catch(e){toast$(e?.message||"Gagal reset data dummy","err");}
   };
 
+  const reportPeriodLabel = () => {
+    if(historyFrom&&historyTo) return `${fmtDate(historyFrom)} - ${fmtDate(historyTo)}`;
+    if(historyFrom) return `>= ${fmtDate(historyFrom)}`;
+    if(historyTo) return `<= ${fmtDate(historyTo)}`;
+    return "Semua Periode";
+  };
+
   const exportTransactionsExcel=()=>{
+    const source=filteredOut;
+    const unitTotal=source.reduce((acc,t)=>acc+toSafeRows(t.items).reduce((x,it)=>x+Number(it.qty||0),0),0);
     const rows=[
+      ["TOKKI Consumable System"],
+      ["Laporan Riwayat Pengambilan"],
+      [`Periode`,reportPeriodLabel()],
+      [`Dibuat`,`${todayFmt()} ${nowTime()}`],
+      [`Total Data`,source.length],
+      [`Total Unit`,unitTotal],
+      [],
       ["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Unit","Keterangan"],
-      ...toSafeRows(trx).flatMap(t=>toSafeRows(t.items).map(it=>[
+      ...toSafeRows(source).flatMap(t=>toSafeRows(t.items).map(it=>[
         t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,it.qty,it.unit,t.note||"",
       ])),
     ];
@@ -424,9 +490,18 @@ export default function App(){
   };
 
   const exportReceivesExcel=()=>{
+    const source=filteredIn;
+    const unitTotal=source.reduce((a,r)=>a+Number(r.qty||0),0);
     const rows=[
+      ["TOKKI Consumable System"],
+      ["Laporan Riwayat Penerimaan"],
+      [`Periode`,reportPeriodLabel()],
+      [`Dibuat`,`${todayFmt()} ${nowTime()}`],
+      [`Total Data`,source.length],
+      [`Total Unit`,unitTotal],
+      [],
       ["ID","Tanggal","Waktu","Item","Qty","Unit","PO","DO","Admin"],
-      ...toSafeRows(receives).map(r=>[
+      ...toSafeRows(source).map(r=>[
         r.id,r.date,r.time,r.itemName,r.qty,r.unit,r.poNumber||"",r.doNumber||"",r.admin||"",
       ]),
     ];
@@ -435,23 +510,26 @@ export default function App(){
     toast$("Export Excel (CSV) penerimaan berhasil");
   };
 
-  const openPrintTable=({title,headers,rows})=>{
+  const openPrintTable=({title,subtitle,headers,rows})=>{
     const w=window.open("","_blank","width=1000,height=800");
     if(!w){toast$("Popup diblokir browser","err");return;}
     const th=headers.map(h=>`<th>${h}</th>`).join("");
     const tr=rows.map(r=>`<tr>${r.map(c=>`<td>${String(c??"").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</td>`).join("")}</tr>`).join("");
-    w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{margin:0 0 12px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}th{background:#efefef}</style></head><body><h2>${title}</h2><table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></body></html>`);
+    w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{margin:0 0 4px}p{margin:0 0 12px;color:#555}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}th{background:#efefef}</style></head><body><h2>${title}</h2>${subtitle?`<p>${subtitle}</p>`:""}<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></body></html>`);
     w.document.close();
     w.focus();
     w.print();
   };
 
   const exportTransactionsPdf=()=>{
-    const rows=toSafeRows(trx).flatMap(t=>toSafeRows(t.items).map(it=>[
+    const source=filteredOut;
+    const unitTotal=source.reduce((acc,t)=>acc+toSafeRows(t.items).reduce((x,it)=>x+Number(it.qty||0),0),0);
+    const rows=toSafeRows(source).flatMap(t=>toSafeRows(t.items).map(it=>[
       t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,`${it.qty} ${it.unit}`,t.note||"",
     ]));
     openPrintTable({
       title:`Riwayat Pengambilan - ${todayFmt()}`,
+      subtitle:`Periode: ${reportPeriodLabel()} | Total data: ${source.length} | Total unit: ${unitTotal}`,
       headers:["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Ket"],
       rows,
     });
@@ -459,11 +537,14 @@ export default function App(){
   };
 
   const exportReceivesPdf=()=>{
-    const rows=toSafeRows(receives).map(r=>[
+    const source=filteredIn;
+    const unitTotal=source.reduce((a,r)=>a+Number(r.qty||0),0);
+    const rows=toSafeRows(source).map(r=>[
       r.id,r.date,r.time,r.itemName,`${r.qty} ${r.unit}`,r.poNumber||"",r.doNumber||"",r.admin||"",
     ]);
     openPrintTable({
       title:`Riwayat Penerimaan - ${todayFmt()}`,
+      subtitle:`Periode: ${reportPeriodLabel()} | Total data: ${source.length} | Total unit: ${unitTotal}`,
       headers:["ID","Tanggal","Waktu","Item","Qty","PO","DO","Admin"],
       rows,
     });
@@ -1032,14 +1113,29 @@ export default function App(){
                   <div style={{display:"flex",gap:6,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
                     <button onClick={()=>setHistoryTab("out")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="out"?T.primary:"transparent",color:historyTab==="out"?"white":T.muted,boxShadow:historyTab==="out"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📤 Pengambilan ({trx.length})</button>
                     <button onClick={()=>setHistoryTab("in")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="in"?T.primary:"transparent",color:historyTab==="in"?"white":T.muted,boxShadow:historyTab==="in"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📥 Penerimaan ({receives.length})</button>
+                    {isAdmin&&<button onClick={()=>setHistoryTab("audit")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="audit"?T.primary:"transparent",color:historyTab==="audit"?"white":T.muted,boxShadow:historyTab==="audit"?`0 4px 12px ${T.primaryGlow}`:"none"}}>🛡 Audit ({auditTotal})</button>}
                   </div>
                   {isAdmin&&(
                     <div style={{display:"flex",gap:8}}>
-                      <BtnG onClick={historyTab==="out"?exportTransactionsExcel:exportReceivesExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>
-                      <BtnG onClick={historyTab==="out"?exportTransactionsPdf:exportReceivesPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>
+                      {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsExcel:exportReceivesExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
+                      {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsPdf:exportReceivesPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
                     </div>
                   )}
                 </div>
+
+                {historyTab!=="audit"&&(
+                  <div className="fbar">
+                    <input className="ifield" style={{width:220}} placeholder="🔍 Cari nama/item/admin/PO/DO..." value={historyQuery} onChange={e=>setHistoryQuery(e.target.value)}/>
+                    <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Dari</span>
+                    <input type="date" className="ifield" style={{width:160}} value={historyFrom} onChange={e=>setHistoryFrom(e.target.value)}/>
+                    <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Sampai</span>
+                    <input type="date" className="ifield" style={{width:160}} value={historyTo} onChange={e=>setHistoryTo(e.target.value)}/>
+                    <select className="ifield" style={{width:120}} value={historyPageSize} onChange={e=>setHistoryPageSize(Number(e.target.value)||6)}>
+                      {[6,10,15,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
+                    </select>
+                    <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setHistoryQuery("");setHistoryFrom("");setHistoryTo("");}}>✕ Reset</BtnG>
+                  </div>
+                )}
 
                 {/* ─ TAB PENGAMBILAN ─ */}
                 {historyTab==="out"&&(
@@ -1079,7 +1175,7 @@ export default function App(){
                       })()}
                     </div>
                     <div style={{fontSize:17,fontWeight:800,...gText(),marginBottom:14}}>Log Lengkap</div>
-                    {[...trx].sort((a,b)=>b.id-a.id).map(t=>(
+                    {pagedOut.map(t=>(
                       <div key={t.id} className="trx-card">
                         <div className="trx-head">
                           <div style={{flex:1,minWidth:0}}>
@@ -1104,6 +1200,16 @@ export default function App(){
                         </div>
                       </div>
                     ))}
+                    {filteredOut.length>0&&(
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredOut.length)} dari {filteredOut.length}</span>
+                        <div style={{display:"flex",gap:8}}>
+                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1} style={{padding:"7px 12px",opacity:historyOutPage<=1?0.55:1}}>← Prev</BtnG>
+                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyOutPage}/{outTotalPages}</Badge>
+                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.min(outTotalPages,p+1))} disabled={historyOutPage>=outTotalPages} style={{padding:"7px 12px",opacity:historyOutPage>=outTotalPages?0.55:1}}>Next →</BtnG>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1124,9 +1230,9 @@ export default function App(){
                         </div>
                       ))}
                     </div>
-                    {receives.length===0
+                    {filteredIn.length===0
                       ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>📭</div>Belum ada riwayat penerimaan</div>
-                      :[...receives].sort((a,b)=>b.id-a.id).map(r=>(
+                      :pagedIn.map(r=>(
                         <div key={r.id} className="trx-card">
                           <div className="trx-head">
                             <div style={{flex:1,minWidth:0}}>
@@ -1147,6 +1253,67 @@ export default function App(){
                         </div>
                       ))
                     }
+                    {filteredIn.length>0&&(
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyInPage-1)*historyPageSize+1}-{Math.min(historyInPage*historyPageSize,filteredIn.length)} dari {filteredIn.length}</span>
+                        <div style={{display:"flex",gap:8}}>
+                          <BtnG onClick={()=>setHistoryInPage(p=>Math.max(1,p-1))} disabled={historyInPage<=1} style={{padding:"7px 12px",opacity:historyInPage<=1?0.55:1}}>← Prev</BtnG>
+                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyInPage}/{inTotalPages}</Badge>
+                          <BtnG onClick={()=>setHistoryInPage(p=>Math.min(inTotalPages,p+1))} disabled={historyInPage>=inTotalPages} style={{padding:"7px 12px",opacity:historyInPage>=inTotalPages?0.55:1}}>Next →</BtnG>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {historyTab==="audit"&&isAdmin&&(
+                  <div>
+                    <p style={{fontSize:12.5,color:T.muted,fontWeight:500,marginBottom:16}}>Audit log aktivitas sistem untuk admin/operator.</p>
+                    <div className="fbar">
+                      <input className="ifield" style={{width:180}} placeholder="Filter actor username" value={auditActor} onChange={e=>setAuditActor(e.target.value)}/>
+                      <select className="ifield" style={{width:180}} value={auditAction} onChange={e=>setAuditAction(e.target.value)}>
+                        <option value="">Semua action</option>
+                        {[
+                          "auth.login","admin.resetDummy","items.create","items.update","items.delete",
+                          "transactions.create","transactions.delete","receives.create","receives.delete",
+                          "master.create","master.delete",
+                        ].map(a=><option key={a} value={a}>{a}</option>)}
+                      </select>
+                      <select className="ifield" style={{width:120}} value={auditPageSize} onChange={e=>setAuditPageSize(Number(e.target.value)||8)}>
+                        {[8,12,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
+                      </select>
+                      <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setAuditActor("");setAuditAction("");}}>✕ Reset</BtnG>
+                    </div>
+                    {auditRows.length===0
+                      ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🛡</div>Belum ada audit log</div>
+                      :auditRows.map(a=>(
+                        <div key={a.id} className="trx-card">
+                          <div className="trx-head">
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:7}}>
+                                <span style={{fontSize:13.5,fontWeight:700,color:T.text}}>{a.action}</span>
+                                <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>Actor: {a.actor?.username||"-"}</Badge>
+                                <Badge bg={T.surface} color={T.muted} border={T.border}>Role: {a.actor?.role||"-"}</Badge>
+                              </div>
+                              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                                <Badge bg={T.surface} color={T.muted} border={T.border}>Target: {a.target||"-"}</Badge>
+                                <Badge bg={T.surface} color={T.muted} border={T.border}>📅 {new Date(a.createdAt).toLocaleString("id-ID")}</Badge>
+                              </div>
+                            </div>
+                            <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>#{a.id}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    {auditRows.length>0&&(
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(auditPage-1)*auditPageSize+1}-{Math.min(auditPage*auditPageSize,auditTotal)} dari {auditTotal}</span>
+                        <div style={{display:"flex",gap:8}}>
+                          <BtnG onClick={()=>setAuditPage(p=>Math.max(1,p-1))} disabled={auditPage<=1} style={{padding:"7px 12px",opacity:auditPage<=1?0.55:1}}>← Prev</BtnG>
+                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {auditPage}/{auditTotalPages}</Badge>
+                          <BtnG onClick={()=>setAuditPage(p=>Math.min(auditTotalPages,p+1))} disabled={auditPage>=auditTotalPages} style={{padding:"7px 12px",opacity:auditPage>=auditTotalPages?0.55:1}}>Next →</BtnG>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
