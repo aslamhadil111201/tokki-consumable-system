@@ -40,11 +40,42 @@ let T = getT(true);
 const gText = () => ({ color: T.primaryLight });
 
 const CATS = ["Semua","APD","Abrasif","Cutting Tool","Material","Kebersihan"];
+const NAV_ICONS={
+  dashboard:(
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
+      <path d="M9 21V12h6v9"/>
+    </svg>
+  ),
+  transaction:(
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="6" r="3"/>
+      <path d="M15 3h6M15 6h6"/>
+      <path d="M4 20v-2a5 5 0 0 1 10 0v2"/>
+      <path d="M19 12l3 3-3 3"/>
+      <path d="M22 15h-5"/>
+    </svg>
+  ),
+  stock:(
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/>
+      <path d="M3 8h18l-1.5 10a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8L3 8z"/>
+      <path d="M10 12h4"/>
+    </svg>
+  ),
+  history:(
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.36 2.64"/>
+      <path d="M3 3v6h6"/>
+      <path d="M12 7v5l3 3"/>
+    </svg>
+  ),
+};
 const TABS = [
-  {id:"dashboard",label:"Dashboard",icon:"⬡"},
-  {id:"transaction",label:"Pengambilan",icon:"◈"},
-  {id:"stock",label:"Stok Barang",icon:"◉"},
-  {id:"history",label:"Riwayat",icon:"◎"},
+  {id:"dashboard",label:"Dashboard",icon:NAV_ICONS.dashboard},
+  {id:"transaction",label:"Pengambilan",icon:NAV_ICONS.transaction},
+  {id:"stock",label:"Stok Barang",icon:NAV_ICONS.stock},
+  {id:"history",label:"Riwayat",icon:NAV_ICONS.history},
 ];
 const ITEM_CATEGORIES = ["APD","Abrasif","Cutting Tool","Material","Kebersihan"];
 const MAX_STOCK_VALUE = 1000000;
