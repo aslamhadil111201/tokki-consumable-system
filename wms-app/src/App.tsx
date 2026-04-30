@@ -1417,17 +1417,28 @@ export default function App(){
             {/* ══ STOK ══ */}
             {tab==="stock"&&(
               <div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
-                  <p style={{fontSize:12.5,color:T.muted,fontWeight:500}}>Kelola inventaris barang consumable gudang.</p>
+                {/* ── Panel header ── */}
+                <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:"16px 20px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap",boxShadow:T.shadowSm}}>
+                  <div style={{display:"flex",alignItems:"center",gap:14}}>
+                    <div style={{width:48,height:48,borderRadius:14,background:`linear-gradient(135deg,${T.primary},${T.primaryLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,boxShadow:`0 8px 20px ${T.primaryGlow}`}}>📦</div>
+                    <div>
+                      <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1.2}}>Stok Barang</div>
+                      <div style={{fontSize:12,color:T.muted,marginTop:3,fontWeight:500}}>Kelola inventaris barang consumable gudang.</div>
+                    </div>
+                  </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    {isAdmin&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800}}>➕ Add New Item</BtnG>}
-                    {isAdmin&&<BtnP onClick={()=>setShowAdd(true)}>📥 Receive New</BtnP>}
+                    {isAdmin&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800,padding:"10px 16px"}}>➕ Add New Item</BtnG>}
+                    {isAdmin&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"10px 16px"}}>📥 Receive New</BtnP>}
                   </div>
                 </div>
-                <div className="fbar">
+                
+                {/* ── Filter bar ── */}
+                <div className="fbar" style={{marginBottom:16}}>
                   <input className="ifield" placeholder="🔍 Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:220}}/>
-                  {CATS.map(c=><button key={c} className={`cat-btn${catF===c?" on":""}`} onClick={()=>setCatF(c)}>{c}</button>)}
-                  <span style={{marginLeft:"auto",fontSize:11.5,color:T.muted}}>{filtItems.length} item</span>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {CATS.map(c=><button key={c} className={`cat-btn${catF===c?" on":""}`} onClick={()=>setCatF(c)} style={{fontWeight:600,fontSize:12.5,padding:"7px 13px",borderRadius:8}}>{c}</button>)}
+                  </div>
+                  <span style={{marginLeft:"auto",fontSize:11.5,color:T.muted,fontWeight:600}}>{filtItems.length} item</span>
                 </div>
                 <div className="stock-g">
                   {filtItems.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🔍</div>Tidak ada barang ditemukan</div>}
@@ -1441,42 +1452,60 @@ export default function App(){
                             :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",background:cc.bg,border:`1px dashed ${cc.border}`,borderRadius:8,fontSize:26,opacity:.45}}>📷</div>
                           }
                         </div>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-                          <div style={{minWidth:0}}>
-                            <div style={{fontSize:13.5,fontWeight:700,color:T.text,lineHeight:1.35,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{it.name}</div>
-                            {it.itemCode&&<div style={{fontSize:11.5,color:T.muted,fontWeight:700,marginTop:3}}>Item Kode: {it.itemCode}</div>}
-                            <div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
-                              <span style={{width:6,height:6,borderRadius:"50%",background:cc.dot,display:"inline-block",flexShrink:0}}/>
-                              <span style={{fontSize:11,color:cc.text,fontWeight:700}}>{it.category}</span>
-                            </div>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:12}}>
+                          <div style={{minWidth:0,flex:1}}>
+                            <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.35,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{it.name}</div>
+                            {it.itemCode&&<div style={{fontSize:10.5,color:T.muted,fontWeight:700,marginTop:4}}>Kode: {it.itemCode}</div>}
                           </div>
-                          <div style={{display:"flex",flexDirection:"column",gap:5,alignItems:"flex-end",flexShrink:0}}>
-                            <Badge bg={s.bg} color={s.text} border={s.border}><span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block"}}/> {s.label}</Badge>
-                            {isAdmin&&(
-                              <button onClick={e=>{e.stopPropagation();setEditItem({...it});setShowEdit(true);}}
-                                style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10,fontWeight:700,color:T.navActiveText,transition:"all .15s"}}
-                                onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="white";e.currentTarget.style.borderColor=T.primary;}}
-                                onMouseLeave={e=>{e.currentTarget.style.background=T.navActive;e.currentTarget.style.color=T.navActiveText;e.currentTarget.style.borderColor=T.navActiveBorder;}}>
-                                ✏️ Edit
-                              </button>
-                            )}
+                          {isAdmin&&(
+                            <button onClick={e=>{e.stopPropagation();setEditItem({...it});setShowEdit(true);}}
+                              style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:7,padding:"5px 11px",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:11,fontWeight:700,color:T.navActiveText,transition:"all .15s",flexShrink:0}}
+                              onMouseEnter={e=>{e.currentTarget.style.background=T.primary;e.currentTarget.style.color="white";e.currentTarget.style.borderColor=T.primary;}}
+                              onMouseLeave={e=>{e.currentTarget.style.background=T.navActive;e.currentTarget.style.color=T.navActiveText;e.currentTarget.style.borderColor=T.navActiveBorder;}}>
+                              ✏️ Edit
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                          <div style={{display:"flex",alignItems:"center",gap:3.5}}>
+                            <span style={{width:7,height:7,borderRadius:"50%",background:cc.dot,display:"inline-block",flexShrink:0}}/>
+                            <span style={{fontSize:10.5,color:cc.text,fontWeight:700}}>{it.category}</span>
+                          </div>
+                          <Badge bg={s.bg} color={s.text} border={s.border} style={{marginLeft:"auto"}}><span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block"}}/> {s.label}</Badge>
+                        </div>
+                        
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                          <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
+                            <div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6}}>Stok</div>
+                            <div style={{fontSize:24,fontWeight:900,lineHeight:1,color:s.dot}}>{it.stock}</div>
+                            <div style={{fontSize:10,color:T.muted,fontWeight:600,marginTop:3}}>{it.unit}</div>
+                          </div>
+                          <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
+                            <div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6}}>Min</div>
+                            <div style={{fontSize:24,fontWeight:900,lineHeight:1,color:T.text}}>{it.minStock}</div>
+                            <Prog pct={pct} color={s.dot}/>
                           </div>
                         </div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                          <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Stok</div><div style={{fontSize:22,fontWeight:900,lineHeight:1,color:it.stock<=it.minStock?T.redText:T.greenText}}>{it.stock}</div></div>
-                          <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Min</div><div style={{fontSize:22,fontWeight:900,lineHeight:1,color:T.text}}>{it.minStock}</div></div>
-                          <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Satuan</div><div style={{fontSize:11,fontWeight:700,color:T.muted,marginTop:5,wordBreak:"break-word"}}>{it.unit}</div></div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+                          <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"9px 11px"}}>
+                            <div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Harga Avg</div>
+                            <div style={{fontSize:13,fontWeight:800,color:T.text}}>{fmtMoney(it.averageCost)}</div>
+                          </div>
+                          <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"9px 11px"}}>
+                            <div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Last Price</div>
+                            <div style={{fontSize:13,fontWeight:800,color:T.text}}>{fmtMoney(it.lastPrice)}</div>
+                          </div>
+                          <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"9px 11px"}}>
+                            <div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Total Value</div>
+                            <div style={{fontSize:13,fontWeight:800,color:T.text}}>{fmtMoney(it.totalValue)}</div>
+                          </div>
                         </div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                          <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Harga Avg</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.averageCost)}</div></div>
-                                  <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Last Price</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.lastPrice)}</div></div>
-                          <div className="stk-box"><div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:5}}>Total Value</div><div style={{fontSize:13,fontWeight:800,color:T.text,marginTop:4}}>{fmtMoney(it.totalValue)}</div></div>
+                        
+                        <div style={{display:"flex",gap:8}}>
+                          {isAdmin&&<BtnP onClick={()=>openQuickIn(it)} style={{flex:1,padding:"9px 12px",fontSize:12,borderRadius:10,fontWeight:700}}>+ Masuk</BtnP>}
+                          <BtnG onClick={()=>openQuickOut(it)} style={{flex:1,padding:"9px 12px",fontSize:12,borderRadius:10,fontWeight:700}}>- Keluar</BtnG>
                         </div>
-                                <div style={{display:"flex",gap:8,marginTop:2}}>
-                                  {isAdmin&&<BtnP onClick={()=>openQuickIn(it)} style={{flex:1,padding:"9px 12px",fontSize:12,borderRadius:10}}>+ Masuk</BtnP>}
-                                  <BtnG onClick={()=>openQuickOut(it)} style={{flex:1,padding:"9px 12px",fontSize:12,borderRadius:10}}>- Keluar</BtnG>
-                                </div>
-                        <Prog pct={pct} color={s.dot}/>
                       </div>
                     );
                   })}
