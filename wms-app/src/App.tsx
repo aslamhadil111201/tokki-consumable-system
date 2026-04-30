@@ -1830,11 +1830,15 @@ export default function App(){
                               {t.items.length>3&&<div style={{fontSize:10,color:T.muted}}>+{t.items.length-3} item lainnya</div>}
                             </div>
                             {/* Jenis + Unit */}
-                            <div style={{minWidth:55,flexShrink:0,textAlign:"center",paddingRight:16}}>
-                              <div style={{fontSize:15,fontWeight:900,color:T.text,lineHeight:1}}>{t.items.length}</div>
-                              <div style={{fontSize:10,color:T.muted,fontWeight:600}}>jenis</div>
-                              <div style={{fontSize:14,fontWeight:800,color:T.text,marginTop:5,lineHeight:1}}>{totalUnits}</div>
-                              <div style={{fontSize:10,color:T.muted,fontWeight:600}}>unit</div>
+                            <div style={{minWidth:60,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
+                              <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                                <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{t.items.length}</span>
+                                <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
+                              </div>
+                              <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                                <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{totalUnits}</span>
+                                <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>unit</span>
+                              </div>
                             </div>
                             {/* Total */}
                             <div style={{minWidth:105,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
