@@ -59,6 +59,8 @@ const emptyForm=(overrides={})=>({taker:"",dept:"",workOrder:"",note:"",date:tod
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",photo:null});
 const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",...overrides});
 const initials=(name="")=>String(name).split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()||"").join("")||"NA";
+const _AV_PAL=["#10b981","#6366f1","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#0ea5e9","#22c55e"];
+const avatarColor=(name="")=>{let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);return _AV_PAL[Math.abs(h)%_AV_PAL.length];};
 const toSafeRows = (rows) => Array.isArray(rows) ? rows : (rows ? [rows] : []);
 const csvEscape = (v) => {
   const s = String(v ?? "").replace(/"/g, '""');
@@ -1351,12 +1353,19 @@ export default function App(){
             {/* ══ PENGAMBILAN ══ */}
             {tab==="transaction"&&(
               <div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:14,marginBottom:20,flexWrap:"wrap"}}>
-                  <p style={{fontSize:12.5,color:T.muted,fontWeight:500}}>Catat pengambilan barang oleh karyawan. Satu transaksi bisa beberapa barang.</p>
+                {/* ── Panel header ── */}
+                <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:"16px 20px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap",boxShadow:T.shadowSm}}>
+                  <div style={{display:"flex",alignItems:"center",gap:14}}>
+                    <div style={{width:48,height:48,borderRadius:14,background:`linear-gradient(135deg,${T.primary},${T.primaryLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,boxShadow:`0 8px 20px ${T.primaryGlow}`}}>📤</div>
+                    <div>
+                      <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1.2}}>Catat Pengambilan Barang</div>
+                      <div style={{fontSize:12,color:T.muted,marginTop:3,fontWeight:500}}>Catat pengambilan barang oleh karyawan. Satu transaksi bisa beberapa barang.</div>
+                    </div>
+                  </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                     {isAdmin&&<BtnG onClick={exportTransactionsExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
                     {isAdmin&&<BtnG onClick={exportTransactionsPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
-                    <BtnP onClick={()=>setShowModal(true)}>+ Catat Pengambilan</BtnP>
+                    <BtnP onClick={()=>setShowModal(true)} style={{flexShrink:0,padding:"12px 20px",borderRadius:14,fontWeight:800}}>＋ Catat Pengambilan</BtnP>
                   </div>
                 </div>
                 <div className="fbar">
@@ -1370,6 +1379,10 @@ export default function App(){
                   :filtTrx.map(t=>(
                     <div key={t.id} className="trx-card">
                       <div className="trx-head">
+                        {/* Avatar */}
+                        <div style={{width:44,height:44,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:avatarColor(t.taker),color:"white",fontWeight:800,fontSize:14,letterSpacing:".5px",marginTop:1,boxShadow:`0 4px 10px ${avatarColor(t.taker)}55`}}>
+                          {initials(t.taker)}
+                        </div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:13.5,fontWeight:700,color:T.text}}>{t.taker}</div>
                           <div style={{fontSize:11,color:T.muted,marginTop:3}}>{t.dept} · {fmtDate(t.date)} · {t.time}</div>
