@@ -40,6 +40,8 @@ let T = getT(true);
 const gText = () => ({ color: T.primaryLight });
 
 const CATS = ["Semua","APD","Abrasif","Cutting Tool","Material","Kebersihan"];
+const EXCEL_ICON=(<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/><path d="M7 12l2.5 3L12 12l2.5 3L17 12" strokeWidth="1.8"/></svg>);
+const PDF_ICON=(<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h1.5a1.5 1.5 0 0 1 0 3H9v-3zm0 3v2"/><path d="M14 13v5m0 0h2m-2-3h1.5"/></svg>);
 const NAV_ICONS={
   dashboard:(
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}>
@@ -1405,8 +1407,8 @@ export default function App(){
                     </div>
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {isAdmin&&<BtnG onClick={exportTransactionsExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
-                    {isAdmin&&<BtnG onClick={exportTransactionsPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
+                    {isAdmin&&<BtnG onClick={exportTransactionsExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
+                    {isAdmin&&<BtnG onClick={exportTransactionsPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
                     <BtnP onClick={()=>setShowModal(true)} style={{flexShrink:0,padding:"12px 20px",borderRadius:14,fontWeight:800}}>＋ Catat Pengambilan</BtnP>
                   </div>
                 </div>
@@ -1587,10 +1589,10 @@ export default function App(){
                     ))}
                   </div>
                   <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12}}>⬇ Excel</BtnG>}
-                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12}}>🧾 PDF</BtnG>}
-                    {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
-                    {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
+                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
+                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
+                    {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
+                    {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
                     {isAdmin&&historyTab!=="in"&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
                     {isAdmin&&historyTab==="in"&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Penerimaan</BtnP>}
                   </div>
