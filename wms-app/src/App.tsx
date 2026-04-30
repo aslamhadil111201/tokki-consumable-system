@@ -1560,7 +1560,8 @@ export default function App(){
                     {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12}}>🧾 PDF</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
-                    {isAdmin&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
+                    {isAdmin&&historyTab!=="in"&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
+                    {isAdmin&&historyTab==="in"&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Penerimaan</BtnP>}
                   </div>
                 </div>
 
@@ -1850,53 +1851,146 @@ export default function App(){
                 {/* ─ TAB PENERIMAAN ─ */}
                 {historyTab==="in"&&(
                   <div>
-                    <p style={{fontSize:12.5,color:T.muted,fontWeight:500,marginBottom:16}}>Rekap seluruh penerimaan & penambahan stok barang.</p>
-                    <div className="hist-g">
+                    {/* Stats 4 columns */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:18}}>
                       {[
-                        {label:"Total Penerimaan",val:receives.length,color:T.primaryLight},
-                        {label:"Total Unit Masuk",val:totalIn,color:"#6ee7b7"},
-                        {label:"Item Berbeda",val:[...new Set(receives.map(r=>r.itemId))].length,color:"#a7f3d0"},
-                        {label:"Admin Terlibat",val:[...new Set(receives.map(r=>r.admin).filter(Boolean))].length,color:T.amberText},
+                        {label:"Total Penerimaan",sub:"transaksi",val:receives.length,icon:"📥",dot:T.primary},
+                        {label:"Total Unit Masuk",sub:"unit",val:totalIn,icon:"📦",dot:T.green},
+                        {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(receives.map(r=>r.itemId))].length,icon:"🏷",dot:T.primaryLight},
+                        {label:"Admin Terlibat",sub:"admin",val:[...new Set(receives.map(r=>r.admin).filter(Boolean))].length,icon:"👥",dot:T.amber},
                       ].map((s,i)=>(
-                        <div key={i} className="stat-card">
-                          <div style={{fontSize:10,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:12}}>{s.label}</div>
-                          <div style={{fontSize:40,fontWeight:900,lineHeight:1,color:s.color}}>{s.val}</div>
+                        <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",padding:"16px 18px"}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0}}>{s.icon}</div>
+                            <span style={{width:6,height:6,borderRadius:"50%",background:s.dot,display:"inline-block"}}/>
+                          </div>
+                          <div style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
+                          <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:s.dot,marginBottom:5}}>{s.val}</div>
+                          <div style={{fontSize:10,color:T.muted,fontWeight:500}}>{s.sub}</div>
                         </div>
                       ))}
                     </div>
+
                     {filteredIn.length===0
                       ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>📭</div>Belum ada riwayat penerimaan</div>
-                      :pagedIn.map(r=>(
-                        <div key={r.id} className="trx-card">
-                          <div className="trx-head">
-                            <div style={{flex:1,minWidth:0}}>
-                              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:7}}>
-                                <span style={{fontSize:13.5,fontWeight:700,color:T.text}}>{r.itemName}</span>
-                                <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>📦 +{r.qty} {r.unit}</Badge>
-                              </div>
-                              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                                {r.poNumber&&<Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>PO: {r.poNumber}</Badge>}
-                                {r.doNumber&&<Badge bg={T.surface} color={T.muted} border={T.border}>DO: {r.doNumber}</Badge>}
-                                <Badge bg={T.surface} color={T.muted} border={T.border}>📅 {fmtDate(r.date)}</Badge>
-                                <Badge bg={T.surface} color={T.muted} border={T.border}>⏰ {r.time}</Badge>
-                                <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>👤 {r.admin}</Badge>
-                                <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>💵 {fmtMoney(r.buyPrice ?? itemMap[Number(r.itemId)]?.lastPrice ?? 0)}</Badge>
-                                <Badge bg={T.surface} color={T.muted} border={T.border}>Avg: {fmtMoney(r.averageCostAfter ?? itemMap[Number(r.itemId)]?.averageCost ?? 0)}</Badge>
-                              </div>
-                            </div>
-                            {isAdmin&&<button onClick={()=>deleteReceive(r.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
+                      :(
+                        <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,overflow:"hidden"}}>
+                          {/* Table header */}
+                          <div style={{display:"grid",gridTemplateColumns:"180px 1fr 220px 160px 130px 130px",gap:0,padding:"10px 20px",borderBottom:`1px solid ${T.border}`,background:dark?"rgba(0,0,0,0.18)":"rgba(0,0,0,0.04)"}}>
+                            {["TANGGAL & WAKTU","DETAIL TRANSAKSI","ITEM & JUMLAH","HARGA","DOKUMEN","ADMIN"].map(h=>(
+                              <div key={h} style={{fontSize:9.5,fontWeight:900,color:T.muted,letterSpacing:".1em",textTransform:"uppercase"}}>{h}</div>
+                            ))}
                           </div>
+                          {/* Rows */}
+                          {pagedIn.map((r,ri)=>{
+                            const it=itemMap[Number(r.itemId)];
+                            const buyPrice=Number(r.buyPrice??it?.lastPrice??0);
+                            const totalCostR=buyPrice*Number(r.qty||0);
+                            const ac=avatarColor(r.admin||"A");
+                            return(
+                              <div key={r.id} style={{display:"grid",gridTemplateColumns:"180px 1fr 220px 160px 130px 130px",gap:0,padding:"16px 20px",borderBottom:ri<pagedIn.length-1?`1px solid ${T.border}`:"none",alignItems:"center",transition:"background .15s"}}
+                                onMouseEnter={e=>{e.currentTarget.style.background=dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)";}}
+                                onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
+
+                                {/* Col 1: Tanggal & Waktu */}
+                                <div>
+                                  <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"3px 9px",borderRadius:6,background:T.greenBg,border:`1px solid ${T.greenBorder}`,fontSize:9.5,fontWeight:800,color:T.greenText,letterSpacing:".07em",marginBottom:8}}>PENERIMAAN</div>
+                                  <div style={{fontSize:11.5,color:T.muted,display:"flex",alignItems:"center",gap:5,marginBottom:3}}>
+                                    <span>📅</span><span>{fmtDate(r.date)}</span>
+                                  </div>
+                                  <div style={{fontSize:11.5,color:T.muted,display:"flex",alignItems:"center",gap:5}}>
+                                    <span>🕐</span><span>{r.time||"-"}</span>
+                                  </div>
+                                </div>
+
+                                {/* Col 2: Detail Transaksi */}
+                                <div style={{paddingRight:12}}>
+                                  <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:7}}>
+                                    <span style={{fontSize:13.5,fontWeight:800,color:T.text}}>{r.itemName}</span>
+                                    <span style={{fontSize:10.5,fontWeight:800,color:T.greenText,background:T.greenBg,padding:"2px 8px",borderRadius:5,border:`1px solid ${T.greenBorder}`,flexShrink:0}}>+{r.qty} {r.unit||"pcs"}</span>
+                                  </div>
+                                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                                    {r.poNumber&&<span style={{fontSize:10,fontWeight:700,color:T.navActiveText,background:T.navActive,padding:"2px 8px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`}}>PO: {r.poNumber}</span>}
+                                    {r.doNumber&&<span style={{fontSize:10,fontWeight:700,color:T.muted,background:T.surface,padding:"2px 8px",borderRadius:5,border:`1px solid ${T.border}`}}>DO: {r.doNumber}</span>}
+                                  </div>
+                                  {r.admin&&<div style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:6,fontSize:10.5,color:T.muted,fontWeight:600}}>
+                                    <span style={{width:16,height:16,borderRadius:"50%",background:ac,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:900,color:"white",flexShrink:0}}>{initials(r.admin).slice(0,1)}</span>
+                                    {r.admin}
+                                  </div>}
+                                </div>
+
+                                {/* Col 3: Item & Jumlah */}
+                                <div style={{display:"flex",alignItems:"center",gap:10,paddingRight:12}}>
+                                  <div style={{width:52,height:52,borderRadius:10,overflow:"hidden",background:dark?"rgba(0,0,0,0.22)":"rgba(255,255,255,0.7)",border:`1px solid ${T.border}`,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                    {it?.photo
+                                      ?<img src={it.photo} alt={r.itemName} style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+                                      :<span style={{fontSize:20,opacity:.4}}>📦</span>
+                                    }
+                                  </div>
+                                  <div>
+                                    <div style={{fontSize:12,fontWeight:700,color:T.text,lineHeight:1.3,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{r.itemName}</div>
+                                    <div style={{fontSize:12,fontWeight:800,color:T.greenText,marginTop:4}}>{r.qty} {r.unit||"pcs"}</div>
+                                  </div>
+                                </div>
+
+                                {/* Col 4: Harga */}
+                                <div style={{paddingRight:12}}>
+                                  <div style={{fontSize:9.5,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Buy Price</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>{fmtMoney(buyPrice)} / {r.unit||"pcs"}</div>
+                                  <div style={{fontSize:9.5,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Total</div>
+                                  <div style={{fontSize:13,fontWeight:900,color:T.green}}>{fmtMoney(totalCostR)}</div>
+                                </div>
+
+                                {/* Col 5: Dokumen */}
+                                <div style={{paddingRight:12}}>
+                                  {r.poNumber&&<div style={{fontSize:11.5,color:T.muted,marginBottom:5}}><span style={{fontWeight:700}}>PO:</span> {r.poNumber}</div>}
+                                  {r.doNumber&&<div style={{fontSize:11.5,color:T.muted}}><span style={{fontWeight:700}}>DO:</span> {r.doNumber}</div>}
+                                  {!r.poNumber&&!r.doNumber&&<div style={{fontSize:11,color:T.muted}}>-</div>}
+                                </div>
+
+                                {/* Col 6: Admin + Hapus */}
+                                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                  <div style={{width:32,height:32,borderRadius:"50%",background:ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"white",flexShrink:0,boxShadow:`0 3px 8px ${ac}55`}}>{initials(r.admin||"A")}</div>
+                                  <div style={{flex:1,minWidth:0}}>
+                                    <div style={{fontSize:11.5,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.admin||"Admin"}</div>
+                                  </div>
+                                  {isAdmin&&(
+                                    <button onClick={()=>deleteReceive(r.id)}
+                                      style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:7,padding:"5px 9px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                                      🗑
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))
+                      )
                     }
+                    {/* Pagination */}
                     {filteredIn.length>0&&(
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyInPage-1)*historyPageSize+1}-{Math.min(historyInPage*historyPageSize,filteredIn.length)} dari {filteredIn.length}</span>
-                        <div style={{display:"flex",gap:8}}>
-                          <BtnG onClick={()=>setHistoryInPage(p=>Math.max(1,p-1))} disabled={historyInPage<=1} style={{padding:"7px 12px",opacity:historyInPage<=1?0.55:1}}>← Prev</BtnG>
-                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyInPage}/{inTotalPages}</Badge>
-                          <BtnG onClick={()=>setHistoryInPage(p=>Math.min(inTotalPages,p+1))} disabled={historyInPage>=inTotalPages} style={{padding:"7px 12px",opacity:historyInPage>=inTotalPages?0.55:1}}>Next →</BtnG>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:16,gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>Menampilkan {(historyInPage-1)*historyPageSize+1}-{Math.min(historyInPage*historyPageSize,filteredIn.length)} dari {filteredIn.length} transaksi</span>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <button onClick={()=>setHistoryInPage(p=>Math.max(1,p-1))} disabled={historyInPage<=1}
+                            style={{padding:"8px 16px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:historyInPage<=1?T.muted:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:historyInPage<=1?"default":"pointer",opacity:historyInPage<=1?0.5:1,transition:"all .18s"}}>
+                            ← Prev
+                          </button>
+                          {Array.from({length:inTotalPages}).map((_,i)=>(
+                            <button key={i} onClick={()=>setHistoryInPage(i+1)}
+                              style={{width:36,height:36,borderRadius:9,border:`1px solid ${historyInPage===i+1?T.primary:T.border}`,background:historyInPage===i+1?T.primary:T.surface,color:historyInPage===i+1?"white":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",transition:"all .18s"}}>
+                              {i+1}
+                            </button>
+                          ))}
+                          <button onClick={()=>setHistoryInPage(p=>Math.min(inTotalPages,p+1))} disabled={historyInPage>=inTotalPages}
+                            style={{padding:"8px 16px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:historyInPage>=inTotalPages?T.muted:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:historyInPage>=inTotalPages?"default":"pointer",opacity:historyInPage>=inTotalPages?0.5:1,transition:"all .18s"}}>
+                            Next →
+                          </button>
                         </div>
+                        <select value={historyPageSize} onChange={e=>setHistoryPageSize(Number(e.target.value)||6)}
+                          style={{padding:"8px 12px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",outline:"none"}}>
+                          {[6,10,15,20].map(n=><option key={n} value={n}>{n} / halaman</option>)}
+                        </select>
                       </div>
                     )}
                   </div>
