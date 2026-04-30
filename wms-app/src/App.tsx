@@ -58,6 +58,7 @@ const fmtMoney=n=>`Rp ${Number(n||0).toLocaleString("id-ID")}`;
 const emptyForm=(overrides={})=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[],...overrides});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",photo:null});
 const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",...overrides});
+const initials=(name="")=>String(name).split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()||"").join("")||"NA";
 const toSafeRows = (rows) => Array.isArray(rows) ? rows : (rows ? [rows] : []);
 const csvEscape = (v) => {
   const s = String(v ?? "").replace(/"/g, '""');
@@ -823,6 +824,50 @@ export default function App(){
     .stock-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
     .hist-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
 
+    .dash-hero{background:${T.card};border:1px solid ${T.border};border-radius:24px;padding:18px 26px;min-height:128px;margin-bottom:24px;position:relative;overflow:hidden;backdrop-filter:blur(14px);box-shadow:${T.shadowSm}}
+    .dash-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,${dark?"rgba(16,185,129,0.11)":"rgba(16,185,129,0.09)"} 0%,transparent 55%)}
+    .dash-hero::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${T.primary},${T.primaryLight},#14b8a6)}
+    .dash-hero-content{position:relative;z-index:1;display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap}
+    .dash-hero-copy{flex:1;min-width:220px}
+    .dash-hero-illus{width:164px;height:92px;position:relative;flex-shrink:0;opacity:${dark?0.45:0.6}}
+    .dash-box{position:absolute;bottom:0;border-radius:10px;background:linear-gradient(180deg,${dark?"rgba(255,255,255,0.1)":"rgba(6,95,70,0.14)"},transparent),${dark?"rgba(250,204,21,0.14)":"rgba(5,150,105,0.12)"};border:1px solid ${T.border};box-shadow:inset 0 1px 0 rgba(255,255,255,0.05)}
+    .dash-box.b1{left:12px;width:34px;height:42px}
+    .dash-box.b2{left:44px;width:48px;height:58px}
+    .dash-box.b3{left:88px;width:42px;height:76px}
+    .dash-box.b4{left:124px;width:28px;height:50px}
+    .dash-box::before{content:'';position:absolute;top:8px;left:8px;right:8px;height:1px;background:${T.border}}
+    .dash-box::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:${T.border};opacity:.65}
+
+    .dash-stat{display:flex;align-items:center;gap:14px;min-height:116px}
+    .dash-stat-icon{width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;background:${dark?"linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.07))":"linear-gradient(135deg,rgba(16,185,129,0.13),rgba(16,185,129,0.04))"};border:1px solid ${T.navActiveBorder};box-shadow:0 0 0 6px ${dark?"rgba(16,185,129,0.05)":"rgba(16,185,129,0.04)"}}
+    .dash-stat-meta{flex:1;min-width:0}
+    .dash-stat-label{font-size:10px;font-weight:800;color:${T.muted};letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+    .dash-stat-value{font-size:25px;font-weight:900;line-height:1;color:${T.text}}
+    .dash-stat-sub{font-size:11px;color:${T.muted};margin-top:8px;font-weight:600}
+
+    .dash-panel-title{font-size:16px;font-weight:800;color:${T.text};display:flex;align-items:center;gap:8px}
+    .dash-transaction-card{padding:18px 0;border-bottom:1px solid ${T.border};display:flex;align-items:flex-start;gap:14px}
+    .dash-transaction-card:first-of-type{padding-top:6px}
+    .dash-transaction-card:last-child{border-bottom:none;padding-bottom:0}
+    .dash-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${T.primary},${T.primaryLight});color:white;font-size:15px;font-weight:800;flex-shrink:0;box-shadow:0 10px 18px ${T.primaryGlow}}
+    .dash-transaction-main{flex:1;min-width:0}
+    .dash-transaction-name{font-size:13.5px;font-weight:800;color:${T.text};line-height:1.3}
+    .dash-transaction-meta{font-size:11px;color:${T.muted};margin-top:2px;font-weight:500}
+    .dash-chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+    .dash-chip{display:inline-flex;align-items:center;gap:6px;background:${T.greenBg};color:${T.greenText};border:1px solid ${T.greenBorder};font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:8px;max-width:100%}
+    .dash-chip-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px}
+    .dash-unit-pill{background:${T.navActive};border:1px solid ${T.navActiveBorder};color:${T.navActiveText};font-size:11px;font-weight:800;border-radius:999px;padding:7px 12px;white-space:nowrap;flex-shrink:0}
+
+    .dash-alert-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px 22px;text-align:center;min-height:295px}
+    .dash-alert-visual{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;background:radial-gradient(circle,${dark?"rgba(16,185,129,0.28)":"rgba(16,185,129,0.18)"} 0%,transparent 70%);margin-bottom:16px}
+    .dash-alert-visual::before{content:'';position:absolute;inset:18px;border-radius:50%;background:${dark?"rgba(16,185,129,0.12)":"rgba(16,185,129,0.1)"};border:1px solid ${T.navActiveBorder};box-shadow:0 0 20px ${T.primaryGlow}}
+    .dash-alert-check{position:relative;z-index:1;width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,${T.primary},${T.primaryLight});display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:900;box-shadow:0 12px 28px ${T.primaryGlow}}
+    .dash-alert-spark{position:absolute;width:6px;height:6px;border-radius:50%;background:${T.primaryLight};box-shadow:0 0 12px ${T.primaryGlow}}
+    .dash-alert-spark.s1{top:22px;left:18px}
+    .dash-alert-spark.s2{top:35px;right:18px}
+    .dash-alert-spark.s3{bottom:30px;left:26px}
+    .dash-alert-spark.s4{top:16px;right:34px;width:4px;height:4px}
+
     /* CARDS */
     .stat-card{background:${T.card};border:1px solid ${T.border};border-radius:18px;padding:20px 22px;backdrop-filter:blur(12px);transition:all .25s;position:relative;overflow:hidden;box-shadow:${T.shadowSm}}
     .stat-card:hover{border-color:${T.borderHover};transform:translateY(-3px);box-shadow:${T.shadowCard}}
@@ -891,23 +936,33 @@ export default function App(){
     @media(max-width:660px){.bottom-nav{display:block}.body-area{padding-bottom:72px !important}}
 
     /* LOGIN */
+    .login-bg{position:fixed;inset:0;background:linear-gradient(135deg,rgba(0,12,5,0.82) 0%,rgba(0,10,4,0.66) 40%,rgba(0,8,3,0.74) 100%),url('/tokki-building.jpg');background-size:cover;background-position:center;background-repeat:no-repeat}
+    .login-bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,${dark?"rgba(16,185,129,0.08)":"rgba(16,185,129,0.12)"} 1px,transparent 1px);background-size:26px 26px}
     .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;position:relative;z-index:1}
     .login-card{
-      background:${dark?"rgba(10,32,20,0.72)":"rgba(255,255,255,0.9)"};
-      border:1px solid ${T.border};
+      background:${dark?"rgba(3,14,7,0.88)":"rgba(255,255,255,0.93)"};
+      border:1px solid ${dark?"rgba(16,185,129,0.22)":"rgba(16,185,129,0.3)"};
       border-radius:24px;
       padding:44px 40px;
-      width:420px;max-width:100%;
-      box-shadow:${T.shadowCard};
-      backdrop-filter:blur(18px);
-      -webkit-backdrop-filter:blur(18px);
+      width:440px;max-width:100%;
+      box-shadow:${dark?"0 32px 80px rgba(0,0,0,0.8),0 0 0 1px rgba(16,185,129,0.08)":"0 20px 60px rgba(0,0,0,0.25),0 0 0 1px rgba(16,185,129,0.12)"};
+      backdrop-filter:blur(28px);
+      -webkit-backdrop-filter:blur(28px);
       position:relative;overflow:hidden;
       animation:fadeIn .4s ease;
     }
     .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${T.primary},${T.primaryLight},#14b8a6);border-radius:24px 24px 0 0}
+    .login-ifield-wrap{position:relative}
+    .login-ifield-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:${T.muted};display:flex;align-items:center;pointer-events:none}
+    .login-ifield-wrap .ifield{padding-left:42px}
+    .login-btn{width:100%;padding:14px 20px;font-size:15px;font-weight:800;background:linear-gradient(135deg,${T.primary} 0%,${T.primaryLight} 100%);color:white;border:none;border-radius:14px;cursor:pointer;box-shadow:0 6px 24px ${T.primaryGlow};letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .15s,box-shadow .15s;font-family:'Plus Jakarta Sans',sans-serif}
+    .login-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px ${T.primaryGlow}}
+    .login-btn:active{transform:translateY(0)}
+    .login-divider{display:flex;align-items:center;gap:12px;margin:18px 0 14px}
+    .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:${T.border}}
     @media(max-width:480px){
-      .login-card{padding:36px 22px;border-radius:18px}
-      .login-wrap{padding:12px;align-items:flex-start;padding-top:32px}
+      .login-card{padding:36px 20px;border-radius:18px}
+      .login-wrap{padding:12px;align-items:flex-start;padding-top:28px}
     }
 
     @media(max-width:1100px){
@@ -941,6 +996,12 @@ export default function App(){
       .stat-card{padding:16px}
       .card{padding:16px 16px}
       .date-btn{display:none}
+      .dash-hero{padding:18px 18px 20px}
+      .dash-hero-illus{display:none}
+      .dash-stat{align-items:flex-start}
+      .dash-stat-icon{width:46px;height:46px;border-radius:15px;font-size:20px}
+      .dash-transaction-card{gap:10px}
+      .dash-unit-pill{padding:6px 10px;font-size:10.5px}
     }
     @media(max-width:420px){
       .stats-g{grid-template-columns:1fr 1fr}
@@ -983,53 +1044,75 @@ export default function App(){
 
   // ── LOGIN ────────────────────────────────────────────────────────
   if(!loggedIn) return(
-    <div style={{position:"relative"}}>
+    <div style={{position:"relative",minHeight:"100vh"}}>
       <style>{CSS}</style>
-      <Blobs/>
+      <div className="login-bg"/>
+      <div style={{position:"fixed",right:"-6%",top:"50%",transform:"translateY(-50%)",width:"min(520px,52vw)",opacity:dark?0.05:0.07,pointerEvents:"none",zIndex:0}}>
+        <img src={dark?"/tokki-logo dark mode.png":"/tokki-logo.png"} alt="" style={{width:"100%",objectFit:"contain"}}/>
+      </div>
+      <div style={{position:"fixed",left:0,top:0,bottom:0,width:"35%",background:dark?"linear-gradient(90deg,rgba(0,12,5,0.6) 0%,transparent 100%)":"linear-gradient(90deg,rgba(209,250,229,0.5) 0%,transparent 100%)",pointerEvents:"none",zIndex:0}}/>
       <div className="login-wrap">
         <div className="login-card">
-          {/* toggle pojok kanan atas */}
           <div style={{position:"absolute",top:16,right:16}}><Toggle mini/></div>
 
+          <div style={{display:"flex",justifyContent:"center",marginBottom:22}}>
+            <img src={dark?"/tokki-logo dark mode.png":"/tokki-logo.png"} alt="Tokki" style={{height:dark?54:66,objectFit:"contain"}}/>
+          </div>
+
           <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
-            <img src={dark?"/tokki-logo dark mode.png":"/tokki-logo.png"} alt="Tokki" style={{height:dark?52:64,objectFit:"contain"}}/>
+            <div style={{display:"inline-flex",alignItems:"center",gap:7,background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:20,padding:"5px 14px",fontSize:11,fontWeight:800,color:T.navActiveText}}>
+              🛡️ Warehouse Management System
+            </div>
           </div>
 
-          <div style={{display:"inline-flex",alignItems:"center",gap:6,background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:20,padding:"4px 12px",fontSize:10,fontWeight:800,color:T.navActiveText,marginBottom:16}}>
-            Warehouse Management System
+          <div style={{fontSize:34,fontWeight:900,lineHeight:1.15,marginBottom:8}}>
+            <span style={{color:T.text}}>Selamat </span>
+            <span style={{color:T.primary}}>Datang</span>
           </div>
-
-          {/* TITLE — FIXED gradient text */}
-          <div style={{fontSize:32,fontWeight:900,lineHeight:1.15,marginBottom:8,...gText()}}>
-            Selamat Datang
-          </div>
-          <div style={{fontSize:13,color:T.muted,marginBottom:28,fontWeight:500,lineHeight:1.6}}>
+          <div style={{fontSize:13,color:T.muted,marginBottom:28,fontWeight:500,lineHeight:1.65}}>
             Masuk untuk mengelola inventaris barang consumable gudang
           </div>
 
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <div><FL>Username</FL>
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:10,fontWeight:800,color:T.primary,letterSpacing:".12em",textTransform:"uppercase",marginBottom:6}}>Username</div>
+            <div className="login-ifield-wrap">
+              <span className="login-ifield-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              </span>
               <input className="ifield" type="text" placeholder="Masukkan username"
                 value={loginForm.username} onChange={e=>setLoginForm({...loginForm,username:e.target.value})}
                 onKeyDown={e=>e.key==="Enter"&&login()}/>
             </div>
-            <div><FL>Password</FL>
-              <div style={{position:"relative"}}>
-                <input className="ifield" type={showLoginPassword?"text":"password"} placeholder="Masukkan password"
-                  style={{paddingRight:94}}
-                  value={loginForm.password} onChange={e=>setLoginForm({...loginForm,password:e.target.value})}
-                  onKeyDown={e=>e.key==="Enter"&&login()}/>
-                <button type="button" onClick={()=>setShowLoginPassword(v=>!v)}
-                  style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",border:`1px solid ${T.border}`,background:T.surface,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:T.muted,cursor:"pointer"}}>
-                  {showLoginPassword?"Tutup":"Lihat"}
-                </button>
-              </div>
-            </div>
-            <BtnP onClick={login} style={{padding:"13px",fontSize:14,marginTop:4,width:"100%",borderRadius:12}}>
-              🔐 Masuk ke Dashboard
-            </BtnP>
           </div>
-          <div style={{textAlign:"center",marginTop:18,fontSize:11.5,color:T.muted,fontStyle:"italic"}}>
+
+          <div style={{marginBottom:22}}>
+            <div style={{fontSize:10,fontWeight:800,color:T.primary,letterSpacing:".12em",textTransform:"uppercase",marginBottom:6}}>Password</div>
+            <div className="login-ifield-wrap" style={{position:"relative"}}>
+              <span className="login-ifield-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </span>
+              <input className="ifield" type={showLoginPassword?"text":"password"} placeholder="Masukkan password"
+                style={{paddingRight:76}}
+                value={loginForm.password} onChange={e=>setLoginForm({...loginForm,password:e.target.value})}
+                onKeyDown={e=>e.key==="Enter"&&login()}/>
+              <button type="button" onClick={()=>setShowLoginPassword(v=>!v)}
+                style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:T.primary,cursor:"pointer",padding:"4px 2px"}}>
+                {showLoginPassword?"Tutup":"Lihat"}
+              </button>
+            </div>
+          </div>
+
+          <button className="login-btn" onClick={login}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Masuk ke Dashboard
+          </button>
+
+          <div className="login-divider">
+            <span style={{fontSize:11,color:T.muted,fontWeight:600}}>atau</span>
+          </div>
+
+          <div style={{textAlign:"center",fontSize:12,color:T.muted,display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontWeight:500}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{color:T.primary}}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             Gunakan akun yang telah diberikan
           </div>
         </div>
@@ -1156,34 +1239,48 @@ export default function App(){
             {/* ══ DASHBOARD ══ */}
             {tab==="dashboard"&&(
               <div>
-                {/* HERO STRIP */}
-                <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:20,padding:"20px 24px",marginBottom:24,position:"relative",overflow:"hidden",backdropFilter:"blur(12px)",boxShadow:T.shadowSm}}>
-                  <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.primary},${T.primaryLight},#14b8a6)`}}/>
-                  <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",position:"relative"}}>
-                    <div style={{flex:1,minWidth:200}}>
-                      <div style={{display:"inline-flex",alignItems:"center",gap:6,background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:20,padding:"3px 12px",fontSize:10,fontWeight:800,color:T.navActiveText,marginBottom:8}}>🏭 Sistem Gudang Aktif</div>
-                      <div style={{fontSize:19,fontWeight:800,...gText()}}>Ringkasan Hari Ini</div>
-                      <div style={{fontSize:12,color:T.muted,marginTop:3,fontWeight:500}}>{todayFmt()} · {todayTrx.length} transaksi · {todayUnits} unit keluar</div>
+                <div className="dash-hero">
+                  <div className="dash-hero-content">
+                    <div className="dash-hero-copy">
+                      <div style={{display:"inline-flex",alignItems:"center",gap:6,background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:999,padding:"4px 12px",fontSize:10.5,fontWeight:800,color:T.navActiveText,marginBottom:10}}>🏭 Sistem Gudang Aktif</div>
+                      <div style={{fontSize:18,color:T.text,fontWeight:800,marginBottom:4}}>Ringkasan Hari Ini</div>
+                      <div style={{fontSize:12.5,color:T.muted,fontWeight:600,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                        <span>📅 {todayFmt()}</span>
+                        <span style={{color:T.primary}}>•</span>
+                        <span><b style={{color:T.primaryLight}}>{todayTrx.length}</b> transaksi</span>
+                        <span style={{color:T.primary}}>•</span>
+                        <span><b style={{color:T.primaryLight}}>{todayUnits}</b> unit keluar</span>
+                      </div>
                     </div>
-                    <BtnP onClick={()=>setShowModal(true)} style={{flexShrink:0}}>+ Catat Pengambilan</BtnP>
+                    <BtnP onClick={()=>setShowModal(true)} style={{flexShrink:0,padding:"12px 20px",borderRadius:14,fontWeight:800}}>＋ Catat Pengambilan</BtnP>
+                    <div className="dash-hero-illus" aria-hidden="true">
+                      <div className="dash-box b1"/>
+                      <div className="dash-box b2"/>
+                      <div className="dash-box b3"/>
+                      <div className="dash-box b4"/>
+                    </div>
                   </div>
                 </div>
 
-                {/* STATS */}
                 <div className="stats-g">
                   {[
-                    {label:"Total Item",val:items.length,color:T.primaryLight,sub:`${filtItems.length} tampil`,dot:T.primary},
-                    {label:"Transaksi Hari Ini",val:todayTrx.length,color:"#6ee7b7",sub:`${todayUnits} unit keluar`,dot:"#10b981"},
-                    {label:"Unit Keluar Hari Ini",val:todayUnits,color:"#a7f3d0",sub:"unit total",dot:"#34d399"},
-                    {label:"Perlu Restok",val:lowStock.length,color:lowStock.length>0?T.redText:T.muted,sub:"item alert",dot:lowStock.length>0?T.red:T.muted},
+                    {label:"Total Item",val:items.length,sub:`${filtItems.length} tampilan`,dot:T.primary,icon:"📦"},
+                    {label:"Transaksi Hari Ini",val:todayTrx.length,sub:`${todayUnits} unit keluar`,dot:"#10b981",icon:"⤵"},
+                    {label:"Unit Keluar Hari Ini",val:todayUnits,sub:"unit total",dot:"#34d399",icon:"🧊"},
+                    {label:"Perlu Restok",val:lowStock.length,sub:"item alert",dot:lowStock.length>0?T.red:T.muted,icon:"🔔"},
                   ].map((s,i)=>(
                     <div key={i} className="stat-card">
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-                        <div style={{fontSize:10,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase"}}>{s.label}</div>
-                        <div style={{width:7,height:7,borderRadius:"50%",background:s.dot,boxShadow:`0 0 6px ${s.dot}`}}/>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                        <div className="dash-stat" style={{gap:12}}>
+                          <div className="dash-stat-icon">{s.icon}</div>
+                          <div className="dash-stat-meta">
+                            <div className="dash-stat-label">{s.label}</div>
+                            <div className="dash-stat-value">{s.val}</div>
+                            <div className="dash-stat-sub">{s.sub}</div>
+                          </div>
+                        </div>
+                        <div style={{width:8,height:8,borderRadius:"50%",background:s.dot,boxShadow:`0 0 8px ${s.dot}`,marginLeft:8,marginTop:4,flexShrink:0}}/>
                       </div>
-                      <div style={{fontSize:44,fontWeight:900,lineHeight:1,color:s.color}}>{s.val}</div>
-                      <div style={{fontSize:11,color:T.muted,marginTop:8,fontWeight:500}}>{s.sub}</div>
                     </div>
                   ))}
                 </div>
@@ -1191,34 +1288,51 @@ export default function App(){
                 <div className="two-col">
                   <div className="card">
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                      <div style={{fontSize:16,fontWeight:800,...gText()}}>📋 Transaksi Hari Ini</div>
+                      <div className="dash-panel-title">📋 Transaksi Hari Ini</div>
                       <button className="tb-btn" onClick={()=>setTab("history")} style={{fontSize:11,padding:"5px 11px"}}>Lihat semua →</button>
                     </div>
                     {todayTrx.length===0
                       ?<div style={{textAlign:"center",padding:"34px 0",color:T.muted}}><div style={{fontSize:32,marginBottom:8}}>📭</div>Belum ada transaksi hari ini</div>
                       :todayTrx.slice(0,4).map(t=>(
-                        <div key={t.id} style={{padding:"11px 0",borderBottom:`1px solid ${T.border}`}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:7,gap:8}}>
-                            <div>
-                              <div style={{fontWeight:700,fontSize:13,color:T.text}}>{t.taker}</div>
-                              <div style={{fontSize:11,color:T.muted,marginTop:2}}>{t.dept} · {t.time}</div>
+                        <div key={t.id} className="dash-transaction-card">
+                          <div className="dash-avatar">{initials(t.taker)}</div>
+                          <div className="dash-transaction-main">
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                              <div style={{minWidth:0}}>
+                                <div className="dash-transaction-name">{t.taker}</div>
+                                <div className="dash-transaction-meta">{t.dept} · {t.time}</div>
+                              </div>
+                              <div className="dash-unit-pill">{t.items.reduce((a,i)=>a+i.qty,0)} unit</div>
                             </div>
-                            <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>{t.items.reduce((a,i)=>a+i.qty,0)} unit</Badge>
-                          </div>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                            {t.items.map((it,ii)=>(
-                              <span key={ii} style={{background:T.greenBg,color:T.greenText,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:6,border:`1px solid ${T.greenBorder}`,whiteSpace:"nowrap"}}>
-                                {it.itemName} ×{it.qty}
-                              </span>
-                            ))}
+                            <div className="dash-chip-row">
+                              {t.items.map((it,ii)=>(
+                                <span key={ii} className="dash-chip">
+                                  <span className="dash-chip-text">{it.itemName}</span>
+                                  <span>×{it.qty}</span>
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       ))}
                   </div>
                   <div className="card">
-                    <div style={{fontSize:16,fontWeight:800,...gText(),marginBottom:16}}>🔔 Alert Stok</div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,gap:10}}>
+                      <div className="dash-panel-title">🔔 Alert Stok</div>
+                      <button className="tb-btn" onClick={()=>setTab("stock")} style={{fontSize:11,padding:"5px 11px"}}>Lihat semua →</button>
+                    </div>
                     {lowStock.length===0
-                      ?<div style={{textAlign:"center",padding:"34px 0"}}><div style={{fontSize:32,marginBottom:8}}>✅</div><div style={{fontSize:12.5,color:T.muted}}>Semua stok aman</div></div>
+                      ?<div className="dash-alert-empty">
+                        <div className="dash-alert-visual">
+                          <span className="dash-alert-spark s1"/>
+                          <span className="dash-alert-spark s2"/>
+                          <span className="dash-alert-spark s3"/>
+                          <span className="dash-alert-spark s4"/>
+                          <div className="dash-alert-check">✓</div>
+                        </div>
+                        <div style={{fontSize:15,color:T.text,fontWeight:800,marginBottom:6}}>Semua stok aman</div>
+                        <div style={{fontSize:12.5,color:T.muted,maxWidth:260,lineHeight:1.55}}>Tidak ada item yang perlu di-restok saat ini. Pertahankan stok tetap aman.</div>
+                      </div>
                       :lowStock.slice(0,5).map(it=>{const s=stockStatus(it);return(
                         <div key={it.id} className="al-row">
                           <div style={{flex:1,minWidth:0}}>
