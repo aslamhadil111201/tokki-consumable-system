@@ -1652,20 +1652,20 @@ export default function App(){
                                     <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:accentColor,textTransform:"uppercase"}}>{isIn?"MASUK":"KELUAR"}</span>
                                   </div>
                                   {/* Content */}
-                                  <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"wrap",minWidth:0}}>
+                                  <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"nowrap",minWidth:0}}>
                                     {/* Name + dept */}
-                                    <div style={{minWidth:130,flex:"0 0 auto",paddingRight:16}}>
+                                    <div style={{width:210,flexShrink:0,paddingRight:16}}>
                                       <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{isIn?(row.itemName||itemsArr[0]?.itemName||"-"):(row.taker||"-")}</div>
                                       <div style={{fontSize:11,color:T.muted,marginTop:2}}>{isIn?`Admin: ${row.admin||"-"}`:(row.dept||"-")}</div>
                                       {!isIn&&<div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {row.admin||"-"}</div>}
                                     </div>
                                     {/* Time */}
-                                    <div style={{minWidth:68,flexShrink:0,paddingRight:16}}>
+                                    <div style={{width:110,flexShrink:0,paddingRight:16}}>
                                       <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{row.time||"-"}</div>
                                       <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(row.date)}</div>
                                     </div>
                                     {/* Items */}
-                                    <div style={{flex:1,minWidth:140,paddingRight:16}}>
+                                    <div style={{flex:"1 1 auto",minWidth:280,paddingRight:16}}>
                                       {isIn
                                         ?<>
                                           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
@@ -1680,7 +1680,7 @@ export default function App(){
                                           </div>
                                         </>
                                         :itemsArr.slice(0,3).map((it:any,ii:number)=>(
-                                          <div key={ii} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>
+                                          <div key={ii} style={{display:"grid",gridTemplateColumns:"14px minmax(0,1fr) auto",alignItems:"center",columnGap:8,marginBottom:3}}>
                                             <span style={{fontSize:11}}>📦</span>
                                             <span style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>{it.itemName}</span>
                                             <span style={{fontSize:10,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 7px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`,flexShrink:0}}>×{it.qty} {it.unit||"pcs"}</span>
@@ -1690,7 +1690,7 @@ export default function App(){
                                       {!isIn&&itemsArr.length>3&&<div style={{fontSize:10,color:T.muted,marginTop:2}}>+{itemsArr.length-3} item lainnya</div>}
                                     </div>
                                     {/* Jenis + Unit */}
-                                    <div style={{minWidth:60,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
+                                    <div style={{width:90,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
                                       <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                                         <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{jenis}</span>
                                         <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
@@ -1701,7 +1701,7 @@ export default function App(){
                                       </div>
                                     </div>
                                     {/* Total */}
-                                    <div style={{minWidth:100,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                                    <div style={{width:140,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
                                       <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
                                       <div style={{fontSize:14,fontWeight:900,color:accentColor}}>{fmtMoney(totalCost)}</div>
                                     </div>
@@ -1811,22 +1811,22 @@ export default function App(){
                             <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.red,textTransform:"uppercase"}}>KELUAR</span>
                           </div>
                           {/* Content */}
-                          <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"wrap",minWidth:0}}>
+                          <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"nowrap",minWidth:0}}>
                             {/* Name + dept */}
-                            <div style={{minWidth:130,flex:"0 0 auto",paddingRight:16}}>
+                            <div style={{width:210,flexShrink:0,paddingRight:16}}>
                               <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{t.taker}</div>
                               <div style={{fontSize:11,color:T.muted,marginTop:2}}>{t.dept}</div>
                               <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {t.admin}</div>
                             </div>
                             {/* Time */}
-                            <div style={{minWidth:68,flexShrink:0,paddingRight:16}}>
+                            <div style={{width:110,flexShrink:0,paddingRight:16}}>
                               <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{t.time||"-"}</div>
                               <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(t.date)}</div>
                             </div>
                             {/* Items */}
-                            <div style={{flex:1,minWidth:160,paddingRight:16}}>
+                            <div style={{flex:"1 1 auto",minWidth:280,paddingRight:16}}>
                               {t.items.slice(0,3).map((it,ii)=>(
-                                <div key={ii} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,flexWrap:"wrap"}}>
+                                <div key={ii} style={{display:"grid",gridTemplateColumns:"14px minmax(0,1fr) auto",alignItems:"center",columnGap:8,marginBottom:4}}>
                                   <span style={{fontSize:11}}>📦</span>
                                   <span style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>{it.itemName}</span>
                                   <span style={{fontSize:10,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 7px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`,flexShrink:0}}>×{it.qty} {it.unit}</span>
@@ -1835,7 +1835,7 @@ export default function App(){
                               {t.items.length>3&&<div style={{fontSize:10,color:T.muted}}>+{t.items.length-3} item lainnya</div>}
                             </div>
                             {/* Jenis + Unit */}
-                            <div style={{minWidth:60,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
+                            <div style={{width:90,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
                               <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                                 <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{t.items.length}</span>
                                 <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
@@ -1846,7 +1846,7 @@ export default function App(){
                               </div>
                             </div>
                             {/* Total */}
-                            <div style={{minWidth:105,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                            <div style={{width:140,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
                               <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
                               <div style={{fontSize:14,fontWeight:900,color:T.red}}>{fmtMoney(totalCostRow)}</div>
                             </div>
@@ -1927,19 +1927,19 @@ export default function App(){
                                 <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.green,textTransform:"uppercase"}}>MASUK</span>
                               </div>
                               {/* Content */}
-                              <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"wrap",minWidth:0}}>
+                              <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"nowrap",minWidth:0}}>
                                 {/* Name */}
-                                <div style={{minWidth:130,flex:"0 0 auto",paddingRight:16}}>
+                                <div style={{width:210,flexShrink:0,paddingRight:16}}>
                                   <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{r.itemName||"-"}</div>
                                   <div style={{fontSize:11,color:T.muted,marginTop:2}}>Admin: {r.admin||"-"}</div>
                                 </div>
                                 {/* Time */}
-                                <div style={{minWidth:68,flexShrink:0,paddingRight:16}}>
+                                <div style={{width:110,flexShrink:0,paddingRight:16}}>
                                   <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{r.time||"-"}</div>
                                   <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(r.date)}</div>
                                 </div>
                                 {/* Items */}
-                                <div style={{flex:1,minWidth:140,paddingRight:16}}>
+                                <div style={{flex:"1 1 auto",minWidth:280,paddingRight:16}}>
                                   <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
                                     <span style={{fontSize:12}}>📦</span>
                                     <span style={{fontSize:12.5,fontWeight:700,color:T.text}}>{r.itemName||"-"}</span>
@@ -1952,7 +1952,7 @@ export default function App(){
                                   </div>
                                 </div>
                                 {/* Jenis + Unit */}
-                                <div style={{minWidth:60,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
+                                <div style={{width:90,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
                                   <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                                     <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>1</span>
                                     <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
@@ -1963,7 +1963,7 @@ export default function App(){
                                   </div>
                                 </div>
                                 {/* Total */}
-                                <div style={{minWidth:100,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                                <div style={{width:140,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
                                   <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
                                   <div style={{fontSize:14,fontWeight:900,color:T.green}}>{fmtMoney(totalCostR)}</div>
                                 </div>
