@@ -1709,27 +1709,25 @@ export default function App(){
                 {historyTab==="out"&&(
                   <div>
                     {/* Stats 5 columns */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:18}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
                       {(()=>{
                         const totalNilai=trx.reduce((acc,t)=>acc+Number(t.totalCostOut??t.items.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0)),0)),0);
                         return [
-                          {label:"Total Transaksi",sub:"pengambilan",val:trx.length,icon:"📋",dot:T.primary},
-                          {label:"Total Unit Keluar",sub:"unit total",val:totalOut,icon:"📦",dot:T.green},
-                          {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(trx.flatMap(t=>t.items.map(i=>i.itemId)))].length,icon:"🏷",dot:T.primaryLight},
-                          {label:"Jumlah Pengambil",sub:"karyawan",val:[...new Set(trx.map(t=>t.taker))].length,icon:"👥",dot:T.amber},
-                          {label:"Total Nilai (Estimasi)",sub:"berdasarkan harga rata-rata",val:null,valStr:fmtMoney(totalNilai),icon:"Rp",dot:T.primary},
+                          {label:"Total Transaksi",sub:"pengambilan",val:trx.length,valStr:null,icon:"📋",dot:T.primary},
+                          {label:"Total Unit Keluar",sub:"unit total",val:totalOut,valStr:null,icon:"📦",dot:T.green},
+                          {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(trx.flatMap(t=>t.items.map(i=>i.itemId)))].length,valStr:null,icon:"🏷",dot:T.primaryLight},
+                          {label:"Jumlah Pengambil",sub:"karyawan",val:[...new Set(trx.map(t=>t.taker))].length,valStr:null,icon:"👥",dot:T.amber},
+                          {label:"Total Nilai",sub:"estimasi harga rata-rata",val:null,valStr:fmtMoney(totalNilai),icon:"Rp",dot:T.primary},
                         ];
                       })().map((s,i)=>(
-                        <div key={i} className="stat-card" style={{display:"flex",alignItems:"flex-start",gap:14,minHeight:90}}>
-                          <div style={{width:46,height:46,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:i===4?11:20,fontWeight:i===4?900:400,background:dark?"rgba(16,185,129,0.12)":"rgba(16,185,129,0.08)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:6}}>
-                              <span style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase"}}>{s.label}</span>
-                              <span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block",flexShrink:0}}/>
-                            </div>
-                            <div style={{fontSize:i===4?18:30,fontWeight:900,lineHeight:1,color:s.dot,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.val!==null?s.val:s.valStr}</div>
-                            <div style={{fontSize:10,color:T.muted,marginTop:5,fontWeight:500}}>{s.sub}</div>
+                        <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",gap:0,padding:"16px 18px"}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:i===4?11:18,fontWeight:i===4?900:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
+                            <span style={{width:6,height:6,borderRadius:"50%",background:s.dot,display:"inline-block"}}/>
                           </div>
+                          <div style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:6,lineHeight:1.3}}>{s.label}</div>
+                          <div style={{fontSize:i===4?15:28,fontWeight:900,lineHeight:1,color:s.dot,marginBottom:5}}>{s.val!==null?s.val:s.valStr}</div>
+                          <div style={{fontSize:10,color:T.muted,fontWeight:500}}>{s.sub}</div>
                         </div>
                       ))}
                     </div>
