@@ -1708,33 +1708,52 @@ export default function App(){
                 {/* ─ TAB PENGAMBILAN ─ */}
                 {historyTab==="out"&&(
                   <div>
-                    <p style={{fontSize:12.5,color:T.muted,fontWeight:500,marginBottom:16}}>Rekap seluruh pengambilan barang consumable gudang.</p>
-                    <div className="hist-g">
-                      {[
-                        {label:"Total Transaksi",val:trx.length,color:T.primaryLight},
-                        {label:"Total Unit Keluar",val:totalOut,color:"#6ee7b7"},
-                        {label:"Item Berbeda",val:[...new Set(trx.flatMap(t=>t.items.map(i=>i.itemId)))].length,color:"#a7f3d0"},
-                        {label:"Jumlah Pengambil",val:[...new Set(trx.map(t=>t.taker))].length,color:T.amberText},
-                      ].map((s,i)=>(
-                        <div key={i} className="stat-card">
-                          <div style={{fontSize:10,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase",marginBottom:12}}>{s.label}</div>
-                          <div style={{fontSize:40,fontWeight:900,lineHeight:1,color:s.color}}>{s.val}</div>
+                    {/* Stats 5 columns */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:18}}>
+                      {(()=>{
+                        const totalNilai=trx.reduce((acc,t)=>acc+Number(t.totalCostOut??t.items.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0)),0)),0);
+                        return [
+                          {label:"Total Transaksi",sub:"pengambilan",val:trx.length,icon:"📋",dot:T.primary},
+                          {label:"Total Unit Keluar",sub:"unit total",val:totalOut,icon:"📦",dot:T.green},
+                          {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(trx.flatMap(t=>t.items.map(i=>i.itemId)))].length,icon:"🏷",dot:T.primaryLight},
+                          {label:"Jumlah Pengambil",sub:"karyawan",val:[...new Set(trx.map(t=>t.taker))].length,icon:"👥",dot:T.amber},
+                          {label:"Total Nilai (Estimasi)",sub:"berdasarkan harga rata-rata",val:null,valStr:fmtMoney(totalNilai),icon:"Rp",dot:T.primary},
+                        ];
+                      })().map((s,i)=>(
+                        <div key={i} className="stat-card" style={{display:"flex",alignItems:"flex-start",gap:14,minHeight:90}}>
+                          <div style={{width:46,height:46,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:i===4?11:20,fontWeight:i===4?900:400,background:dark?"rgba(16,185,129,0.12)":"rgba(16,185,129,0.08)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:6}}>
+                              <span style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase"}}>{s.label}</span>
+                              <span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block",flexShrink:0}}/>
+                            </div>
+                            <div style={{fontSize:i===4?18:30,fontWeight:900,lineHeight:1,color:s.dot,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.val!==null?s.val:s.valStr}</div>
+                            <div style={{fontSize:10,color:T.muted,marginTop:5,fontWeight:500}}>{s.sub}</div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    <div className="card" style={{marginBottom:16}}>
+
+                    {/* Barang Paling Sering Diambil */}
+                    <div className="card" style={{marginBottom:18}}>
                       <div style={{fontSize:16,fontWeight:800,...gText(),marginBottom:16}}>🏆 Barang Paling Sering Diambil</div>
                       {(()=>{
-                        const agg=trx.flatMap(t=>t.items).reduce((acc,it)=>{acc[it.itemName]=(acc[it.itemName]||0)+it.qty;return acc;},{});
-                        const sorted=Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,5);const max=sorted[0]?.[1]||1;
-                        return sorted.length===0?<div style={{textAlign:"center",padding:"24px 0",color:T.muted}}>Belum ada data</div>
+                        const agg=trx.flatMap(t=>t.items).reduce((acc,it)=>{acc[it.itemName]=(acc[it.itemName]||0)+it.qty;return acc;},{} as Record<string,number>);
+                        const sorted=Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,5);
+                        const max=sorted[0]?.[1]||1;
+                        const grandTotal=sorted.reduce((a,[,v])=>a+v,0)||1;
+                        return sorted.length===0
+                          ?<div style={{textAlign:"center",padding:"24px 0",color:T.muted}}>Belum ada data</div>
                           :sorted.map(([name,qty],i)=>(
                             <div key={name} style={{display:"flex",alignItems:"center",gap:11,padding:"11px 0",borderBottom:`1px solid ${T.border}`}}>
                               <div style={{width:24,height:24,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,background:i===0?T.navActive:T.surface,color:i===0?T.navActiveText:T.muted,border:`1px solid ${i===0?T.navActiveBorder:T.border}`,flexShrink:0}}>{i+1}</div>
                               <div style={{flex:1,minWidth:0}}>
                                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5,gap:8}}>
                                   <span style={{fontSize:13,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
-                                  <span style={{fontSize:12,fontWeight:800,color:T.greenText,flexShrink:0}}>{qty} unit</span>
+                                  <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                                    <span style={{fontSize:12,fontWeight:800,color:T.greenText}}>{qty} unit</span>
+                                    <span style={{fontSize:11,fontWeight:700,color:T.muted}}>({(qty/grandTotal*100).toFixed(1)}%)</span>
+                                  </div>
                                 </div>
                                 <Prog pct={qty/max*100} color={i===0?T.primary:T.muted}/>
                               </div>
@@ -1742,45 +1761,89 @@ export default function App(){
                           ));
                       })()}
                     </div>
-                    <div style={{fontSize:17,fontWeight:800,...gText(),marginBottom:14}}>Log Lengkap</div>
-                    {pagedOut.map(t=>(
-                      <div key={t.id} className="trx-card">
-                        <div className="trx-head">
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
-                              <span style={{fontSize:13.5,fontWeight:700,color:T.text}}>{t.taker}</span>
-                              <span style={{fontSize:11.5,color:T.muted}}>{t.dept}</span>
-                            </div>
-                            <div style={{fontSize:11,color:T.muted,marginTop:3}}>{fmtDate(t.date)} · {t.time} · Admin: {t.admin}{t.workOrder&&` · ${t.workOrder}`}</div>
+
+                    {/* Log Pengambilan */}
+                    <div style={{fontSize:17,fontWeight:800,...gText(),marginBottom:14}}>Log Pengambilan</div>
+                    {pagedOut.map(t=>{
+                      const totalCostRow=Number(t.totalCostOut??t.items.reduce((acc,it)=>{const avg=Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0);return acc+(Number(it.qty||0)*avg);},0));
+                      const totalUnits=t.items.reduce((a,i)=>a+i.qty,0);
+                      return(
+                        <div key={t.id} style={{display:"flex",alignItems:"stretch",gap:0,background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${T.red}`,borderRadius:14,marginBottom:8,overflow:"hidden",boxShadow:T.shadowSm,transition:"box-shadow .2s"}}>
+                          {/* Avatar */}
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"14px 12px",gap:5,minWidth:70,flexShrink:0}}>
+                            <div style={{width:48,height:48,borderRadius:"50%",background:T.redBg,border:`2px solid ${T.red}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,lineHeight:1}}>↗</div>
+                            <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.red,textTransform:"uppercase"}}>KELUAR</span>
                           </div>
-                          <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>{t.items.length} item · {t.items.reduce((a,i)=>a+i.qty,0)} unit</Badge>
-                            <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>💰 {fmtMoney(t.totalCostOut ?? t.items.reduce((acc,it)=>{const avg=Number(it.averageCost ?? itemMap[Number(it.itemId)]?.averageCost ?? 0);return acc+(Number(it.qty||0)*avg);},0))}</Badge>
-                            {isAdmin&&<button onClick={()=>deleteTransaction(t.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>}
+                          {/* Content */}
+                          <div style={{flex:1,display:"flex",alignItems:"center",gap:0,padding:"12px 14px 12px 8px",flexWrap:"wrap",minWidth:0}}>
+                            {/* Name + dept */}
+                            <div style={{minWidth:140,flex:"0 0 auto",paddingRight:16}}>
+                              <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{t.taker}</div>
+                              <div style={{fontSize:11,color:T.muted,marginTop:2}}>{t.dept}</div>
+                              <div style={{display:"flex",alignItems:"center",gap:5,marginTop:5,flexWrap:"wrap"}}>
+                                <span style={{fontSize:10,color:T.muted}}>📅 {fmtDate(t.date)}</span>
+                                <span style={{fontSize:10,color:T.muted}}>🕐 {t.time}</span>
+                                <span style={{fontSize:10,color:T.muted}}>👤 Admin: {t.admin}</span>
+                              </div>
+                            </div>
+                            {/* Items */}
+                            <div style={{flex:1,minWidth:160,paddingRight:16}}>
+                              {t.items.slice(0,3).map((it,ii)=>(
+                                <div key={ii} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,flexWrap:"wrap"}}>
+                                  <span style={{fontSize:11}}>📦</span>
+                                  <span style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>{it.itemName}</span>
+                                  <span style={{fontSize:10,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 7px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`,flexShrink:0}}>×{it.qty} {it.unit}</span>
+                                </div>
+                              ))}
+                              {t.items.length>3&&<div style={{fontSize:10,color:T.muted}}>+{t.items.length-3} item lainnya</div>}
+                            </div>
+                            {/* Jenis + Unit */}
+                            <div style={{minWidth:55,flexShrink:0,textAlign:"center",paddingRight:16}}>
+                              <div style={{fontSize:15,fontWeight:900,color:T.text,lineHeight:1}}>{t.items.length}</div>
+                              <div style={{fontSize:10,color:T.muted,fontWeight:600}}>jenis</div>
+                              <div style={{fontSize:14,fontWeight:800,color:T.text,marginTop:5,lineHeight:1}}>{totalUnits}</div>
+                              <div style={{fontSize:10,color:T.muted,fontWeight:600}}>unit</div>
+                            </div>
+                            {/* Total */}
+                            <div style={{minWidth:105,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                              <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
+                              <div style={{fontSize:14,fontWeight:900,color:T.red}}>{fmtMoney(totalCostRow)}</div>
+                            </div>
+                            {/* Hapus */}
+                            {isAdmin&&(
+                              <button onClick={()=>deleteTransaction(t.id)}
+                                style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 12px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                                🗑 Hapus
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <div className="trx-body">
-                          {t.items.map((it,ii)=>{
-                            const avg=Number(it.averageCost ?? itemMap[Number(it.itemId)]?.averageCost ?? 0);
-                            const lineCost=Number(it.totalCost ?? (Number(it.qty||0)*avg));
-                            return(
-                            <div key={ii} className="itm-pill" title={`Avg ${fmtMoney(avg)} · Cost ${fmtMoney(lineCost)}`}>
-                              <span style={{fontSize:12,fontWeight:700,color:T.sub}}>{it.itemName}</span>
-                              <span style={{fontSize:10.5,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 7px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`}}>×{it.qty} {it.unit}</span>
-                              <span style={{fontSize:10.5,color:T.muted,fontWeight:700}}>· {fmtMoney(lineCost)}</span>
-                            </div>
-                          );})}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
+                    {/* Pagination */}
                     {filteredOut.length>0&&(
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredOut.length)} dari {filteredOut.length}</span>
-                        <div style={{display:"flex",gap:8}}>
-                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1} style={{padding:"7px 12px",opacity:historyOutPage<=1?0.55:1}}>← Prev</BtnG>
-                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyOutPage}/{outTotalPages}</Badge>
-                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.min(outTotalPages,p+1))} disabled={historyOutPage>=outTotalPages} style={{padding:"7px 12px",opacity:historyOutPage>=outTotalPages?0.55:1}}>Next →</BtnG>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:16,gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredOut.length)} dari {filteredOut.length} transaksi</span>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <button onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1}
+                            style={{display:"flex",alignItems:"center",gap:4,padding:"8px 16px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:historyOutPage<=1?T.muted:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:historyOutPage<=1?"default":"pointer",opacity:historyOutPage<=1?0.5:1,transition:"all .18s"}}>
+                            ‹ Prev
+                          </button>
+                          {Array.from({length:outTotalPages}).map((_,i)=>(
+                            <button key={i} onClick={()=>setHistoryOutPage(i+1)}
+                              style={{width:36,height:36,borderRadius:9,border:`1px solid ${historyOutPage===i+1?T.primary:T.border}`,background:historyOutPage===i+1?T.primary:T.surface,color:historyOutPage===i+1?"white":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",transition:"all .18s"}}>
+                              {i+1}
+                            </button>
+                          ))}
+                          <button onClick={()=>setHistoryOutPage(p=>Math.min(outTotalPages,p+1))} disabled={historyOutPage>=outTotalPages}
+                            style={{display:"flex",alignItems:"center",gap:4,padding:"8px 16px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:historyOutPage>=outTotalPages?T.muted:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:historyOutPage>=outTotalPages?"default":"pointer",opacity:historyOutPage>=outTotalPages?0.5:1,transition:"all .18s"}}>
+                            Next ›
+                          </button>
                         </div>
+                        <select value={historyPageSize} onChange={e=>setHistoryPageSize(Number(e.target.value)||6)}
+                          style={{padding:"8px 12px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",outline:"none"}}>
+                          {[6,10,15,20].map(n=><option key={n} value={n}>{n} / halaman</option>)}
+                        </select>
                       </div>
                     )}
                   </div>
