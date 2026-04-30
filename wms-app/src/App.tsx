@@ -1543,26 +1543,29 @@ export default function App(){
             {/* ══ HISTORY ══ */}
             {tab==="history"&&(
               <div>
-                {/* Sub-tab toggle */}
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:22}}>
-                  <div style={{display:"flex",gap:6,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
-                    <button onClick={()=>setHistoryTab("all")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="all"?T.primary:"transparent",color:historyTab==="all"?"white":T.muted,boxShadow:historyTab==="all"?`0 4px 12px ${T.primaryGlow}`:"none"}}>🧾 Semua ({allHistory.length})</button>
-                    <button onClick={()=>setHistoryTab("out")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="out"?T.primary:"transparent",color:historyTab==="out"?"white":T.muted,boxShadow:historyTab==="out"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📤 Pengambilan ({trx.length})</button>
-                    <button onClick={()=>setHistoryTab("in")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="in"?T.primary:"transparent",color:historyTab==="in"?"white":T.muted,boxShadow:historyTab==="in"?`0 4px 12px ${T.primaryGlow}`:"none"}}>📥 Penerimaan ({receives.length})</button>
-                    {isAdmin&&<button onClick={()=>setHistoryTab("audit")} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab==="audit"?T.primary:"transparent",color:historyTab==="audit"?"white":T.muted,boxShadow:historyTab==="audit"?`0 4px 12px ${T.primaryGlow}`:"none"}}>🛡 Audit ({auditTotal})</button>}
+                {/* Sub-tab toggle + actions */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:14}}>
+                  <div style={{display:"flex",gap:4,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
+                    {[
+                      {id:"all",icon:"🧾",label:`Semua (${allHistory.length})`},
+                      {id:"out",icon:"📤",label:`Pengambilan (${trx.length})`},
+                      {id:"in",icon:"📋",label:`Penerimaan (${receives.length})`},
+                      ...(isAdmin?[{id:"audit",icon:"🛡",label:`Audit (${auditTotal})`}]:[]),
+                    ].map(tb=>(
+                      <button key={tb.id} onClick={()=>setHistoryTab(tb.id)} style={{padding:"8px 16px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab===tb.id?T.primary:"transparent",color:historyTab===tb.id?"white":T.muted,boxShadow:historyTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap"}}>{tb.icon} {tb.label}</button>
+                    ))}
                   </div>
-                  {isAdmin&&(
-                    <div style={{display:"flex",gap:8}}>
-                      {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsExcel:exportReceivesExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
-                      {historyTab!=="audit"&&<BtnG onClick={historyTab==="out"?exportTransactionsPdf:exportReceivesPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
-                      {historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
-                      {historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
-                    </div>
-                  )}
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12}}>⬇ Excel</BtnG>}
+                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12}}>🧾 PDF</BtnG>}
+                    {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700}}>⬇ Excel</BtnG>}
+                    {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700}}>🧾 PDF</BtnG>}
+                    {isAdmin&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
+                  </div>
                 </div>
 
                 {historyTab!=="audit"&&(
-                  <div className="fbar">
+                  <div className="fbar" style={{marginBottom:14}}>
                     <input className="ifield" style={{width:220}} placeholder="🔍 Cari nama/item/admin/PO/DO..." value={historyQuery} onChange={e=>setHistoryQuery(e.target.value)}/>
                     <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Dari</span>
                     <input type="date" className="ifield" style={{width:160}} value={historyFrom} onChange={e=>setHistoryFrom(e.target.value)}/>
@@ -1572,72 +1575,131 @@ export default function App(){
                       {[6,10,15,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
                     </select>
                     <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setHistoryQuery("");setHistoryFrom("");setHistoryTo("");}}>✕ Reset</BtnG>
+                    <span style={{marginLeft:"auto",fontSize:11.5,color:T.muted,fontWeight:600,whiteSpace:"nowrap"}}>
+                      {historyTab==="all"?filteredAll.length:historyTab==="out"?filteredOut.length:filteredIn.length} transaksi ditemukan
+                    </span>
                   </div>
                 )}
 
                 {/* ─ TAB SEMUA ─ */}
                 {historyTab==="all"&&(
                   <div>
-                    <p style={{fontSize:12.5,color:T.muted,fontWeight:500,marginBottom:16}}>Riwayat transaksi gabungan masuk dan keluar dengan tipe pergerakan barang.</p>
                     {filteredAll.length===0
                       ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🧾</div>Belum ada riwayat transaksi</div>
-                      :pagedAll.map(row=>{
-                        const isIn=String(row.type||"").toLowerCase()==="in";
-                        const badgeBg=isIn?T.greenBg:T.navActive;
-                        const badgeColor=isIn?T.greenText:T.navActiveText;
-                        const badgeBorder=isIn?T.greenBorder:T.navActiveBorder;
-                        const totalCost=isIn
-                          ?Number(row.totalCostIn ?? ((Number(row.qty)||0)*(Number(row.buyPrice)||0)))
-                          :Number(row.totalCostOut ?? 0);
-                        return(
-                          <div key={`${row.type||"legacy"}-${row.id}`} className="trx-card">
-                            <div className="trx-head">
-                              <div style={{flex:1,minWidth:0}}>
-                                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:7}}>
-                                  <Badge bg={badgeBg} color={badgeColor} border={badgeBorder}>{isIn?"MASUK":"KELUAR"}</Badge>
-                                  <span style={{fontSize:13.5,fontWeight:700,color:T.text}}>{isIn?(row.itemName||row.items?.[0]?.itemName||"-"):(row.taker||"-")}</span>
-                                  {isIn
-                                    ?<span style={{fontSize:11.5,color:T.muted}}>Admin: {row.admin||"-"}</span>
-                                    :<span style={{fontSize:11.5,color:T.muted}}>{row.dept||"-"}</span>
-                                  }
-                                </div>
-                                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                                  <Badge bg={T.surface} color={T.muted} border={T.border}>📅 {fmtDate(row.date)}</Badge>
-                                  <Badge bg={T.surface} color={T.muted} border={T.border}>⏰ {row.time||"-"}</Badge>
-                                  {row.admin&&<Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>👤 {row.admin}</Badge>}
-                                  {row.poNumber&&<Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>PO: {row.poNumber}</Badge>}
-                                  {row.doNumber&&<Badge bg={T.surface} color={T.muted} border={T.border}>DO: {row.doNumber}</Badge>}
-                                  <Badge bg={T.surface} color={T.muted} border={T.border}>Total: {fmtMoney(totalCost)}</Badge>
-                                </div>
-                              </div>
-                              {isIn
-                                ?isAdmin&&<button onClick={()=>deleteReceive(row.receiveId ?? row.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>
-                                :isAdmin&&<button onClick={()=>deleteTransaction(row.id)} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>
-                              }
+                      :(()=>{
+                        const grouped:Record<string,typeof pagedAll>={};
+                        for(const row of pagedAll){const d=row.date||"";if(!grouped[d])grouped[d]=[];grouped[d].push(row);}
+                        const sortedDates=Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
+                        const fmtDG=(d:string)=>new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}).toUpperCase();
+                        return sortedDates.map(date=>(
+                          <div key={date} style={{marginBottom:22}}>
+                            {/* Date group header */}
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                              <span style={{width:8,height:8,borderRadius:"50%",background:T.primary,display:"inline-block",flexShrink:0}}/>
+                              <span style={{fontSize:12,fontWeight:900,color:T.primary,letterSpacing:".1em"}}>{fmtDG(date)}</span>
                             </div>
-                            <div className="trx-body">
-                              {(row.items||[]).map((it,ii)=>(
-                                <div key={ii} className="itm-pill" title={isIn?`Buy ${fmtMoney(it.buyPrice ?? row.buyPrice)} · Avg ${fmtMoney(it.averageCostAfter ?? row.averageCostAfter ?? 0)}`:`Avg ${fmtMoney(it.averageCost ?? 0)} · Cost ${fmtMoney(it.totalCost ?? 0)}`}>
-                                  <span style={{fontSize:12,fontWeight:700,color:T.sub}}>{it.itemName}</span>
-                                  <span style={{fontSize:10.5,fontWeight:800,color:badgeColor,background:badgeBg,padding:"1px 7px",borderRadius:5,border:`1px solid ${badgeBorder}`}}>{isIn?"+":"×"}{it.qty} {it.unit}</span>
-                                  {isIn
-                                    ?<span style={{fontSize:10.5,color:T.muted,fontWeight:700}}>· Buy {fmtMoney(it.buyPrice ?? row.buyPrice)}</span>
-                                    :<span style={{fontSize:10.5,color:T.muted,fontWeight:700}}>· {fmtMoney(it.totalCost ?? 0)}</span>
-                                  }
+                            {grouped[date].map((row:any)=>{
+                              const isIn=String(row.type||"").toLowerCase()==="in";
+                              const accentColor=isIn?T.green:T.red;
+                              const accentBg=isIn?T.greenBg:T.redBg;
+                              const itemsArr:any[]=row.items||[];
+                              const totalUnits=isIn?(Number(row.qty)||0):itemsArr.reduce((a:number,i:any)=>a+Number(i.qty||0),0);
+                              const jenis=isIn?1:itemsArr.length;
+                              const totalCost=isIn
+                                ?Number(row.totalCostIn??((Number(row.qty)||0)*(Number(row.buyPrice)||0)))
+                                :Number(row.totalCostOut??0);
+                              return(
+                                <div key={`${row.type||"x"}-${row.id}`} style={{display:"flex",alignItems:"stretch",gap:0,background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${accentColor}`,borderRadius:14,marginBottom:8,overflow:"hidden",transition:"box-shadow .2s",boxShadow:T.shadowSm}}>
+                                  {/* Avatar */}
+                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"14px 12px",gap:5,minWidth:70,flexShrink:0}}>
+                                    <div style={{width:48,height:48,borderRadius:"50%",background:accentBg,border:`2px solid ${accentColor}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,lineHeight:1}}>
+                                      {isIn?"↙":"↗"}
+                                    </div>
+                                    <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:accentColor,textTransform:"uppercase"}}>{isIn?"MASUK":"KELUAR"}</span>
+                                  </div>
+                                  {/* Content */}
+                                  <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"wrap",minWidth:0}}>
+                                    {/* Name + dept */}
+                                    <div style={{minWidth:130,flex:"0 0 auto",paddingRight:16}}>
+                                      <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{isIn?(row.itemName||itemsArr[0]?.itemName||"-"):(row.taker||"-")}</div>
+                                      <div style={{fontSize:11,color:T.muted,marginTop:2}}>{isIn?`Admin: ${row.admin||"-"}`:(row.dept||"-")}</div>
+                                      {!isIn&&<div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {row.admin||"-"}</div>}
+                                    </div>
+                                    {/* Time */}
+                                    <div style={{minWidth:68,flexShrink:0,paddingRight:16}}>
+                                      <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{row.time||"-"}</div>
+                                      <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(row.date)}</div>
+                                    </div>
+                                    {/* Items */}
+                                    <div style={{flex:1,minWidth:140,paddingRight:16}}>
+                                      {isIn
+                                        ?<>
+                                          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
+                                            <span style={{fontSize:12}}>📦</span>
+                                            <span style={{fontSize:12.5,fontWeight:700,color:T.text}}>{row.itemName||"-"}</span>
+                                            <span style={{fontSize:10.5,fontWeight:800,color:T.greenText,background:T.greenBg,padding:"1px 8px",borderRadius:5,border:`1px solid ${T.greenBorder}`,flexShrink:0}}>+{row.qty} {row.unit||"pcs"}</span>
+                                          </div>
+                                          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                            {row.poNumber&&<span style={{fontSize:10,fontWeight:700,color:T.navActiveText,background:T.navActive,padding:"2px 8px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`}}>PO: {row.poNumber}</span>}
+                                            {row.doNumber&&<span style={{fontSize:10,fontWeight:700,color:T.muted,background:T.surface,padding:"2px 8px",borderRadius:5,border:`1px solid ${T.border}`}}>DO: {row.doNumber}</span>}
+                                            {row.buyPrice&&<span style={{fontSize:10,color:T.greenText,fontWeight:700}}>💵 Buy {fmtMoney(row.buyPrice)} / {row.unit||"pcs"}</span>}
+                                          </div>
+                                        </>
+                                        :itemsArr.slice(0,3).map((it:any,ii:number)=>(
+                                          <div key={ii} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>
+                                            <span style={{fontSize:11}}>📦</span>
+                                            <span style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>{it.itemName}</span>
+                                            <span style={{fontSize:10,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 7px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`,flexShrink:0}}>×{it.qty} {it.unit||"pcs"}</span>
+                                          </div>
+                                        ))
+                                      }
+                                      {!isIn&&itemsArr.length>3&&<div style={{fontSize:10,color:T.muted,marginTop:2}}>+{itemsArr.length-3} item lainnya</div>}
+                                    </div>
+                                    {/* Jenis + Unit */}
+                                    <div style={{minWidth:55,flexShrink:0,textAlign:"center",paddingRight:16}}>
+                                      <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{jenis}</div>
+                                      <div style={{fontSize:10,color:T.muted,fontWeight:600}}>jenis</div>
+                                      <div style={{fontSize:14,fontWeight:800,color:T.text,marginTop:5,lineHeight:1}}>{totalUnits}</div>
+                                      <div style={{fontSize:10,color:T.muted,fontWeight:600}}>unit</div>
+                                    </div>
+                                    {/* Total */}
+                                    <div style={{minWidth:100,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                                      <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
+                                      <div style={{fontSize:14,fontWeight:900,color:accentColor}}>{fmtMoney(totalCost)}</div>
+                                    </div>
+                                    {/* Hapus */}
+                                    {isAdmin&&(
+                                      <button
+                                        onClick={()=>isIn?deleteReceive(row.receiveId??row.id):deleteTransaction(row.id)}
+                                        style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 12px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                                        🗑 Hapus
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                              ))}
-                            </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
+                        ));
+                      })()
+                    }
+                    {/* Pagination */}
                     {filteredAll.length>0&&(
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11.5,color:T.muted}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredAll.length)} dari {filteredAll.length}</span>
-                        <div style={{display:"flex",gap:8}}>
-                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1} style={{padding:"7px 12px",opacity:historyOutPage<=1?0.55:1}}>← Prev</BtnG>
-                          <Badge bg={T.surface} color={T.text} border={T.border}>Page {historyOutPage}/{allTotalPages}</Badge>
-                          <BtnG onClick={()=>setHistoryOutPage(p=>Math.min(allTotalPages,p+1))} disabled={historyOutPage>=allTotalPages} style={{padding:"7px 12px",opacity:historyOutPage>=allTotalPages?0.55:1}}>Next →</BtnG>
-                        </div>
+                      <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:6,marginTop:20,flexWrap:"wrap"}}>
+                        <button onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1}
+                          style={{padding:"8px 18px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:historyOutPage<=1?T.muted:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:historyOutPage<=1?"default":"pointer",opacity:historyOutPage<=1?0.5:1,transition:"all .18s"}}>
+                          ‹ Sebelumnya
+                        </button>
+                        {Array.from({length:allTotalPages}).map((_,i)=>(
+                          <button key={i} onClick={()=>setHistoryOutPage(i+1)}
+                            style={{width:38,height:38,borderRadius:9,border:`1px solid ${historyOutPage===i+1?T.primary:T.border}`,background:historyOutPage===i+1?T.primary:T.surface,color:historyOutPage===i+1?"white":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",transition:"all .18s"}}>
+                            {i+1}
+                          </button>
+                        ))}
+                        <button onClick={()=>setHistoryOutPage(p=>Math.min(allTotalPages,p+1))} disabled={historyOutPage>=allTotalPages}
+                          style={{padding:"8px 18px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:historyOutPage>=allTotalPages?T.muted:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:historyOutPage>=allTotalPages?"default":"pointer",opacity:historyOutPage>=allTotalPages?0.5:1,transition:"all .18s"}}>
+                          Selanjutnya ›
+                        </button>
                       </div>
                     )}
                   </div>
