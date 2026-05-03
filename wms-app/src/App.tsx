@@ -1901,21 +1901,28 @@ export default function App(){
                 {/* ─ TAB PENERIMAAN ─ */}
                 {historyTab==="in"&&(
                   <div>
-                    {/* Stats 4 columns */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:18}}>
-                      {[
-                        {label:"Total Penerimaan",sub:"transaksi",val:receives.length,icon:"📥",dot:T.primary},
-                        {label:"Total Unit Masuk",sub:"unit",val:totalIn,icon:"📦",dot:T.green},
-                        {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(receives.map(r=>r.itemId))].length,icon:"🏷",dot:T.primaryLight},
-                        {label:"Admin Terlibat",sub:"admin",val:[...new Set(receives.map(r=>r.admin).filter(Boolean))].length,icon:"👥",dot:T.amber},
-                      ].map((s,i)=>(
+                    {/* Stats 5 columns */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
+                      {(()=>{
+                        const totalNilaiIn=receives.reduce((acc,r)=>{
+                          const it=itemMap[Number(r.itemId)];
+                          return acc+(Number(r.buyPrice??it?.lastPrice??0)*Number(r.qty||0));
+                        },0);
+                        return [
+                          {label:"Total Penerimaan",sub:"transaksi",val:receives.length,valStr:null,icon:"📥",dot:T.primary},
+                          {label:"Total Unit Masuk",sub:"unit",val:totalIn,valStr:null,icon:"📦",dot:T.green},
+                          {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(receives.map(r=>r.itemId))].length,valStr:null,icon:"🏷",dot:T.primaryLight},
+                          {label:"Admin Terlibat",sub:"admin",val:[...new Set(receives.map(r=>r.admin).filter(Boolean))].length,valStr:null,icon:"👥",dot:T.amber},
+                          {label:"Total Nilai",sub:"estimasi harga beli",val:null,valStr:fmtMoney(totalNilaiIn),icon:"Rp",dot:T.primary},
+                        ];
+                      })().map((s,i)=>(
                         <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",padding:"16px 18px"}}>
                           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0}}>{s.icon}</div>
+                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
                             <span style={{width:6,height:6,borderRadius:"50%",background:s.dot,display:"inline-block"}}/>
                           </div>
                           <div style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
-                          <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:s.dot,marginBottom:5}}>{s.val}</div>
+                          <div style={{fontSize:28,fontWeight:900,lineHeight:1.2,color:s.dot,marginBottom:5,wordBreak:"break-word",overflowWrap:"break-word"}}>{s.val!==null?s.val:s.valStr}</div>
                           <div style={{fontSize:10,color:T.muted,fontWeight:500}}>{s.sub}</div>
                         </div>
                       ))}
