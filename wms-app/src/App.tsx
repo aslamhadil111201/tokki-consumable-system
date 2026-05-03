@@ -464,6 +464,7 @@ export default function App(){
       setAuthToken(token||"");
       setLoggedIn(true);
       setUser(u);
+      localStorage.setItem("wms_token",token||"");
       localStorage.setItem("wms_user",JSON.stringify(u));
       setTab(desiredTabRef.current||"dashboard");
       toast$("Selamat datang ✓");
