@@ -99,6 +99,13 @@ const csvEscape = (v) => {
   const s = String(v ?? "").replace(/"/g, '""');
   return /[",\n]/.test(s) ? `"${s}"` : s;
 };
+const csvText = (v) => `="${String(v ?? "").replace(/"/g, '""')}"`;
+const fmtDateExcel = (d) => {
+  if(!d) return "";
+  const m = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return String(d);
+};
 const triggerDownload = (filename, content, mime) => {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -661,10 +668,10 @@ export default function App(){
       [],
       ["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Unit","Keterangan"],
       ...toSafeRows(source).flatMap(t=>toSafeRows(t.items).map(it=>[
-        t.id,t.date,t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,it.qty,it.unit,t.note||"",
+        csvText(t.id),fmtDateExcel(t.date),t.time,t.taker,t.dept,t.workOrder||"",t.admin||"",it.itemName,it.qty,it.unit,t.note||"",
       ])),
     ];
-    const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+    const csv="\uFEFF"+rows.map(r=>r.map(v=>typeof v==="string"&&v.startsWith("=")?v:csvEscape(v)).join(",")).join("\n");
     triggerDownload(`riwayat-pengambilan-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
     toast$("Export Excel (CSV) pengambilan berhasil");
   };
@@ -682,10 +689,10 @@ export default function App(){
       [],
       ["ID","Tanggal","Waktu","Item","Qty","Unit","PO","DO","Admin"],
       ...toSafeRows(source).map(r=>[
-        r.id,r.date,r.time,r.itemName,r.qty,r.unit,r.poNumber||"",r.doNumber||"",r.admin||"",
+        csvText(r.id),fmtDateExcel(r.date),r.time,r.itemName,r.qty,r.unit,r.poNumber||"",r.doNumber||"",r.admin||"",
       ]),
     ];
-    const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+    const csv="\uFEFF"+rows.map(r=>r.map(v=>typeof v==="string"&&v.startsWith("=")?v:csvEscape(v)).join(",")).join("\n");
     triggerDownload(`riwayat-penerimaan-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
     toast$("Export Excel (CSV) penerimaan berhasil");
   };
