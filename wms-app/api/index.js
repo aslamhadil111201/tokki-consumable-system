@@ -45,6 +45,7 @@ if (!globalForMongo.__tokkiMongoClientPromise) {
 }
 
 let seedDone = false;
+let defaultUsersEnsured = false;
 let lastAuditCleanupAt = 0;
 
 function sendJson(res, status, payload) {
@@ -196,6 +197,38 @@ async function seedDatabaseIfNeeded(db) {
   seedDone = true;
 }
 
+async function ensureDefaultUsersPresent(db) {
+  if (defaultUsersEnsured) return;
+
+  const usersCol = db.collection("users");
+  const [adminUser, operatorUser] = await Promise.all([
+    usersCol.findOne({ username: "admin" }),
+    usersCol.findOne({ username: "operator" }),
+  ]);
+
+  if (!adminUser) {
+    await usersCol.insertOne({
+      id: await getNextId(db, "users"),
+      username: "admin",
+      passwordHash: bcrypt.hashSync("admin123", 10),
+      role: "admin",
+      name: "Administrator",
+    });
+  }
+
+  if (!operatorUser) {
+    await usersCol.insertOne({
+      id: await getNextId(db, "users"),
+      username: "operator",
+      passwordHash: bcrypt.hashSync("operator123", 10),
+      role: "operator",
+      name: "Operator",
+    });
+  }
+
+  defaultUsersEnsured = true;
+}
+
 async function getNextId(db, collectionName, session = null) {
   const latest = await db.collection(collectionName)
     .find({}, withSessionOptions(session, { projection: { id: 1 } }))
@@ -231,6 +264,13 @@ function isAdminUser(payload) {
 function ensureAdmin(payload, res) {
   if (isAdminUser(payload)) return true;
   sendJson(res, 403, { error: "Forbidden: admin only" });
+  return false;
+}
+
+function ensureAdminOrOperator(payload, res) {
+  const role = String(payload?.role || "").toLowerCase();
+  if (role === "admin" || role === "operator") return true;
+  sendJson(res, 403, { error: "Forbidden: admin or operator only" });
   return false;
 }
 
@@ -415,6 +455,7 @@ export default async function handler(req, res) {
 
     const db = await getDb();
     await seedDatabaseIfNeeded(db);
+    await ensureDefaultUsersPresent(db);
 
     if (method === "POST" && parts[0] === "login") {
       const { username, password } = body;
@@ -679,7 +720,7 @@ export default async function handler(req, res) {
       }
 
       if (method === "POST" && parts.length === 1) {
-        if (!ensureAdmin(auth.payload, res)) return;
+        if (!ensureAdminOrOperator(auth.payload, res)) return;
         const valid = validateNewItemPayload(body);
         if (!valid.ok) return sendJson(res, 400, { error: valid.error });
         const photo = await normalizePhoto(body.photo);
@@ -890,7 +931,7 @@ export default async function handler(req, res) {
       }
 
       if (method === "POST" && parts.length === 1) {
-        if (!ensureAdmin(auth.payload, res)) return;
+        if (!ensureAdminOrOperator(auth.payload, res)) return;
         const { itemId, qty, poNumber, doNumber, date, admin, buyPrice } = body;
         const qtyIn = Number(qty);
         const purchasePrice = Number(buyPrice);
