@@ -5,6 +5,13 @@
       "username": "admin",
       "password": "admin123",
       "role": "admin"
+    },
+    {
+      "id": 2,
+      "username": "operator",
+      "password": "operator123",
+      "role": "operator",
+      "name": "Operator"
     }
   ],
   "admins": [

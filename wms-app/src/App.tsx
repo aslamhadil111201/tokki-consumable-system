@@ -116,6 +116,24 @@ const triggerDownload = (filename, content, mime) => {
   URL.revokeObjectURL(url);
 };
 
+const pathToTab = (pathname = "") => {
+  const p = String(pathname || "/").toLowerCase().replace(/\/+$/, "") || "/";
+  if (p === "/" || p === "/dashboard" || p === "/dasboard" || p === "/dasbord") return "dashboard";
+  if (p === "/login") return "login";
+  if (p === "/riwayat" || p === "/history") return "history";
+  if (p === "/pengambilan" || p === "/transaction") return "transaction";
+  if (p === "/stok" || p === "/stock") return "stock";
+  return null;
+};
+
+const tabToPath = (tab = "") => ({
+  login: "/Login",
+  dashboard: "/Dasboard",
+  transaction: "/Pengambilan",
+  stock: "/Stok",
+  history: "/Riwayat",
+}[tab] || "/Dasboard");
+
 const stockStatus=it=>{
   const pct=it.minStock?it.stock/it.minStock*100:100;
   if(it.stock===0) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:"⊗"};
@@ -271,6 +289,7 @@ export default function App(){
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const notifRef=useRef(null);
   const restoreInputRef=useRef(null);
+  const desiredTabRef=useRef("dashboard");
   const loading=loadingCount>0;
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const isOperator = (user?.role || "").toLowerCase() === "operator";
@@ -299,6 +318,34 @@ export default function App(){
     if(authToken)localStorage.setItem("wms_token",authToken);
     else localStorage.removeItem("wms_token");
   },[authToken]);
+
+  useEffect(()=>{
+    const applyPathTab = () => {
+      const mapped = pathToTab(window.location.pathname);
+      if (!mapped) return;
+      if (mapped !== "login") desiredTabRef.current = mapped;
+      setTab(mapped);
+    };
+
+    applyPathTab();
+    window.addEventListener("popstate", applyPathTab);
+    return () => window.removeEventListener("popstate", applyPathTab);
+  },[]);
+
+  useEffect(()=>{
+    const currentPath = window.location.pathname;
+    const mapped = pathToTab(currentPath);
+
+    if (!loggedIn) {
+      if (!mapped) window.history.replaceState(null, "", "/Login");
+      return;
+    }
+
+    const safeTab = tab === "login" ? (desiredTabRef.current || "dashboard") : tab;
+    if (safeTab !== "login") desiredTabRef.current = safeTab;
+    const nextPath = tabToPath(safeTab);
+    if (currentPath !== nextPath) window.history.replaceState(null, "", nextPath);
+  },[loggedIn,tab]);
 
   const withLoading=async(task,message="Sedang memproses data")=>{
     setLoadingText(message);
@@ -418,7 +465,7 @@ export default function App(){
       setLoggedIn(true);
       setUser(u);
       localStorage.setItem("wms_user",JSON.stringify(u));
-      setTab("dashboard");
+      setTab(desiredTabRef.current||"dashboard");
       toast$("Selamat datang ✓");
     }catch{toast$("Server tidak bisa dihubungi","err");}
   },"Sedang login");
@@ -431,6 +478,7 @@ export default function App(){
     setTab("login");
     setItems([]);
     setTrx([]);
+    window.history.replaceState(null,"","/Login");
   };
   const addToCart=()=>{
     if(!pickerItem||!pickerQty||+pickerQty<1){toast$("Pilih barang dan isi jumlah","err");return;}
