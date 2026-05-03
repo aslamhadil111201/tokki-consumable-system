@@ -39,7 +39,7 @@ let T = getT(true);
 // gradient text helper — solid color agar tidak tertutup
 const gText = () => ({ color: T.primaryLight });
 
-const CATS = ["Semua","APD","Abrasif","Cutting Tool","Material","Kebersihan"];
+const CATS = ["Semua","APD","Abrasif","Cutting Tool","Industrial Gas","Kebersihan"];
 const EXCEL_ICON=(<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/><path d="M7 12l2.5 3L12 12l2.5 3L17 12" strokeWidth="1.8"/></svg>);
 const PDF_ICON=(<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h1.5a1.5 1.5 0 0 1 0 3H9v-3zm0 3v2"/><path d="M14 13v5m0 0h2m-2-3h1.5"/></svg>);
 const NAV_ICONS={
@@ -79,7 +79,7 @@ const TABS = [
   {id:"stock",label:"Stok Barang",icon:NAV_ICONS.stock},
   {id:"history",label:"Riwayat",icon:NAV_ICONS.history},
 ];
-const ITEM_CATEGORIES = ["APD","Abrasif","Cutting Tool","Material","Kebersihan"];
+const ITEM_CATEGORIES = ["APD","Abrasif","Cutting Tool","Industrial Gas","Kebersihan"];
 const MAX_STOCK_VALUE = 1000000;
 const MAX_TEXT_LEN = 120;
 
@@ -89,7 +89,7 @@ const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-di
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
 const fmtMoney=n=>`Rp ${Number(n||0).toLocaleString("id-ID")}`;
 const emptyForm=(overrides={})=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[],...overrides});
-const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",photo:null});
+const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",hargaAwal:"",photo:null});
 const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",...overrides});
 const initials=(name="")=>String(name).split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()||"").join("")||"NA";
 const _AV_PAL=["#10b981","#6366f1","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#0ea5e9","#22c55e"];
@@ -120,7 +120,7 @@ const catColor=cat=>({
   APD:{dot:"#10b981",bg:"rgba(16,185,129,0.1)",text:"#6ee7b7",border:"rgba(16,185,129,0.25)"},
   Abrasif:{dot:"#f59e0b",bg:"rgba(245,158,11,0.1)",text:"#fcd34d",border:"rgba(245,158,11,0.25)"},
   "Cutting Tool":{dot:"#3b82f6",bg:"rgba(59,130,246,0.1)",text:"#93c5fd",border:"rgba(59,130,246,0.25)"},
-  Material:{dot:"#8b5cf6",bg:"rgba(139,92,246,0.1)",text:"#c4b5fd",border:"rgba(139,92,246,0.25)"},
+  "Industrial Gas":{dot:"#8b5cf6",bg:"rgba(139,92,246,0.1)",text:"#c4b5fd",border:"rgba(139,92,246,0.25)"},
   Kebersihan:{dot:"#ec4899",bg:"rgba(236,72,153,0.1)",text:"#f9a8d4",border:"rgba(236,72,153,0.25)"},
 }[cat]||{dot:T.primary,bg:T.navActive,text:T.navActiveText,border:T.navActiveBorder});
 
@@ -266,7 +266,9 @@ export default function App(){
   const restoreInputRef=useRef(null);
   const loading=loadingCount>0;
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
-  const visibleTabs = isAdmin ? TABS : TABS.filter(t=>t.id!=="history");
+  const isOperator = (user?.role || "").toLowerCase() === "operator";
+  const canManage = isAdmin || isOperator;
+  const visibleTabs = (isAdmin||isOperator) ? TABS : TABS.filter(t=>t.id!=="history");
 
   T=getT(dark);
 
@@ -466,7 +468,7 @@ export default function App(){
     setShowAdd(true);
   };
   const submitAdd=async()=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh menambah stok","err");return;}
+    if(!canManage){toast$("Hanya admin/operator yang boleh menambah stok","err");return;}
     if(!addForm.itemId||!addForm.qty||+addForm.qty<1||!addForm.admin){toast$("Lengkapi semua field wajib","err");return;}
     const effectiveBuyPrice=Number(addForm.buyPrice);
     if(!Number.isFinite(effectiveBuyPrice)||effectiveBuyPrice<0){toast$("Harga beli wajib angka >= 0","err");return;}
@@ -482,12 +484,13 @@ export default function App(){
     },"Sedang menyimpan penerimaan");
   };
   const submitNewItem=async()=>{
-    if(!isAdmin){toast$("Hanya admin yang boleh menambah item","err");return;}
+    if(!canManage){toast$("Hanya admin/operator yang boleh menambah item","err");return;}
     const name = String(newItemForm.name || "").trim();
     const itemCode = String(newItemForm.itemCode || "").trim();
     const unit = String(newItemForm.unit || "").trim();
     const stock = Number(newItemForm.stock);
     const minStock = Number(newItemForm.minStock);
+    const hargaAwal = newItemForm.hargaAwal==="" ? 0 : Number(newItemForm.hargaAwal);
 
     if(!name||!newItemForm.category||!unit){toast$("Nama, kategori, dan satuan wajib diisi","err");return;}
     if(!ITEM_CATEGORIES.includes(newItemForm.category)){toast$("Kategori tidak valid","err");return;}
@@ -498,6 +501,7 @@ export default function App(){
     if(!Number.isInteger(stock)||!Number.isInteger(minStock)){toast$("Stok harus bilangan bulat","err");return;}
     if(stock<0||minStock<0){toast$("Nilai stok tidak boleh negatif","err");return;}
     if(stock>MAX_STOCK_VALUE||minStock>MAX_STOCK_VALUE){toast$(`Stok maksimal ${MAX_STOCK_VALUE.toLocaleString("id-ID")}`,"err");return;}
+    if(isNaN(hargaAwal)||hargaAwal<0){toast$("Harga awal tidak boleh negatif","err");return;}
     await withLoading(async()=>{
       try{
         const payload={
@@ -507,6 +511,10 @@ export default function App(){
           unit,
           stock,
           minStock,
+          hargaAwal,
+          averageCost:hargaAwal,
+          lastPrice:hargaAwal,
+          totalValue:hargaAwal*stock,
           photo:newItemForm.photo||null,
         };
         const r=await apiFetch("/items",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
@@ -1469,8 +1477,8 @@ export default function App(){
                   </div>
                   <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>{filtItems.length} item</span>
                   <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {isAdmin&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800,padding:"9px 15px",fontSize:12.5}}>＋ Add New Item</BtnG>}
-                    {isAdmin&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"9px 15px",fontSize:12.5}}>📥 Receive New</BtnP>}
+                    {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800,padding:"9px 15px",fontSize:12.5}}>＋ Add New Item</BtnG>}
+                    {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"9px 15px",fontSize:12.5}}>📥 Receive New</BtnP>}
                   </div>
                 </div>
                 <div className="stock-g">
@@ -1593,8 +1601,8 @@ export default function App(){
                     {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
-                    {isAdmin&&historyTab!=="in"&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
-                    {isAdmin&&historyTab==="in"&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Penerimaan</BtnP>}
+                    {isAdmin&&historyTab!=="in"&&historyTab!=="audit"&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
+                    {canManage&&historyTab==="in"&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Penerimaan</BtnP>}
                   </div>
                 </div>
 
@@ -1760,11 +1768,11 @@ export default function App(){
                       })().map((s,i)=>(
                         <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",gap:0,padding:"16px 18px"}}>
                           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:i===4?11:18,fontWeight:i===4?900:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
+                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
                             <span style={{width:6,height:6,borderRadius:"50%",background:s.dot,display:"inline-block"}}/>
                           </div>
                           <div style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:6,lineHeight:1.3}}>{s.label}</div>
-                          <div style={{fontSize:i===4?15:28,fontWeight:900,lineHeight:1,color:s.dot,marginBottom:5}}>{s.val!==null?s.val:s.valStr}</div>
+                          <div style={{fontSize:28,fontWeight:900,lineHeight:1.2,color:s.dot,marginBottom:5,wordBreak:"break-word",overflowWrap:"break-word"}}>{s.val!==null?s.val:s.valStr}</div>
                           <div style={{fontSize:10,color:T.muted,fontWeight:500}}>{s.sub}</div>
                         </div>
                       ))}
@@ -2259,6 +2267,7 @@ export default function App(){
                 <div><FL>Satuan *</FL><input className="ifield" placeholder="pcs / box / set" value={newItemForm.unit} onChange={e=>setNewItemForm(p=>({...p,unit:e.target.value}))}/></div>
                 <div><FL>Min Stock *</FL><input className="ifield" type="number" min="0" placeholder="0" value={newItemForm.minStock} onChange={e=>setNewItemForm(p=>({...p,minStock:e.target.value}))}/></div>
                 <div><FL>Stok Awal *</FL><input className="ifield" type="number" min="0" placeholder="0" value={newItemForm.stock} onChange={e=>setNewItemForm(p=>({...p,stock:e.target.value}))}/></div>
+                <div><FL>Harga Awal (Rp)</FL><input className="ifield" type="number" min="0" placeholder="0" value={newItemForm.hargaAwal} onChange={e=>setNewItemForm(p=>({...p,hargaAwal:e.target.value}))}/></div>
               </div>
             </div>
             <div style={{display:"flex",gap:10}}>
