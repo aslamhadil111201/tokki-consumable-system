@@ -1484,7 +1484,7 @@ export default function App(){
     </div>
   );
 
-  const BusyOverlay=()=>loading?(
+  const BusyOverlay=()=>loading&&loggedIn?(
     <div className="busy-overlay" role="status" aria-live="polite" aria-busy="true">
       <div className="busy-card">
         <div className="busy-spin"/>
