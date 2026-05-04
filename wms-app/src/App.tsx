@@ -2056,6 +2056,50 @@ export default function App(){
                   ))}
                 </div>
 
+                {isAdmin&&(()=>{
+                  const apTotal=trx.length;
+                  const apPending=pendingApprovalTrx.length;
+                  const apApproved=trx.filter(t=>trxApprovalStatus(t)==="approved").length;
+                  const apRejected=trx.filter(t=>trxApprovalStatus(t)==="rejected").length;
+                  const resolved=trx.filter(t=>trxApprovalStatus(t)!=="pending"&&t.approvedAt);
+                  const avgSlaMs=resolved.length>0?resolved.reduce((sum,t)=>{
+                    const created=typeof t.id==="number"?t.id:parseInt(t.id)||0;
+                    return sum+(t.approvedAt-created);
+                  },0)/resolved.length:0;
+                  const avgSlaLabel=avgSlaMs<=0?"—":avgSlaMs<3600000?`${Math.round(avgSlaMs/60000)} mnt`:`${Math.floor(avgSlaMs/3600000)}j ${Math.round((avgSlaMs%3600000)/60000)}m`;
+                  return(
+                    <div style={{marginBottom:20}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                        <div style={{fontSize:12,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".08em"}}>📊 Approval Overview</div>
+                        <button className="tb-btn" onClick={()=>{setTab("history");setHistoryTab("approval");}} style={{fontSize:11,padding:"5px 11px"}}>Lihat approval →</button>
+                      </div>
+                      <div className="stats-g" style={{gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))"}}>
+                        {[
+                          {label:"Total Pengajuan",val:apTotal,sub:"semua transaksi",dot:T.primary,icon:"📋"},
+                          {label:"Pending",val:apPending,sub:"menunggu approval",dot:apPending>0?"#f59e0b":T.muted,icon:"⏳"},
+                          {label:"Disetujui",val:apApproved,sub:"approved",dot:"#10b981",icon:"✅"},
+                          {label:"Ditolak",val:apRejected,sub:"rejected",dot:apRejected>0?T.red:T.muted,icon:"❌"},
+                          {label:"Avg SLA",val:avgSlaLabel,sub:"waktu resolusi",dot:"#6366f1",icon:"⏱"},
+                        ].map((s,i)=>(
+                          <div key={i} className="stat-card" style={{padding:"16px 18px"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                              <div className="dash-stat" style={{gap:10}}>
+                                <div className="dash-stat-icon">{s.icon}</div>
+                                <div className="dash-stat-meta">
+                                  <div className="dash-stat-label">{s.label}</div>
+                                  <div className="dash-stat-value">{s.val}</div>
+                                  <div className="dash-stat-sub">{s.sub}</div>
+                                </div>
+                              </div>
+                              <div style={{width:8,height:8,borderRadius:"50%",background:s.dot,boxShadow:`0 0 8px ${s.dot}`,marginLeft:8,marginTop:4,flexShrink:0}}/>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="two-col">
                   <div className="card">
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
