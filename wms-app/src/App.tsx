@@ -1528,6 +1528,8 @@ export default function App(){
     .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:30px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s;appearance:none;-webkit-appearance:none;font-family:'Plus Jakarta Sans',sans-serif;position:relative;z-index:2}
     .toggle-wrap:hover{border-color:${T.borderHover}}
     .toggle-wrap:focus-visible{outline:none;box-shadow:0 0 0 2px ${T.primaryGlow}}
+    .toggle-wrap.mini{min-width:72px;min-height:36px;padding:6px 11px;justify-content:center}
+    .toggle-wrap.mini .toggle-lbl{display:inline-flex !important;font-size:12px}
     .toggle-lbl{font-size:11px;font-weight:700;color:${T.muted}}
     .toggle-track{width:42px;height:23px;border-radius:12px;background:${dark?`linear-gradient(135deg,${T.primary},${T.primaryLight})`:`rgba(100,116,139,0.25)`};position:relative;transition:background .35s ease;box-shadow:${dark?`0 0 8px ${T.primaryGlow}`:"none"}}
     .toggle-thumb{width:17px;height:17px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${dark?"22px":"3px"};transition:left .3s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 6px rgba(0,0,0,0.25)}
@@ -1752,6 +1754,7 @@ export default function App(){
       .audit-col-target{flex:0 0 110px}
       .cat-btn{padding:6px 10px;font-size:11px}
       .toggle-lbl{display:none}
+      .toggle-wrap.mini .toggle-lbl{display:inline-flex !important}
       .stat-card{padding:16px 14px}
       .card{padding:16px 16px}
       .date-btn{display:none}
@@ -1812,7 +1815,7 @@ export default function App(){
 
   // ── TOGGLE COMPONENT ─────────────────────────────────────────────
   const Toggle=({mini})=>(
-    <button type="button" className="toggle-wrap" onClick={toggleTheme} style={mini?{padding:"4px 8px 4px 10px"}:{}} aria-label={dark?"Switch to light mode":"Switch to dark mode"}>
+    <button type="button" className={`toggle-wrap${mini?" mini":""}`} onClick={toggleTheme} style={mini?{padding:"6px 11px"}:{}} aria-label={dark?"Switch to light mode":"Switch to dark mode"}>
       <span className="toggle-lbl">{dark?"🌙":"☀️"}{!mini&&(dark?" Dark":" Light")}</span>
       <div className="toggle-track"><div className="toggle-thumb"/></div>
     </button>
