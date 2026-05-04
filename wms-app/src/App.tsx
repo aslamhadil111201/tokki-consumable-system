@@ -106,6 +106,8 @@ const clamp01=(n)=>Math.max(0,Math.min(1,Number(n)||0));
 const emptyForm=(overrides={})=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[],...overrides});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",hargaAwal:"",photo:null});
 const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",attachment:null,...overrides});
+const RETUR_REASONS=["Sisa pemakaian","Kondisi masih baik","Kelebihan ambil","Tidak jadi dipakai"];
+const emptyReturForm=()=>({employee:"",itemId:"",qty:"",reason:RETUR_REASONS[0],note:""});
 const initials=(name="")=>String(name).split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()||"").join("")||"NA";
 const _AV_PAL=["#10b981","#6366f1","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#0ea5e9","#22c55e"];
 const avatarColor=(name="")=>{let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);return _AV_PAL[Math.abs(h)%_AV_PAL.length];};
@@ -309,6 +311,10 @@ export default function App(){
   const [idleWarning,setIdleWarning]=useState(false);
   const [idleCountdown,setIdleCountdown]=useState(60);
   const [reportPeriod,setReportPeriod]=useState("month");
+  const [returns,setReturns]=useState([]);
+  const [showRetur,setShowRetur]=useState(false);
+  const [returForm,setReturForm]=useState(emptyReturForm());
+  const [returSubTab,setReturSubTab]=useState("log");
   const notifRef=useRef(null);
   const restoreInputRef=useRef(null);
   const desiredTabRef=useRef("dashboard");
@@ -399,7 +405,7 @@ export default function App(){
   // ── FETCH SEMUA DATA ─────────────────────────────────────────────
   const fetchAll=async()=>withLoading(async()=>{
     try{
-      const [it,tr,adm,dep,emp,wo,rcv,allMovements]=await Promise.all([
+      const [it,tr,adm,dep,emp,wo,rcv,allMovements,ret]=await Promise.all([
         apiFetch("/items").then(r=>r.json()),
         apiFetch("/transactions").then(r=>r.json()),
         apiFetch("/admins").then(r=>r.json()),
@@ -408,8 +414,9 @@ export default function App(){
         apiFetch("/work-orders").then(r=>r.json()),
         apiFetch("/receives").then(r=>r.json()),
         apiFetch("/transactions?scope=all").then(r=>r.json()),
+        apiFetch("/returns").then(r=>r.json()),
       ]);
-      setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv); setAllHistory(allMovements);
+      setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv); setAllHistory(allMovements); setReturns(Array.isArray(ret)?ret:[]);
     }catch(e){toast$(e?.message||"Gagal terhubung ke server","err");}
   },"Sedang memuat data");
 
@@ -741,6 +748,22 @@ export default function App(){
         setAttachPreview({data:doc.attachment,name,mimeType,receiveId});
       }catch{toast$("Gagal memuat lampiran","err");}
     },"Memuat lampiran");
+  };
+  const submitRetur=async()=>{
+    const empName=String(returForm.employee||"").trim();
+    const itemId=Number(returForm.itemId);
+    const qty=Number(returForm.qty);
+    if(!empName){toast$("Nama karyawan wajib diisi","err");return;}
+    if(!itemId){toast$("Pilih barang terlebih dahulu","err");return;}
+    if(!Number.isInteger(qty)||qty<=0){toast$("Jumlah harus bilangan bulat > 0","err");return;}
+    await withLoading(async()=>{
+      const r=await apiFetch("/returns",{method:"POST",body:JSON.stringify({employee:empName,itemId,qty,reason:returForm.reason,note:String(returForm.note||"").trim(),date:todayStr(),time:nowTime()})});
+      if(!r.ok){const e=await r.json().catch(()=>({}));toast$(e.error||"Gagal menyimpan retur","err");return;}
+      toast$("Retur berhasil dicatat, stok telah diperbarui");
+      setShowRetur(false);
+      setReturForm(emptyReturForm());
+      fetchAll();
+    },"Menyimpan retur...");
   };
   const submitNewItem=async()=>{
     if(!canManage){toast$("Hanya admin/operator yang boleh menambah item","err");return;}
@@ -1788,15 +1811,30 @@ export default function App(){
                   <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                     {isAdmin&&<BtnG onClick={exportTransactionsExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
                     {isAdmin&&<BtnG onClick={exportTransactionsPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
+                    <button onClick={()=>{setReturForm(emptyReturForm());setShowRetur(true);}} style={{padding:"12px 18px",borderRadius:14,fontWeight:800,fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",border:`1.5px solid ${T.amber}`,background:T.amberBg,color:T.amber,cursor:"pointer"}}>↩ Catat Retur</button>
                     <BtnP onClick={()=>setShowModal(true)} style={{flexShrink:0,padding:"12px 20px",borderRadius:14,fontWeight:800}}>＋ Catat Pengambilan</BtnP>
                   </div>
                 </div>
-                <div className="fbar">
+
+                {/* ── Sub-tabs ── */}
+                <div style={{display:"flex",gap:4,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,marginBottom:14,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+                  {[
+                    {id:"log",icon:"📤",label:`Log Pengambilan (${trx.length})`},
+                    {id:"retur",icon:"↩",label:`Retur Barang (${returns.length})`},
+                  ].map(tb=>(
+                    <button key={tb.id} onClick={()=>setReturSubTab(tb.id)} style={{padding:"9px 18px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",background:returSubTab===tb.id?T.primary:"transparent",color:returSubTab===tb.id?"white":T.muted,boxShadow:returSubTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap",flexShrink:0}}>{tb.icon} {tb.label}</button>
+                  ))}
+                </div>
+
+                {/* ── Sub-tab: LOG PENGAMBILAN ── */}
+                {returSubTab==="log"&&(
+                  <div>
+                  <div className="fbar">
                   <span style={{fontSize:11.5,color:T.muted,fontWeight:700,flexShrink:0}}>Filter tanggal:</span>
                   <input type="date" className="ifield" value={trxDate} onChange={e=>setTrxDate(e.target.value)} style={{width:180}}/>
                   {trxDate&&<BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>setTrxDate("")}>✕ Reset</BtnG>}
                   <span style={{marginLeft:"auto",fontSize:11.5,color:T.muted}}>{filtTrx.length} transaksi</span>
-                </div>
+                  </div>
                 {filtTrx.length===0
                   ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>📂</div>Tidak ada transaksi ditemukan</div>
                   :filtTrx.map(t=>(
@@ -1836,6 +1874,85 @@ export default function App(){
                       </div>
                     </div>
                   ))}
+                  </div>
+                )}
+
+                {/* ── Sub-tab: RETUR BARANG ── */}
+                {returSubTab==="retur"&&(
+                  <div>
+                    {/* Summary cards */}
+                    <div className="stats-g" style={{marginBottom:16}}>
+                      {(()=>{
+                        const totalUnit=returns.reduce((a,r)=>a+Number(r.qty||0),0);
+                        const pending=returns.filter(r=>r.status==="Menunggu").length;
+                        const diterima=returns.filter(r=>r.status==="Diterima").length;
+                        return [
+                          {label:"Total Retur",val:returns.length,icon:"↩",color:T.amber,bg:T.amberBg,sub:"total catatan"},
+                          {label:"Unit Dikembalikan",val:totalUnit,icon:"📦",color:T.green,bg:T.greenBg,sub:"unit barang kembali"},
+                          {label:"Diterima",val:diterima,icon:"✅",color:T.primary,bg:T.navActive,sub:"sudah diproses"},
+                          {label:"Menunggu",val:pending,icon:"⏳",color:T.red,bg:T.redBg,sub:"menunggu konfirmasi"},
+                        ];
+                      })().map((s,i)=>(
+                        <div key={i} className="stat-card" style={{padding:"16px 18px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                            <div>
+                              <div style={{fontSize:10.5,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".09em",marginBottom:7}}>{s.label}</div>
+                              <div style={{fontSize:26,fontWeight:900,color:T.text,lineHeight:1.2}}>{s.val}</div>
+                              <div style={{fontSize:11.5,color:T.muted,marginTop:6}}>{s.sub}</div>
+                            </div>
+                            <div style={{width:36,height:36,borderRadius:11,background:s.bg,color:s.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,border:`1px solid ${T.border}`}}>{s.icon}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Retur list */}
+                    {returns.length===0
+                      ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>↩</div>Belum ada retur tercatat</div>
+                      :[...returns].reverse().map(r=>{
+                        const it=itemMap[Number(r.itemId)];
+                        const isDiterima=r.status==="Diterima";
+                        return(
+                          <div key={r.id} style={{display:"flex",alignItems:"stretch",gap:0,background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${T.amber}`,borderRadius:14,marginBottom:8,overflow:"hidden",boxShadow:T.shadowSm}}>
+                            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"14px 12px",gap:5,minWidth:64,flexShrink:0}}>
+                              <div style={{width:40,height:40,borderRadius:"50%",background:T.amberBg,border:`2px solid ${T.amber}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>↩</div>
+                              <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.amber,textTransform:"uppercase"}}>RETUR</span>
+                            </div>
+                            <div style={{flex:1,padding:"12px 14px",minWidth:0}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
+                                <span style={{fontSize:13.5,fontWeight:800,color:T.text}}>{r.employee}</span>
+                                <span style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:5,border:`1px solid ${isDiterima?T.greenBorder:T.redBorder}`,background:isDiterima?T.greenBg:T.redBg,color:isDiterima?T.greenText:T.redText}}>{r.status||"Menunggu"}</span>
+                              </div>
+                              <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
+                                <span style={{fontSize:12}}>📦</span>
+                                <span style={{fontSize:12.5,fontWeight:700,color:T.text}}>{it?.name||r.itemName||`Item #${r.itemId}`}</span>
+                                <span style={{fontSize:10.5,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 8px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`}}>+{r.qty} {it?.unit||"pcs"}</span>
+                              </div>
+                              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                <Badge bg={T.amberBg} color={T.amber} border={`1px solid ${T.amber}33`}>📋 {r.reason}</Badge>
+                                {r.note&&<Badge bg={T.surface} color={T.muted} border={T.border}>📝 {r.note}</Badge>}
+                                <Badge bg={T.surface} color={T.muted} border={T.border}>🗓 {fmtDate(r.date)} {r.time||""}</Badge>
+                              </div>
+                            </div>
+                            {isAdmin&&(
+                              <div style={{display:"flex",flexDirection:"column",justifyContent:"center",padding:"0 12px",gap:6,flexShrink:0}}>
+                                {!isDiterima&&(
+                                  <button onClick={async()=>{
+                                    await withLoading(async()=>{
+                                      const resp=await apiFetch(`/returns/${r.id}`,{method:"PATCH",body:JSON.stringify({status:"Diterima"})});
+                                      if(!resp.ok){const e=await resp.json().catch(()=>({}));toast$(e.error||"Gagal update status","err");return;}
+                                      toast$("Status retur diperbarui");fetchAll();
+                                    },"Memperbarui...");
+                                  }} style={{background:T.greenBg,border:`1px solid ${T.greenBorder}`,color:T.greenText,borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>✅ Terima</button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    }
+                  </div>
+                )}
               </div>
             )}
 
@@ -2915,26 +3032,40 @@ export default function App(){
         </div>
       )}
 
-      {/* ══ MODAL ATTACHMENT PREVIEW ══ */}
-      {attachPreview&&(
-        <div className="overlay" onClick={()=>setAttachPreview(null)}>
-          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:700,width:"95vw"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-              <div style={{fontSize:18,fontWeight:900,...gText()}}>{attachPreview.mimeType==="application/pdf"?"📄":"🖼️"} Lampiran #{attachPreview.receiveId}</div>
-              <BtnG onClick={()=>setAttachPreview(null)} style={{padding:"6px 14px",fontSize:12}}>✕ Tutup</BtnG>
+      {/* ══ MODAL CATAT RETUR ══ */}
+      {showRetur&&(
+        <div className="overlay" onClick={()=>setShowRetur(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:480}}>
+            <div style={{fontSize:20,fontWeight:900,...gText(),marginBottom:4}}>↩ Catat Retur Barang</div>
+            <div style={{fontSize:12,color:T.muted,marginBottom:18}}>Barang yang diretur akan otomatis menambah stok kembali.</div>
+            <div className="sect-box">
+              <div className="sect-lbl">👤 Nama Karyawan</div>
+              <input className="ifield" style={{width:"100%"}} placeholder="Nama karyawan yang meretur..." value={returForm.employee} onChange={e=>setReturForm(p=>({...p,employee:e.target.value}))}/>
             </div>
-            {attachPreview.mimeType==="application/pdf"
-              ?<iframe
-                  src={attachPreview.data}
-                  title={attachPreview.name}
-                  style={{width:"100%",height:"65vh",border:"none",borderRadius:10,background:"#fff"}}
-                />
-              :<img src={attachPreview.data} alt={attachPreview.name} style={{width:"100%",maxHeight:"65vh",objectFit:"contain",borderRadius:10,border:`1px solid ${T.border}`}}/>
-            }
-            <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
-              <a href={attachPreview.data} download={attachPreview.name} style={{textDecoration:"none"}}>
-                <BtnG style={{fontSize:12,padding:"8px 16px"}}>⬇ Download</BtnG>
-              </a>
+            <div className="sect-box">
+              <div className="sect-lbl">📦 Barang yang Diretur</div>
+              <select className="ifield" style={{width:"100%"}} value={returForm.itemId} onChange={e=>setReturForm(p=>({...p,itemId:e.target.value}))}>
+                <option value="">-- Pilih barang --</option>
+                {items.map(it=><option key={it.id} value={it.id}>{it.name} (Stok: {it.stock} {it.unit})</option>)}
+              </select>
+            </div>
+            <div className="sect-box">
+              <div className="sect-lbl">🔢 Jumlah Dikembalikan</div>
+              <input className="ifield" type="number" min="1" style={{width:"100%"}} placeholder="Qty yang dikembalikan..." value={returForm.qty} onChange={e=>setReturForm(p=>({...p,qty:e.target.value}))}/>
+            </div>
+            <div className="sect-box">
+              <div className="sect-lbl">📋 Alasan Retur</div>
+              <select className="ifield" style={{width:"100%"}} value={returForm.reason} onChange={e=>setReturForm(p=>({...p,reason:e.target.value}))}>
+                {RETUR_REASONS.map(r=><option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="sect-box">
+              <div className="sect-lbl">📝 Catatan Tambahan <span style={{fontWeight:400,color:T.muted}}>(opsional)</span></div>
+              <input className="ifield" style={{width:"100%"}} placeholder="Catatan tambahan..." value={returForm.note} onChange={e=>setReturForm(p=>({...p,note:e.target.value}))}/>
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:4}}>
+              <BtnP onClick={submitRetur} style={{flex:1,padding:"13px",fontSize:14,borderRadius:12}}>💾 Simpan Retur</BtnP>
+              <BtnG onClick={()=>setShowRetur(false)}>Batal</BtnG>
             </div>
           </div>
         </div>

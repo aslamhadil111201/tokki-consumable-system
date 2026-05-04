@@ -19,7 +19,7 @@ const MASTER_MAP = {
   employees: "employees",
   "work-orders": "workOrders",
 };
-const ADMIN_DATA_COLLECTIONS = ["users", "admins", "departments", "employees", "workOrders", "items", "transactions", "receives", "auditLogs"];
+const ADMIN_DATA_COLLECTIONS = ["users", "admins", "departments", "employees", "workOrders", "items", "transactions", "receives", "returns", "auditLogs"];
 
 const toNumber = (v, fallback = 0) => {
   const n = Number(v);
@@ -131,6 +131,7 @@ function buildSeedDocuments(seed) {
       ["items", cleanedItems],
       ["transactions", seed.transactions || []],
       ["receives", seed.receives || []],
+      ["returns", seed.returns || []],
     ],
   };
 }
@@ -1126,6 +1127,73 @@ export default async function handler(req, res) {
         categories,
         items: normalized,
       });
+    }
+
+    if (parts[0] === "returns") {
+      const returnsCol = db.collection("returns");
+      const itemsCol = db.collection("items");
+
+      if (method === "GET" && parts.length === 1) {
+        const docs = await returnsCol.find({}).sort({ id: -1 }).toArray();
+        return sendJson(res, 200, docs);
+      }
+
+      if (method === "POST" && parts.length === 1) {
+        const { employee, itemId, qty, reason, note, date, time } = body;
+        if (!String(employee || "").trim()) return sendJson(res, 400, { error: "Nama karyawan wajib diisi" });
+        const parsedItemId = Number(itemId);
+        const parsedQty = Number(qty);
+        if (!Number.isInteger(parsedQty) || parsedQty <= 0) return sendJson(res, 400, { error: "Qty harus bilangan bulat > 0" });
+
+        const record = await runWithMongoTransaction(async (session) => {
+          const item = await itemsCol.findOne({ id: parsedItemId }, withSessionOptions(session));
+          if (!item) throw new Error("Barang tidak ditemukan");
+
+          const nextStock = toNumber(item.stock, 0) + parsedQty;
+          const avgCost = roundMoney(item.averageCost);
+          await itemsCol.updateOne(
+            { id: parsedItemId },
+            { $set: { stock: nextStock, totalValue: roundMoney(nextStock * avgCost) } },
+            withSessionOptions(session),
+          );
+
+          const nextId = await getNextId(db, "returns", session);
+          const row = {
+            id: nextId,
+            employee: String(employee || "").trim(),
+            itemId: parsedItemId,
+            itemName: item.name,
+            unit: item.unit,
+            qty: parsedQty,
+            reason: String(reason || ""),
+            note: String(note || ""),
+            date: String(date || ""),
+            time: String(time || ""),
+            status: "Menunggu",
+          };
+          await returnsCol.insertOne(row, withSessionOptions(session));
+          return row;
+        });
+
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "returns.create",
+          target: "returns",
+          meta: { id: record.id, employee: record.employee, itemId: record.itemId, qty: record.qty },
+        });
+        return sendJson(res, 201, record);
+      }
+
+      if (method === "PATCH" && parts.length === 2) {
+        if (!ensureAdmin(auth.payload, res)) return;
+        const id = Number(parts[1]);
+        const { status } = body;
+        const allowed = ["Diterima", "Menunggu"];
+        if (!allowed.includes(status)) return sendJson(res, 400, { error: "Status tidak valid" });
+        const result = await returnsCol.findOneAndUpdate({ id }, { $set: { status } }, { returnDocument: "after" });
+        if (!result) return sendJson(res, 404, { error: "Retur tidak ditemukan" });
+        return sendJson(res, 200, result);
+      }
     }
 
     return sendJson(res, 404, { error: "Endpoint tidak ditemukan" });
