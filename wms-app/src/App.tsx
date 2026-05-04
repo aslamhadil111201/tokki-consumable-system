@@ -1694,6 +1694,7 @@ export default function App(){
       .hist-g{grid-template-columns:repeat(2,1fr)}
       .two-col{grid-template-columns:1fr}
       .stat5-g{grid-template-columns:repeat(3,1fr)}
+      .approval-ov-g{grid-template-columns:repeat(3,1fr) !important}
     }
     @media(max-width:860px){
       .stock-g{grid-template-columns:repeat(2,1fr)}
@@ -1747,6 +1748,7 @@ export default function App(){
       .dash-hero-illus{display:none}
       .stats-g{gap:10px;margin-bottom:14px}
       .two-col{gap:12px}
+      .approval-ov-g{grid-template-columns:repeat(2,1fr) !important;gap:10px !important}
       .dash-stat{flex-direction:column;align-items:flex-start;gap:8px;min-height:auto}
       .dash-stat-icon{width:40px;height:40px;border-radius:13px;font-size:18px}
       .dash-stat-value{font-size:clamp(22px,6vw,30px)}
@@ -1770,6 +1772,7 @@ export default function App(){
     }
     @media(max-width:420px){
       .stats-g{grid-template-columns:1fr 1fr}
+      .approval-ov-g{grid-template-columns:1fr 1fr !important}
       .hist-g{grid-template-columns:1fr 1fr}
       .stock-g{grid-template-columns:1fr}
       .stk-card{padding:14px}
@@ -2075,23 +2078,23 @@ export default function App(){
                         <div style={{fontSize:12,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".08em"}}>📊 Approval Overview</div>
                         <button className="tb-btn" onClick={()=>{setTab("history");setHistoryTab("approval");}} style={{fontSize:11,padding:"5px 11px"}}>Lihat approval →</button>
                       </div>
-                      <div className="stats-g" style={{gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))"}}>
+                      <div className="approval-ov-g" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:0}}>
                         {[
-                          {label:"Total Pengajuan",val:apTotal,sub:"semua transaksi",dot:T.primary,icon:"📋"},
-                          {label:"Pending",val:apPending,sub:"menunggu approval",dot:apPending>0?"#f59e0b":T.muted,icon:"⏳"},
-                          {label:"Disetujui",val:apApproved,sub:"approved",dot:"#10b981",icon:"✅"},
-                          {label:"Ditolak",val:apRejected,sub:"rejected",dot:apRejected>0?T.red:T.muted,icon:"❌"},
+                          {label:"Total Pengajuan",val:String(apTotal),sub:"semua transaksi",dot:T.primary,icon:"📋"},
+                          {label:"Pending",val:String(apPending),sub:"menunggu approval",dot:apPending>0?"#f59e0b":T.muted,icon:"⏳"},
+                          {label:"Disetujui",val:String(apApproved),sub:"approved",dot:"#10b981",icon:"✅"},
+                          {label:"Ditolak",val:String(apRejected),sub:"rejected",dot:apRejected>0?T.red:T.muted,icon:"❌"},
                           {label:"Avg SLA",val:avgSlaLabel,sub:"waktu resolusi",dot:"#6366f1",icon:"⏱"},
                         ].map((s,i)=>(
-                          <div key={i} className="stat-card" style={{padding:"16px 18px"}}>
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                              <div className="dash-stat" style={{gap:10}}>
-                                <div className="dash-stat-icon">{s.icon}</div>
-                                <div className="dash-stat-meta">
-                                  <div className="dash-stat-label">{s.label}</div>
-                                  <div className="dash-stat-value">{s.val}</div>
-                                  <div className="dash-stat-sub">{s.sub}</div>
+                          <div key={i} className="stat-card" style={{padding:"16px 18px",minWidth:0}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                              <div style={{display:"flex",flexDirection:"column",gap:6,flex:1,minWidth:0}}>
+                                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                  <div className="dash-stat-icon" style={{flexShrink:0}}>{s.icon}</div>
+                                  <div style={{fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".04em",lineHeight:1.3}}>{s.label}</div>
                                 </div>
+                                <div style={{fontSize:"clamp(18px,2.5vw,26px)",fontWeight:900,color:T.text,lineHeight:1.1,wordBreak:"break-word"}}>{s.val}</div>
+                                <div style={{fontSize:11,color:T.muted,marginTop:2}}>{s.sub}</div>
                               </div>
                               <div style={{width:8,height:8,borderRadius:"50%",background:s.dot,boxShadow:`0 0 8px ${s.dot}`,marginLeft:8,marginTop:4,flexShrink:0}}/>
                             </div>
