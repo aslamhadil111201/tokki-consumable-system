@@ -927,12 +927,27 @@ export default async function handler(req, res) {
 
       if (method === "GET" && parts.length === 1) {
         const docs = await receivesCol.find({}).sort({ id: 1 }).toArray();
-        return sendJson(res, 200, docs);
+        const light = docs.map(({ attachment, ...rest }) => ({ ...rest, hasAttachment: !!attachment }));
+        return sendJson(res, 200, light);
+      }
+
+      if (method === "GET" && parts.length === 2) {
+        const id = Number(parts[1]);
+        if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { error: "ID tidak valid" });
+        const doc = await receivesCol.findOne({ id });
+        if (!doc) return sendJson(res, 404, { error: "Tidak ditemukan" });
+        return sendJson(res, 200, doc);
       }
 
       if (method === "POST" && parts.length === 1) {
         if (!ensureAdminOrOperator(auth.payload, res)) return;
-        const { itemId, qty, poNumber, doNumber, date, admin, buyPrice } = body;
+        const { itemId, qty, poNumber, doNumber, date, admin, buyPrice, attachment } = body;
+        if (attachment != null) {
+          if (typeof attachment !== "string" || !attachment.startsWith("data:")) return sendJson(res, 400, { error: "Format lampiran tidak valid" });
+          if (attachment.length > 14000000) return sendJson(res, 400, { error: "Ukuran lampiran maks 10MB" });
+          const allowed = ["data:image/jpeg;", "data:image/png;", "data:application/pdf;"];
+          if (!allowed.some(p => attachment.startsWith(p))) return sendJson(res, 400, { error: "Hanya PDF, JPG, PNG yang diizinkan" });
+        }
         const qtyIn = Number(qty);
         const purchasePrice = Number(buyPrice);
         if (!Number.isInteger(qtyIn) || qtyIn <= 0) {
@@ -986,6 +1001,7 @@ export default async function handler(req, res) {
             date,
             admin,
             time,
+            attachment: attachment || null,
           };
           const transactionRow = {
             id: transactionId,

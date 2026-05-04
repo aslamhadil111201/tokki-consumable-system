@@ -2862,7 +2862,7 @@ export default function App(){
             </div>
             {/* ── Lampiran ── */}
             <div className="sect-box">
-              <div className="sect-lbl">📎 Lampiran Dokumen <span style={{fontWeight:400,fontSize:10,color:T.muted}}>(opsional · PDF, JPG, PNG · maks 1MB)</span></div>
+              <div className="sect-lbl">📎 Lampiran Dokumen <span style={{fontWeight:400,fontSize:10,color:T.muted}}>(opsional · PDF, JPG, PNG · maks 10MB)</span></div>
               <div
                 onDragOver={e=>{e.preventDefault();setAddFormDragOver(true);}}
                 onDragLeave={()=>setAddFormDragOver(false)}
@@ -2870,7 +2870,7 @@ export default function App(){
                   e.preventDefault();setAddFormDragOver(false);
                   const f=e.dataTransfer.files?.[0];if(!f)return;
                   if(!["image/jpeg","image/png","application/pdf"].includes(f.type)){toast$("Hanya PDF, JPG, PNG yang diizinkan","err");return;}
-                  if(f.size>1048576){toast$("Ukuran lampiran maks 1MB","err");return;}
+                  if(f.size>10485760){toast$("Ukuran lampiran maks 10MB","err");return;}
                   const reader=new FileReader();
                   reader.onload=ev=>setAddForm(p=>({...p,attachment:ev.target?.result as string||null}));
                   reader.readAsDataURL(f);
@@ -2899,7 +2899,7 @@ export default function App(){
                 <input id="attach-upload-input" type="file" accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf" style={{display:"none"}} onChange={e=>{
                   const f=e.target.files?.[0];if(!f)return;
                   if(!["image/jpeg","image/png","application/pdf"].includes(f.type)){toast$("Hanya PDF, JPG, PNG yang diizinkan","err");return;}
-                  if(f.size>1048576){toast$("Ukuran lampiran maks 1MB","err");return;}
+                  if(f.size>10485760){toast$("Ukuran lampiran maks 10MB","err");return;}
                   const reader=new FileReader();
                   reader.onload=ev=>setAddForm(p=>({...p,attachment:ev.target?.result as string||null}));
                   reader.readAsDataURL(f);
