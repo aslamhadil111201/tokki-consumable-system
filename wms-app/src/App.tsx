@@ -2063,8 +2063,10 @@ export default function App(){
                   const apRejected=trx.filter(t=>trxApprovalStatus(t)==="rejected").length;
                   const resolved=trx.filter(t=>trxApprovalStatus(t)!=="pending"&&t.approvedAt);
                   const avgSlaMs=resolved.length>0?resolved.reduce((sum,t)=>{
-                    const created=typeof t.id==="number"?t.id:parseInt(t.id)||0;
-                    return sum+(t.approvedAt-created);
+                    const created=Number(t.id)||0;
+                    const resolvedAt=t.approvedAt?new Date(t.approvedAt).getTime():0;
+                    const diff=resolvedAt-created;
+                    return sum+(diff>0?diff:0);
                   },0)/resolved.length:0;
                   const avgSlaLabel=avgSlaMs<=0?"—":avgSlaMs<3600000?`${Math.round(avgSlaMs/60000)} mnt`:`${Math.floor(avgSlaMs/3600000)}j ${Math.round((avgSlaMs%3600000)/60000)}m`;
                   return(
