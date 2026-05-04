@@ -3040,7 +3040,10 @@ export default function App(){
             <div style={{fontSize:12,color:T.muted,marginBottom:18}}>Barang yang diretur akan otomatis menambah stok kembali.</div>
             <div className="sect-box">
               <div className="sect-lbl">👤 Nama Karyawan</div>
-              <input className="ifield" style={{width:"100%"}} placeholder="Nama karyawan yang meretur..." value={returForm.employee} onChange={e=>setReturForm(p=>({...p,employee:e.target.value}))}/>
+              <select className="ifield" style={{width:"100%"}} value={returForm.employee} onChange={e=>setReturForm(p=>({...p,employee:e.target.value}))}>
+                <option value="">-- Pilih karyawan --</option>
+                {employees.map((emp:any)=><option key={emp.id} value={emp.name}>{emp.name}</option>)}
+              </select>
             </div>
             <div className="sect-box">
               <div className="sect-lbl">📦 Barang yang Diretur</div>
