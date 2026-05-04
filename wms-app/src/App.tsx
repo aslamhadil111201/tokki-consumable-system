@@ -1698,8 +1698,9 @@ export default function App(){
     .login-btn{width:100%;padding:14px 20px;font-size:15px;font-weight:800;background:linear-gradient(135deg,${T.primary} 0%,${T.primaryLight} 100%);color:white;border:none;border-radius:14px;cursor:pointer;box-shadow:0 6px 24px ${T.primaryGlow};letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .15s,box-shadow .15s;font-family:'Plus Jakarta Sans',sans-serif}
     .login-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px ${T.primaryGlow}}
     .login-btn:active{transform:translateY(0)}
-    .login-mode-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid ${T.border};background:${T.surface};color:${T.text};font-size:12px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;margin-bottom:14px}
-    .login-mode-btn:hover{border-color:${T.borderHover};background:${T.navActive};color:${T.navActiveText}}
+    .login-mode-icon-btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid ${T.border};background:${T.surface};color:${T.text};font-size:18px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;box-shadow:${T.shadowSm}}
+    .login-mode-icon-btn:hover{border-color:${T.borderHover};background:${T.navActive};color:${T.navActiveText};transform:translateY(-1px)}
+    .login-mode-icon-btn:focus-visible{outline:none;box-shadow:0 0 0 2px ${T.primaryGlow}}
     .login-divider{display:flex;align-items:center;gap:12px;margin:18px 0 14px}
     .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:${T.border}}
     @media(max-width:480px){
@@ -1844,7 +1845,9 @@ export default function App(){
       <div style={{position:"fixed",left:0,top:0,bottom:0,width:"35%",background:dark?"linear-gradient(90deg,rgba(0,12,5,0.6) 0%,transparent 100%)":"linear-gradient(90deg,rgba(209,250,229,0.5) 0%,transparent 100%)",pointerEvents:"none",zIndex:0}}/>
       <div className="login-wrap">
         <div className="login-card">
-          <div style={{position:"absolute",top:16,right:16}}><Toggle mini/></div>
+          <button type="button" className="login-mode-icon-btn" onClick={toggleTheme} aria-label={dark?"Pindah ke mode terang":"Pindah ke mode gelap"} title={dark?"Pindah ke mode terang":"Pindah ke mode gelap"} style={{position:"absolute",top:16,right:16,zIndex:3}}>
+            {dark?"☀️":"🌙"}
+          </button>
 
           <div style={{display:"flex",justifyContent:"center",marginBottom:22}}>
             <img src={dark?"/tokki-logo dark mode.png":"/tokki-logo.png"} alt="Tokki" style={{height:dark?54:66,objectFit:"contain"}}/>
@@ -1863,10 +1866,6 @@ export default function App(){
           <div style={{fontSize:13,color:T.muted,marginBottom:28,fontWeight:500,lineHeight:1.65}}>
             Masuk untuk mengelola inventaris barang consumable gudang
           </div>
-
-          <button type="button" className="login-mode-btn" onClick={toggleTheme}>
-            {dark?"☀️":"🌙"} {dark?"Pindah ke Mode Terang":"Pindah ke Mode Gelap"}
-          </button>
 
           <div style={{marginBottom:14}}>
             <div style={{fontSize:10,fontWeight:800,color:T.primary,letterSpacing:".12em",textTransform:"uppercase",marginBottom:6}}>Username</div>
