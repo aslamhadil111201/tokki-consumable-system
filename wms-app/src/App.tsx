@@ -1273,6 +1273,80 @@ export default function App(){
     toast$("Export PDF penerimaan berhasil");
   };
 
+  // ── EXPORT LAPORAN APPROVAL ────────────────────────────────────────
+  const approvalReportSource=trx.filter((t:any)=>trxApprovalStatus(t)!=="approved"||true); // semua out trx (pending, approved, rejected)
+  const fmtSlaDuration=(createdMs:number,resolvedMs:number)=>{
+    if(!createdMs||!resolvedMs||resolvedMs<createdMs) return "-";
+    const min=Math.floor((resolvedMs-createdMs)/60000);
+    if(min<1) return "<1 mnt";
+    if(min<60) return `${min} mnt`;
+    const h=Math.floor(min/60);const m=min%60;
+    return m>0?`${h}j ${m}m`:`${h} jam`;
+  };
+  const approvalReportRows=toSafeRows(approvalReportSource).flatMap((t:any)=>{
+    const status=trxApprovalStatus(t);
+    const createdMs=Number(t.id)||0;
+    const resolvedMs=t.approvedAt?new Date(t.approvedAt).getTime():0;
+    const slaDur=fmtSlaDuration(createdMs,resolvedMs);
+    return toSafeRows(t.items).map((it:any)=>({
+      id:t.id,
+      date:t.date,
+      time:t.time||"-",
+      taker:t.taker||"-",
+      dept:t.dept||"-",
+      workOrder:t.workOrder||"-",
+      admin:t.admin||"-",
+      itemName:it.itemName||"-",
+      qty:it.qty,
+      unit:it.unit||"-",
+      status:status==="approved"?"Approved":status==="rejected"?"Rejected":"Pending",
+      approvalReason:t.approvalReason||"-",
+      approvedBy:t.approvedBy||"-",
+      approvedAt:t.approvedAt?new Date(t.approvedAt).toLocaleString("id-ID"):"-",
+      approvalNote:t.approvalNote||"-",
+      slaDur,
+    }));
+  });
+
+  const exportApprovalExcel=()=>{
+    const approved=approvalReportSource.filter((t:any)=>trxApprovalStatus(t)==="approved").length;
+    const rejected=approvalReportSource.filter((t:any)=>trxApprovalStatus(t)==="rejected").length;
+    const pending=approvalReportSource.filter((t:any)=>trxApprovalStatus(t)==="pending").length;
+    const rows=[
+      ["TOKKI Consumable System"],
+      ["Laporan Approval Pengambilan"],
+      [`Dibuat`,`${todayFmt()} ${nowTime()}`],
+      [`Total Transaksi`,approvalReportSource.length],
+      [`Approved`,approved],
+      [`Rejected`,rejected],
+      [`Pending`,pending],
+      [],
+      ["ID","Tanggal","Waktu","Pengambil","Section","Project","Admin","Item","Qty","Unit","Status","Alasan Approval","Diproses Oleh","Waktu Proses","Catatan","Durasi SLA"],
+      ...approvalReportRows.map(r=>[
+        csvText(r.id),fmtDateExcel(r.date),r.time,r.taker,r.dept,r.workOrder,r.admin,r.itemName,r.qty,r.unit,r.status,r.approvalReason,r.approvedBy,r.approvedAt,r.approvalNote,r.slaDur,
+      ]),
+    ];
+    const csv="\uFEFF"+rows.map(r=>r.map(v=>typeof v==="string"&&v.startsWith("=")?v:csvEscape(v)).join(",")).join("\n");
+    triggerDownload(`laporan-approval-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
+    toast$("Export Excel (CSV) laporan approval berhasil");
+  };
+
+  const exportApprovalPdf=()=>{
+    const approved=approvalReportSource.filter((t:any)=>trxApprovalStatus(t)==="approved").length;
+    const rejected=approvalReportSource.filter((t:any)=>trxApprovalStatus(t)==="rejected").length;
+    const pending=approvalReportSource.filter((t:any)=>trxApprovalStatus(t)==="pending").length;
+    downloadPdfTable({
+      fileName:`laporan-approval-${todayStr()}.pdf`,
+      title:`Laporan Approval Pengambilan - ${todayFmt()}`,
+      subtitle:`Total: ${approvalReportSource.length} | Approved: ${approved} | Rejected: ${rejected} | Pending: ${pending}`,
+      headers:["ID","Tanggal","Pengambil","Section","Item","Qty","Status","Diproses Oleh","Durasi SLA","Alasan"],
+      rows:approvalReportRows.map(r=>[
+        r.id,r.date,r.taker,r.dept,r.itemName,`${r.qty} ${r.unit}`,r.status,r.approvedBy,r.slaDur,r.approvalReason,
+      ]),
+    });
+    toast$("Export PDF laporan approval berhasil");
+  };
+
   const auditPeriodLabel = () => {
     if(auditFrom&&auditTo) return `${fmtDate(auditFrom)} - ${fmtDate(auditTo)}`;
     if(auditFrom) return `>= ${fmtDate(auditFrom)}`;
@@ -2494,6 +2568,8 @@ export default function App(){
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                     {isAdmin&&historyTab!=="audit"&&historyTab!=="approval"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
                     {isAdmin&&historyTab!=="audit"&&historyTab!=="approval"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
+                    {isAdmin&&historyTab==="approval"&&<BtnG onClick={exportApprovalExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
+                    {isAdmin&&historyTab==="approval"&&<BtnG onClick={exportApprovalPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
                     {isAdmin&&historyTab!=="in"&&historyTab!=="audit"&&historyTab!=="approval"&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
