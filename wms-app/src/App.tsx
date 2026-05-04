@@ -311,6 +311,7 @@ export default function App(){
   const [auditFrom,setAuditFrom]=useState("");
   const [auditTo,setAuditTo]=useState("");
   const [pendingApprovalCount,setPendingApprovalCount]=useState(0);
+  const [approvalBusyKey,setApprovalBusyKey]=useState("");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [idleWarning,setIdleWarning]=useState(false);
   const [idleCountdown,setIdleCountdown]=useState(60);
@@ -927,22 +928,42 @@ export default function App(){
     const processTransactionApproval=async(id,action)=>{
       if(!isAdmin){toast$("Hanya admin yang boleh approval transaksi","err");return;}
       const actionLabel=action==="approve"?"approve":"reject";
+      const busyKey=`${id}:${actionLabel}`;
+      if(approvalBusyKey) return;
       const yes=window.confirm(actionLabel==="approve"?"Approve transaksi ini?":"Reject transaksi ini?");
       if(!yes) return;
       const note="";
-      await withLoading(async()=>{
-        try{
-          const r=await apiFetch(`/transactions/${id}/approval`,{
-            method:"PATCH",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({action:actionLabel,note:String(note||"").trim()}),
-          });
-          const data=await r.json().catch(()=>null);
-          if(!r.ok) throw new Error(data?.error||"Gagal memproses approval");
-          toast$(actionLabel==="approve"?"Transaksi berhasil di-approve":"Transaksi ditolak");
-          await fetchAll();
-        }catch(e){toast$(e?.message||"Gagal memproses approval","err");}
-      },actionLabel==="approve"?"Sedang meng-approve transaksi":"Sedang menolak transaksi");
+      setApprovalBusyKey(busyKey);
+      try{
+        await withLoading(async()=>{
+          try{
+            const r=await apiFetch(`/transactions/${id}/approval`,{
+              method:"PATCH",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({action:actionLabel,note:String(note||"").trim()}),
+            });
+            const data=await r.json().catch(()=>null);
+            if(!r.ok){
+              const rawMessage=String(data?.error||"");
+              const rawLower=rawMessage.toLowerCase();
+              let message=rawMessage||"Gagal memproses approval";
+              if(r.status===403) message="Akses ditolak: hanya admin yang boleh approval";
+              else if(r.status===404) message="Transaksi tidak ditemukan";
+              else if(r.status===409) message="Data transaksi berubah, silakan refresh lalu coba lagi";
+              else if(r.status===400){
+                if(rawLower.includes("bukan antrian")) message="Transaksi ini sudah diproses, silakan refresh data";
+                else if(rawLower.includes("stok")) message="Approval gagal: stok tidak cukup saat diproses";
+                else message=rawMessage||"Permintaan approval tidak valid";
+              }
+              throw new Error(message);
+            }
+            toast$(actionLabel==="approve"?"Transaksi berhasil di-approve":"Transaksi ditolak");
+            await fetchAll();
+          }catch(e){toast$(e?.message||"Gagal memproses approval","err");}
+        },actionLabel==="approve"?"Sedang meng-approve transaksi":"Sedang menolak transaksi");
+      }finally{
+        setApprovalBusyKey("");
+      }
     };
 
   const deleteReceive=async(id)=>{
@@ -2425,8 +2446,8 @@ export default function App(){
                                 <div style={{fontSize:14,fontWeight:900,color:T.amber}}>{fmtMoney(totalCostRow)}</div>
                               </div>
                               <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-                                <button type="button" onClick={()=>processTransactionApproval(t.id,"approve")} style={{background:T.greenBg,border:`1px solid ${T.greenBorder}`,color:T.greenText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>✅ Approve</button>
-                                <button type="button" onClick={()=>processTransactionApproval(t.id,"reject")} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>⛔ Reject</button>
+                                <button type="button" disabled={Boolean(approvalBusyKey)} onClick={()=>processTransactionApproval(t.id,"approve")} style={{background:T.greenBg,border:`1px solid ${T.greenBorder}`,color:T.greenText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:approvalBusyKey?"not-allowed":"pointer",whiteSpace:"nowrap",opacity:approvalBusyKey?0.65:1}}>{approvalBusyKey===`${t.id}:approve`?"Memproses...":"✅ Approve"}</button>
+                                <button type="button" disabled={Boolean(approvalBusyKey)} onClick={()=>processTransactionApproval(t.id,"reject")} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:approvalBusyKey?"not-allowed":"pointer",whiteSpace:"nowrap",opacity:approvalBusyKey?0.65:1}}>{approvalBusyKey===`${t.id}:reject`?"Memproses...":"⛔ Reject"}</button>
                               </div>
                             </div>
                           </div>
