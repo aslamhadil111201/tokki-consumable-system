@@ -1840,7 +1840,7 @@ export default function App(){
       <style>{CSS}</style>
       <div className="login-bg"/>
       <div style={{position:"fixed",right:"-6%",top:"50%",transform:"translateY(-50%)",width:"min(520px,52vw)",opacity:dark?0.05:0.07,pointerEvents:"none",zIndex:0}}>
-        <img src={dark?"/tokki-logo dark mode.png":"/tokki-logo.png"} alt="" style={{width:"100%",objectFit:"contain"}}/>
+        <img src="/LOGO TOKKI-FAVICON.png" alt="" style={{width:"100%",objectFit:"contain"}}/>
       </div>
       <div style={{position:"fixed",left:0,top:0,bottom:0,width:"35%",background:dark?"linear-gradient(90deg,rgba(0,12,5,0.6) 0%,transparent 100%)":"linear-gradient(90deg,rgba(209,250,229,0.5) 0%,transparent 100%)",pointerEvents:"none",zIndex:0}}/>
       <div className="login-wrap">
