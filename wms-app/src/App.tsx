@@ -1514,7 +1514,7 @@ export default function App(){
     /* MAIN */
     .main{flex:1;display:flex;flex-direction:column;min-width:0}
     .topbar{height:64px;background:${T.topbarBg};border-bottom:1px solid ${T.border};padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-    .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+    .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;line-height:1.15;margin:0}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
     .tb-btn:hover{border-color:${T.borderHover};color:${T.text}}
     .tb-logout{display:none !important}
@@ -1732,9 +1732,8 @@ export default function App(){
       .tb-btn.tb-backup,.tb-btn.tb-restore,.tb-btn.tb-reset-dummy{display:none !important}
       .date-btn{display:none !important}
       .tb-logout{display:inline-flex !important}
-      .page-title{font-size:15px}
+      .page-title{font-size:15px;max-width:none;line-height:1.1}
       .notif-wrap{margin:0 -4px}
-      .page-title{font-size:16px}
       .tb-reset-dummy{display:none}
       .nav-item.mobile-logout{display:flex}
       .body-area{padding:14px 12px 40px}
@@ -1798,7 +1797,7 @@ export default function App(){
       .stk-card{padding:14px}
       .body-area{padding:12px 10px 36px}
       .topbar{padding:0 8px;gap:4px;height:54px}
-      .page-title{font-size:13px}
+      .page-title{font-size:13px;line-height:1.1}
       .tb-btn{padding:6px 10px;font-size:11px}
       .modal{padding:16px 12px}
       .cart-row{flex-wrap:wrap}
@@ -1971,7 +1970,7 @@ export default function App(){
         <div className="main">
           {/* TOPBAR */}
           <header className="topbar">
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
               <button className="tb-btn" style={{padding:"7px 10px",flexShrink:0}} onClick={()=>{if(window.innerWidth<=660){setSidebar(v=>!v);}else{setSidebarCollapsed(v=>!v);}}}>
                 <svg width="15" height="12" viewBox="0 0 15 12" fill="none"><rect width="15" height="1.5" rx="1" fill="currentColor"/><rect y="5.25" width="15" height="1.5" rx="1" fill="currentColor"/><rect y="10.5" width="15" height="1.5" rx="1" fill="currentColor"/></svg>
               </button>
