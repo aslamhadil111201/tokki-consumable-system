@@ -290,6 +290,71 @@ app.delete("/api/receives/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+// ── RETURNS (RETUR BARANG) ──────────────────────────────────────
+app.get("/api/returns", (req, res) => {
+  const db = readDB();
+  res.json(db.returns || []);
+});
+
+app.post("/api/returns", (req, res) => {
+  const db = readDB();
+  const employee = String(req.body?.employee || "").trim();
+  const itemId = Number(req.body?.itemId);
+  const qty = Number(req.body?.qty);
+  const reason = String(req.body?.reason || "").trim();
+  const note = String(req.body?.note || "").trim();
+  const date = String(req.body?.date || "").trim();
+  const time = String(req.body?.time || "").trim();
+
+  if (!employee) return res.status(400).json({ error: "Nama karyawan wajib diisi" });
+  if (!Number.isInteger(itemId) || itemId <= 0) return res.status(400).json({ error: "Item retur tidak valid" });
+  if (!Number.isInteger(qty) || qty <= 0) return res.status(400).json({ error: "Qty retur harus bilangan bulat > 0" });
+
+  const item = (db.items || []).find(i => i.id === itemId);
+  if (!item) return res.status(404).json({ error: "Item tidak ditemukan" });
+
+  item.stock = Number(item.stock || 0) + qty;
+
+  if (!Array.isArray(db.returns)) db.returns = [];
+  const row = {
+    id: Date.now(),
+    employee,
+    itemId,
+    itemName: item.name,
+    qty,
+    reason: reason || "Retur",
+    note,
+    date,
+    time,
+    status: "Menunggu",
+  };
+
+  db.returns.push(row);
+  writeDB(db);
+  res.status(201).json(row);
+});
+
+app.patch("/api/returns/:id", (req, res) => {
+  const db = readDB();
+  const id = Number(req.params.id);
+  const status = String(req.body?.status || "").trim();
+
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "ID retur tidak valid" });
+  if (!status) return res.status(400).json({ error: "Status retur wajib diisi" });
+
+  if (!Array.isArray(db.returns)) db.returns = [];
+  const idx = db.returns.findIndex(r => r.id === id);
+  if (idx === -1) return res.status(404).json({ error: "Data retur tidak ditemukan" });
+
+  db.returns[idx] = {
+    ...db.returns[idx],
+    status,
+  };
+
+  writeDB(db);
+  res.json(db.returns[idx]);
+});
+
 // ── START ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`✅ WMS Backend berjalan di http://localhost:${PORT}`);
