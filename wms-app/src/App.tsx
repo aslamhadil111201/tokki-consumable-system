@@ -754,6 +754,7 @@ export default function App(){
     const itemId=Number(returForm.itemId);
     const qty=Number(returForm.qty);
     if(!empName){toast$("Nama karyawan wajib diisi","err");return;}
+    if(!employees.some((emp:any)=>String(emp?.name||"").trim().toLowerCase()===empName.toLowerCase())){toast$("Pilih nama karyawan dari database","err");return;}
     if(!itemId){toast$("Pilih barang terlebih dahulu","err");return;}
     if(!Number.isInteger(qty)||qty<=0){toast$("Jumlah harus bilangan bulat > 0","err");return;}
     await withLoading(async()=>{
@@ -3040,10 +3041,10 @@ export default function App(){
             <div style={{fontSize:12,color:T.muted,marginBottom:18}}>Barang yang diretur akan otomatis menambah stok kembali.</div>
             <div className="sect-box">
               <div className="sect-lbl">👤 Nama Karyawan</div>
-              <select className="ifield" style={{width:"100%"}} value={returForm.employee} onChange={e=>setReturForm(p=>({...p,employee:e.target.value}))}>
-                <option value="">-- Pilih karyawan --</option>
-                {employees.map((emp:any)=><option key={emp.id} value={emp.name}>{emp.name}</option>)}
-              </select>
+              <input className="ifield" list="retur-employee-list" style={{width:"100%"}} placeholder="Ketik nama karyawan..." value={returForm.employee} onChange={e=>setReturForm(p=>({...p,employee:e.target.value}))}/>
+              <datalist id="retur-employee-list">
+                {employees.map((emp:any)=><option key={emp.id} value={emp.name} />)}
+              </datalist>
             </div>
             <div className="sect-box">
               <div className="sect-lbl">📦 Barang yang Diretur</div>
