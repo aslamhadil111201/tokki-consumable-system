@@ -48,10 +48,7 @@ const getT = (dark) => dark ? {
   shadowCard:"0 10px 30px rgba(0,0,0,0.08)", shadowSm:"0 4px 12px rgba(0,0,0,0.05)",
 };
 
-let T = getT(true);
-
-// gradient text helper — solid color agar tidak tertutup
-const gText = () => ({ color: T.primaryLight });
+// T and gText moved inside App component (reactive to dark state)
 
 const CATS = ["Semua","APD","Abrasif","Cutting Tool","Industrial Gas","Kebersihan"];
 const EXCEL_ICON=(<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/><path d="M7 12l2.5 3L12 12l2.5 3L17 12" strokeWidth="1.8"/></svg>);
@@ -265,7 +262,9 @@ const SearchSelect=({options,value,onChange,placeholder})=>{
 
 // ─── APP ──────────────────────────────────────────────────────────
 export default function App(){
-  const [dark,setDark]=useState(true);
+  const [dark,setDark]=useState(()=>{try{return localStorage.getItem("wms_dark")==="false"?false:true;}catch{return true;}});
+  const T=getT(dark);
+  const gText=()=>({color:T.primaryLight});
   const [tab,setTab]=useState("login");
   const [items,setItems]=useState([]);
   const [trx,setTrx]=useState([]);
@@ -348,8 +347,6 @@ export default function App(){
   const isOperator = (user?.role || "").toLowerCase() === "operator";
   const canManage = isAdmin || isOperator;
   const visibleTabs = (isAdmin||isOperator) ? TABS : TABS.filter(t=>t.id!=="history");
-
-  T=getT(dark);
 
   const logout=useCallback((message="")=>{
     const safeMessage = typeof message === "string" ? message : "";
@@ -1807,7 +1804,7 @@ export default function App(){
 
   // ── TOGGLE COMPONENT ─────────────────────────────────────────────
   const Toggle=({mini})=>(
-    <div className="toggle-wrap" onClick={()=>setDark(!dark)} style={mini?{padding:"4px 8px 4px 10px"}:{}}>
+    <div className="toggle-wrap" onClick={()=>{const next=!dark;setDark(next);try{localStorage.setItem("wms_dark",String(next));}catch{}}} style={mini?{padding:"4px 8px 4px 10px"}:{}}>
       <span className="toggle-lbl">{dark?"🌙":"☀️"}{!mini&&(dark?" Dark":" Light")}</span>
       <div className="toggle-track"><div className="toggle-thumb"/></div>
     </div>
