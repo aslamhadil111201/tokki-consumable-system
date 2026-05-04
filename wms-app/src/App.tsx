@@ -265,6 +265,13 @@ const SearchSelect=({options,value,onChange,placeholder})=>{
 export default function App(){
   const [dark,setDark]=useState(()=>{try{return localStorage.getItem("wms_dark")==="false"?false:true;}catch{return true;}});
   T=getT(dark);
+  const toggleTheme=useCallback(()=>{
+    setDark(prev=>{
+      const next=!prev;
+      try{localStorage.setItem("wms_dark",String(next));}catch{}
+      return next;
+    });
+  },[]);
   const [tab,setTab]=useState("login");
   const [items,setItems]=useState([]);
   const [trx,setTrx]=useState([]);
@@ -1518,8 +1525,9 @@ export default function App(){
     .nav-item.mobile-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
 
     /* TOGGLE — smooth cubic */
-    .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:30px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s}
+    .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:30px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s;appearance:none;-webkit-appearance:none;font-family:'Plus Jakarta Sans',sans-serif;position:relative;z-index:2}
     .toggle-wrap:hover{border-color:${T.borderHover}}
+    .toggle-wrap:focus-visible{outline:none;box-shadow:0 0 0 2px ${T.primaryGlow}}
     .toggle-lbl{font-size:11px;font-weight:700;color:${T.muted}}
     .toggle-track{width:42px;height:23px;border-radius:12px;background:${dark?`linear-gradient(135deg,${T.primary},${T.primaryLight})`:`rgba(100,116,139,0.25)`};position:relative;transition:background .35s ease;box-shadow:${dark?`0 0 8px ${T.primaryGlow}`:"none"}}
     .toggle-thumb{width:17px;height:17px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${dark?"22px":"3px"};transition:left .3s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 6px rgba(0,0,0,0.25)}
@@ -1804,10 +1812,10 @@ export default function App(){
 
   // ── TOGGLE COMPONENT ─────────────────────────────────────────────
   const Toggle=({mini})=>(
-    <div className="toggle-wrap" onClick={()=>{const next=!dark;setDark(next);try{localStorage.setItem("wms_dark",String(next));}catch{}}} style={mini?{padding:"4px 8px 4px 10px"}:{}}>
+    <button type="button" className="toggle-wrap" onClick={toggleTheme} style={mini?{padding:"4px 8px 4px 10px"}:{}} aria-label={dark?"Switch to light mode":"Switch to dark mode"}>
       <span className="toggle-lbl">{dark?"🌙":"☀️"}{!mini&&(dark?" Dark":" Light")}</span>
       <div className="toggle-track"><div className="toggle-thumb"/></div>
-    </div>
+    </button>
   );
 
   const BusyOverlay=()=>loading&&loggedIn?(
