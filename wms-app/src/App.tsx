@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment, react-hooks/set-state-in-effect, react-hooks/static-components, react-hooks/globals, react-hooks/exhaustive-deps */
 // @ts-nocheck
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -8,6 +8,11 @@ const API = (
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? "http://localhost:3001/api" : "/api")
 ).replace(/\/$/, "");
+const IDLE_TIMEOUT_MINUTES = Math.max(
+  1,
+  Number(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || 10),
+);
+const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MINUTES * 60 * 1000;
 
 // ─── DESIGN TOKENS (FIXED) ────────────────────────────────────────
 const getT = (dark) => dark ? {
@@ -72,12 +77,20 @@ const NAV_ICONS={
       <path d="M12 7v5l4 2"/>
     </svg>
   ),
+  report:(
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}>
+      <line x1="18" y1="20" x2="18" y2="10"/>
+      <line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="14"/>
+    </svg>
+  ),
 };
 const TABS = [
   {id:"dashboard",label:"Dashboard",icon:NAV_ICONS.dashboard},
   {id:"transaction",label:"Pengambilan",icon:NAV_ICONS.transaction},
   {id:"stock",label:"Stok Barang",icon:NAV_ICONS.stock},
   {id:"history",label:"Riwayat",icon:NAV_ICONS.history},
+  {id:"report",label:"Laporan",icon:NAV_ICONS.report},
 ];
 const ITEM_CATEGORIES = ["APD","Abrasif","Cutting Tool","Industrial Gas","Kebersihan"];
 const MAX_STOCK_VALUE = 1000000;
@@ -88,9 +101,11 @@ const nowTime=()=>new Date().toTimeString().slice(0,5);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):""; 
 const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
 const fmtMoney=n=>`Rp ${Number(n||0).toLocaleString("id-ID")}`;
+const isoDate=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const clamp01=(n)=>Math.max(0,Math.min(1,Number(n)||0));
 const emptyForm=(overrides={})=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[],...overrides});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",hargaAwal:"",photo:null});
-const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",...overrides});
+const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",attachment:null,...overrides});
 const initials=(name="")=>String(name).split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()||"").join("")||"NA";
 const _AV_PAL=["#10b981","#6366f1","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#0ea5e9","#22c55e"];
 const avatarColor=(name="")=>{let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);return _AV_PAL[Math.abs(h)%_AV_PAL.length];};
@@ -121,6 +136,7 @@ const pathToTab = (pathname = "") => {
   if (p === "/" || p === "/dashboard" || p === "/dasboard" || p === "/dasbord") return "dashboard";
   if (p === "/login") return "login";
   if (p === "/riwayat" || p === "/history") return "history";
+  if (p === "/laporan" || p === "/report") return "report";
   if (p === "/pengambilan" || p === "/transaction") return "transaction";
   if (p === "/stok" || p === "/stock") return "stock";
   return null;
@@ -132,6 +148,7 @@ const tabToPath = (tab = "") => ({
   transaction: "/Pengambilan",
   stock: "/Stok",
   history: "/Riwayat",
+  report: "/Laporan",
 }[tab] || "/Dasboard");
 
 const stockStatus=it=>{
@@ -273,6 +290,8 @@ export default function App(){
   const [allHistory,setAllHistory]=useState([]);
   const [historyTab,setHistoryTab]=useState("out");
   const [historyQuery,setHistoryQuery]=useState("");
+  const [addFormDragOver,setAddFormDragOver]=useState(false);
+  const [attachPreview,setAttachPreview]=useState<{data:string;name:string;mimeType:string;receiveId:number}|null>(null);
   const [historyFrom,setHistoryFrom]=useState("");
   const [historyTo,setHistoryTo]=useState("");
   const [historyOutPage,setHistoryOutPage]=useState(1);
@@ -287,9 +306,16 @@ export default function App(){
   const [auditFrom,setAuditFrom]=useState("");
   const [auditTo,setAuditTo]=useState("");
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
+  const [idleWarning,setIdleWarning]=useState(false);
+  const [idleCountdown,setIdleCountdown]=useState(60);
+  const [reportPeriod,setReportPeriod]=useState("month");
   const notifRef=useRef(null);
   const restoreInputRef=useRef(null);
   const desiredTabRef=useRef("dashboard");
+  const idleTimerRef=useRef(null);
+  const idleWarningTimerRef=useRef(null);
+  const idleCountdownRef=useRef(null);
+  const keepAliveRef=useRef(null);
   const loading=loadingCount>0;
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const isOperator = (user?.role || "").toLowerCase() === "operator";
@@ -298,17 +324,28 @@ export default function App(){
 
   T=getT(dark);
 
+  const logout=useCallback((message="")=>{
+    setLoggedIn(false);
+    setUser(null);
+    setAuthToken("");
+    localStorage.removeItem("wms_user");
+    localStorage.removeItem("wms_token");
+    setTab("login");
+    setItems([]);
+    setTrx([]);
+    window.history.replaceState(null,"","/Login");
+    if(message){
+      setToast({msg:message,type:"err"});
+      setTimeout(()=>setToast(null),3200);
+    }
+  },[]);
+
   const apiFetch=async(path,options={})=>{
     const headers={...(options.headers||{})};
     if(authToken)headers.Authorization=`Bearer ${authToken}`;
     const r=await fetch(`${API}${path}`,{...options,headers});
     if(r.status===401){
-      setAuthToken("");
-      setLoggedIn(false);
-      setUser(null);
-      localStorage.removeItem("wms_token");
-      localStorage.removeItem("wms_user");
-      setTab("login");
+      logout("Sesi login berakhir, silakan login lagi");
       throw new Error("Sesi login berakhir, silakan login lagi");
     }
     return r;
@@ -425,6 +462,117 @@ export default function App(){
   const pagedAll=filteredAll.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
   const auditTotalPages=Math.max(1,Math.ceil(auditTotal/auditPageSize));
 
+  const reportRange=(()=>{
+    const now=new Date();
+    const end=isoDate(now);
+    if(reportPeriod==="week"){
+      const s=new Date(now);
+      s.setDate(now.getDate()-6);
+      return {start:isoDate(s),end,label:"7 Hari Terakhir"};
+    }
+    if(reportPeriod==="year"){
+      const s=new Date(now.getFullYear(),0,1);
+      return {start:isoDate(s),end,label:`Tahun ${now.getFullYear()}`};
+    }
+    const s=new Date(now.getFullYear(),now.getMonth(),1);
+    return {start:isoDate(s),end,label:"Bulan Berjalan"};
+  })();
+  const inReportRange=(d)=>Boolean(d)&&d>=reportRange.start&&d<=reportRange.end;
+  const reportOut=trx.filter(t=>inReportRange(t.date));
+  const reportIn=receives.filter(r=>inReportRange(r.date));
+  const reportTotalOutUnits=reportOut.reduce((a,t)=>a+toSafeRows(t.items).reduce((b,i)=>b+Number(i.qty||0),0),0);
+  const reportTotalInUnits=reportIn.reduce((a,r)=>a+Number(r.qty||0),0);
+  const reportOutValue=reportOut.reduce((a,t)=>a+toSafeRows(t.items).reduce((b,i)=>{
+    const ref=itemMap[Number(i.itemId||0)];
+    const estPrice=Number(ref?.averageCost||ref?.lastPrice||0);
+    return b+Number(i.qty||0)*estPrice;
+  },0),0);
+  const reportInValue=reportIn.reduce((a,r)=>a+Number(r.totalCostIn??(Number(r.qty||0)*Number(r.buyPrice||0))),0);
+  const reportEstimatedValue=reportOutValue+reportInValue;
+
+  const reportTxnSeries=(()=>{
+    const now=new Date();
+    const outMap={};
+    const inMap={};
+    reportOut.forEach(t=>{outMap[t.date]=(outMap[t.date]||0)+1;});
+    reportIn.forEach(r=>{inMap[r.date]=(inMap[r.date]||0)+1;});
+
+    if(reportPeriod==="year"){
+      return Array.from({length:12}).map((_,idx)=>{
+        const key=`${now.getFullYear()}-${String(idx+1).padStart(2,"0")}`;
+        const out=Object.keys(outMap).reduce((acc,d)=>acc+(String(d).startsWith(key)?Number(outMap[d]||0):0),0);
+        const inn=Object.keys(inMap).reduce((acc,d)=>acc+(String(d).startsWith(key)?Number(inMap[d]||0):0),0);
+        return {
+          key,
+          label:new Date(now.getFullYear(),idx,1).toLocaleDateString("id-ID",{month:"short"}),
+          out,
+          in:inn,
+        };
+      });
+    }
+
+    const days=reportPeriod==="week"?7:(new Date(now.getFullYear(),now.getMonth()+1,0).getDate());
+    const first=reportPeriod==="week"?new Date(now.getFullYear(),now.getMonth(),now.getDate()-6):new Date(now.getFullYear(),now.getMonth(),1);
+    return Array.from({length:days}).map((_,idx)=>{
+      const d=new Date(first.getFullYear(),first.getMonth(),first.getDate()+idx);
+      const key=isoDate(d);
+      return {
+        key,
+        label:d.toLocaleDateString("id-ID",{day:"2-digit",month:"short"}),
+        out:Number(outMap[key]||0),
+        in:Number(inMap[key]||0),
+      };
+    }).filter(row=>row.key<=todayStr());
+  })();
+  const reportTxnMax=Math.max(1,...reportTxnSeries.map(s=>Math.max(s.out,s.in)));
+
+  const reportTopItems=(()=>{
+    const map={};
+    reportOut.forEach(t=>toSafeRows(t.items).forEach(it=>{
+      const key=it.itemName||`Item ${it.itemId||""}`;
+      map[key]=(map[key]||0)+Number(it.qty||0);
+    }));
+    const rows=Object.entries(map).map(([name,total])=>({name,total:Number(total||0)})).sort((a,b)=>b.total-a.total).slice(0,5);
+    const max=Math.max(1,...rows.map(r=>r.total));
+    return rows.map(r=>({...r,pct:Math.round((r.total/max)*100)}));
+  })();
+
+  const reportDeptStack=(()=>{
+    const byDept={};
+    reportOut.forEach(t=>{
+      const dept=t.dept||"Tanpa Dept";
+      if(!byDept[dept]) byDept[dept]={};
+      toSafeRows(t.items).forEach(it=>{
+        const ref=itemMap[Number(it.itemId||0)];
+        const cat=ref?.category||"Lainnya";
+        byDept[dept][cat]=(byDept[dept][cat]||0)+Number(it.qty||0);
+      });
+    });
+    return Object.entries(byDept)
+      .map(([dept,cats])=>{
+        const total=Object.values(cats).reduce((a,v)=>a+Number(v||0),0);
+        return {dept,total,cats};
+      })
+      .sort((a,b)=>b.total-a.total)
+      .slice(0,8);
+  })();
+
+  const reportDeptCats=(()=>{
+    const found=new Set();
+    reportDeptStack.forEach(row=>Object.keys(row.cats||{}).forEach(c=>found.add(c)));
+    const ordered=[...ITEM_CATEGORIES,"Lainnya"].filter(c=>found.has(c));
+    const extra=[...found].filter(c=>!ordered.includes(c));
+    return [...ordered,...extra];
+  })();
+  const reportCatPalette={
+    APD:"#10b981",
+    Abrasif:"#f59e0b",
+    "Cutting Tool":"#3b82f6",
+    "Industrial Gas":"#8b5cf6",
+    Kebersihan:"#ec4899",
+    Lainnya:"#64748b",
+  };
+
   useEffect(()=>{document.body.style.background=T.bg;document.body.style.transition="background .4s,color .3s";},[dark]);
   useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize]);
   useEffect(()=>{if(historyOutPage>(historyTab==="all"?allTotalPages:outTotalPages))setHistoryOutPage(historyTab==="all"?allTotalPages:outTotalPages);},[historyOutPage,outTotalPages,allTotalPages,historyTab]);
@@ -470,17 +618,58 @@ export default function App(){
       toast$("Selamat datang ✓");
     }catch{toast$("Server tidak bisa dihubungi","err");}
   },"Sedang login");
-  const logout=()=>{
-    setLoggedIn(false);
-    setUser(null);
-    setAuthToken("");
-    localStorage.removeItem("wms_user");
-    localStorage.removeItem("wms_token");
-    setTab("login");
-    setItems([]);
-    setTrx([]);
-    window.history.replaceState(null,"","/Login");
-  };
+
+  useEffect(()=>{
+    if(!loggedIn){
+      if(idleTimerRef.current){window.clearTimeout(idleTimerRef.current);idleTimerRef.current=null;}
+      if(idleWarningTimerRef.current){window.clearTimeout(idleWarningTimerRef.current);idleWarningTimerRef.current=null;}
+      if(idleCountdownRef.current){window.clearInterval(idleCountdownRef.current);idleCountdownRef.current=null;}
+      setIdleWarning(false);
+      return;
+    }
+
+    const WARN_BEFORE_MS=Math.min(60_000,IDLE_TIMEOUT_MS-1000);
+
+    const clearAllTimers=()=>{
+      if(idleTimerRef.current){window.clearTimeout(idleTimerRef.current);idleTimerRef.current=null;}
+      if(idleWarningTimerRef.current){window.clearTimeout(idleWarningTimerRef.current);idleWarningTimerRef.current=null;}
+      if(idleCountdownRef.current){window.clearInterval(idleCountdownRef.current);idleCountdownRef.current=null;}
+    };
+
+    const startLogoutCountdown=()=>{
+      const secs=Math.round(WARN_BEFORE_MS/1000);
+      setIdleCountdown(secs);
+      setIdleWarning(true);
+      idleCountdownRef.current=window.setInterval(()=>{
+        setIdleCountdown(prev=>{
+          if(prev<=1){
+            window.clearInterval(idleCountdownRef.current);
+            idleCountdownRef.current=null;
+            logout(`Logout otomatis: tidak ada aktivitas selama ${IDLE_TIMEOUT_MINUTES} menit`);
+            return 0;
+          }
+          return prev-1;
+        });
+      },1000);
+    };
+
+    const resetIdleTimer=()=>{
+      clearAllTimers();
+      setIdleWarning(false);
+      idleWarningTimerRef.current=window.setTimeout(startLogoutCountdown,IDLE_TIMEOUT_MS-WARN_BEFORE_MS);
+    };
+
+    keepAliveRef.current=resetIdleTimer;
+
+    const events=["mousemove","keydown","click","scroll","touchstart"];
+    resetIdleTimer();
+    events.forEach(evt=>window.addEventListener(evt,resetIdleTimer,{passive:true}));
+
+    return()=>{
+      events.forEach(evt=>window.removeEventListener(evt,resetIdleTimer));
+      clearAllTimers();
+    };
+  },[loggedIn,logout]);
   const addToCart=()=>{
     if(!pickerItem||!pickerQty||+pickerQty<1){toast$("Pilih barang dan isi jumlah","err");return;}
     const it=items.find(i=>i.id===+pickerItem);if(!it){toast$("Barang tidak ditemukan","err");return;}
@@ -531,13 +720,27 @@ export default function App(){
     await withLoading(async()=>{
       try{
         const r=await apiFetch("/receives",{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,buyPrice:effectiveBuyPrice,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin})});
-        if(!r.ok)throw new Error();
+          body:JSON.stringify({itemId:+addForm.itemId,qty:+addForm.qty,buyPrice:effectiveBuyPrice,poNumber:addForm.poNumber,doNumber:addForm.doNumber,date:addForm.date,admin:addForm.admin,attachment:addForm.attachment||null})});
+        if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e?.error||"error");}
         setAddForm(emptyAddForm());setShowAdd(false);
         toast$("Stok berhasil ditambahkan ✓");
         await fetchAll();
-      }catch{toast$("Gagal menyimpan penerimaan","err");}
+      }catch(err:any){toast$(err?.message||"Gagal menyimpan penerimaan","err");}
     },"Sedang menyimpan penerimaan");
+  };
+  const fetchReceiveAttachment=async(receiveId:number)=>{
+    await withLoading(async()=>{
+      try{
+        const r=await apiFetch(`/receives/${receiveId}`);
+        if(!r.ok)throw new Error();
+        const doc=await r.json();
+        if(!doc.attachment){toast$("Tidak ada lampiran","err");return;}
+        const mimeMatch=doc.attachment.match(/^data:([^;]+);/);
+        const mimeType=mimeMatch?mimeMatch[1]:"application/octet-stream";
+        const name=`lampiran-penerimaan-${receiveId}.${mimeType==="application/pdf"?"pdf":mimeType==="image/png"?"png":"jpg"}`;
+        setAttachPreview({data:doc.attachment,name,mimeType,receiveId});
+      }catch{toast$("Gagal memuat lampiran","err");}
+    },"Memuat lampiran");
   };
   const submitNewItem=async()=>{
     if(!canManage){toast$("Hanya admin/operator yang boleh menambah item","err");return;}
@@ -866,6 +1069,52 @@ export default function App(){
     }catch(e){toast$(e?.message||"Gagal export audit","err");}
   };
 
+  const exportReportExcel=()=>{
+    const rows=[
+      ["TOKKI Consumable System"],
+      ["Laporan & Analitik"],
+      ["Periode",reportRange.label],
+      ["Rentang",`${fmtDate(reportRange.start)} - ${fmtDate(reportRange.end)}`],
+      ["Dibuat",`${todayFmt()} ${nowTime()}`],
+      [],
+      ["KPI","Nilai"],
+      ["Total Keluar (Unit)",reportTotalOutUnits],
+      ["Total Masuk (Unit)",reportTotalInUnits],
+      ["Nilai Estimasi (Rp)",Math.round(reportEstimatedValue)],
+      ["Item Kritis",lowStock.length],
+      [],
+      ["Transaksi Per Hari/Bulan"],
+      ["Label","Keluar","Masuk"],
+      ...reportTxnSeries.map(s=>[s.label,s.out,s.in]),
+      [],
+      ["Top 5 Item Paling Sering Diambil"],
+      ["Item","Unit Keluar"],
+      ...reportTopItems.map(r=>[r.name,r.total]),
+      [],
+      ["Breakdown Pengambilan per Departemen"],
+      ["Departemen","Total Unit",...reportDeptCats],
+      ...reportDeptStack.map(row=>[
+        row.dept,
+        row.total,
+        ...reportDeptCats.map(cat=>Number(row.cats?.[cat]||0)),
+      ]),
+    ];
+    const csv="\uFEFF"+rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+    triggerDownload(`laporan-analitik-${todayStr()}.csv`,csv,"text/csv;charset=utf-8;");
+    toast$("Export Excel (CSV) laporan berhasil");
+  };
+
+  const exportReportPdf=()=>{
+    downloadPdfTable({
+      fileName:`laporan-analitik-${todayStr()}.pdf`,
+      title:`Laporan & Analitik - ${todayFmt()}`,
+      subtitle:`Periode: ${reportRange.label} (${fmtDate(reportRange.start)} - ${fmtDate(reportRange.end)}) | Keluar: ${reportTotalOutUnits} | Masuk: ${reportTotalInUnits} | Item kritis: ${lowStock.length}`,
+      headers:["Label","Keluar","Masuk"],
+      rows:reportTxnSeries.map(s=>[s.label,s.out,s.in]),
+    });
+    toast$("Export PDF laporan berhasil");
+  };
+
   // ── CSS STRING ────────────────────────────────────────────────
   const CSS=`
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
@@ -908,11 +1157,13 @@ export default function App(){
     /* MAIN */
     .main{flex:1;display:flex;flex-direction:column;min-width:0}
     .topbar{height:64px;background:${T.topbarBg};border-bottom:1px solid ${T.border};padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-    .page-title{font-size:22px;font-weight:900;color:${T.text}}
+    .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
     .tb-btn:hover{border-color:${T.borderHover};color:${T.text}}
     .tb-logout{display:none !important}
     .tb-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
+    .tb-btn.tb-backup,.tb-btn.tb-restore,.tb-btn.tb-reset-dummy{display:inline-flex}
+    .date-btn{display:inline-flex}
     .nav-item.mobile-logout{display:none;border-color:${T.redBorder};color:${T.redText};background:${T.redBg}}
     .nav-item.mobile-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
 
@@ -923,7 +1174,7 @@ export default function App(){
     .toggle-track{width:42px;height:23px;border-radius:12px;background:${dark?`linear-gradient(135deg,${T.primary},${T.primaryLight})`:`rgba(100,116,139,0.25)`};position:relative;transition:background .35s ease;box-shadow:${dark?`0 0 8px ${T.primaryGlow}`:"none"}}
     .toggle-thumb{width:17px;height:17px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${dark?"22px":"3px"};transition:left .3s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 6px rgba(0,0,0,0.25)}
 
-    .body-area{padding:28px 24px 52px;flex:1;overflow-y:auto}
+    .body-area{padding:28px 24px 52px;flex:1;overflow-y:auto;overflow-x:hidden;min-width:0}
     .enter{animation:fadeIn .32s ease}
     @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -934,12 +1185,22 @@ export default function App(){
     .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
     .stock-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
     .hist-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+    .stat5-g{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+    .stat5-g .stat-card .stat-val{font-size:clamp(16px,3.5vw,28px);font-weight:900;line-height:1.2;word-break:break-word;overflow-wrap:break-word}
+    .trx-row-inner{flex:1;display:flex;gap:0;align-items:center;padding:12px 14px 12px 8px;flex-wrap:nowrap;min-width:0}
+    .trx-col-name{width:210px;flex-shrink:0;padding-right:16px}
+    .trx-col-time{width:110px;flex-shrink:0;padding-right:16px}
+    .trx-col-items{flex:1 1 auto;min-width:200px;padding-right:16px}
+    .trx-col-count{width:90px;flex-shrink:0;padding-right:16px}
+    .trx-col-total{width:140px;flex-shrink:0;text-align:right;padding-right:14px}
 
     .dash-hero{background:${T.card};border:1px solid ${T.border};border-radius:24px;padding:18px 26px;min-height:128px;margin-bottom:24px;position:relative;overflow:hidden;backdrop-filter:blur(14px);box-shadow:${T.shadowSm}}
     .dash-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,${dark?"rgba(16,185,129,0.11)":"rgba(16,185,129,0.09)"} 0%,transparent 55%)}
     .dash-hero::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${T.primary},${T.primaryLight},#14b8a6)}
     .dash-hero-content{position:relative;z-index:1;display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap}
     .dash-hero-copy{flex:1;min-width:220px}
+    .dash-hero-title{font-size:20px;color:${T.text};font-weight:900;margin-bottom:2px;line-height:1.2}
+    .dash-hero-btn{flex-shrink:0;padding:12px 20px;border-radius:14px;font-weight:800}
     .dash-hero-illus{width:164px;height:92px;position:relative;flex-shrink:0;opacity:${dark?0.45:0.6}}
     .dash-box{position:absolute;bottom:0;border-radius:10px;background:linear-gradient(180deg,${dark?"rgba(255,255,255,0.1)":"rgba(6,95,70,0.14)"},transparent),${dark?"rgba(250,204,21,0.14)":"rgba(5,150,105,0.12)"};border:1px solid ${T.border};box-shadow:inset 0 1px 0 rgba(255,255,255,0.05)}
     .dash-box.b1{left:12px;width:34px;height:42px}
@@ -950,7 +1211,7 @@ export default function App(){
     .dash-box::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:${T.border};opacity:.65}
 
     .dash-stat{display:flex;align-items:center;gap:14px;min-height:116px}
-    .dash-stat-icon{width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;background:${dark?"linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.07))":"linear-gradient(135deg,rgba(16,185,129,0.13),rgba(16,185,129,0.04))"};border:1px solid ${T.navActiveBorder};box-shadow:0 0 0 6px ${dark?"rgba(16,185,129,0.05)":"rgba(16,185,129,0.04)"}}
+    .dash-stat-icon{width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;background:${dark?"linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.07))":"linear-gradient(135deg,rgba(16,185,129,0.13),rgba(16,185,129,0.04))"}; border:1px solid ${T.navActiveBorder};box-shadow:0 0 0 6px ${dark?"rgba(16,185,129,0.05)":"rgba(16,185,129,0.04)"}}
     .dash-stat-meta{flex:1;min-width:0}
     .dash-stat-label{font-size:10px;font-weight:800;color:${T.muted};letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
     .dash-stat-value{font-size:25px;font-weight:900;line-height:1;color:${T.text}}
@@ -987,11 +1248,20 @@ export default function App(){
     .stk-card{background:${T.card};border-radius:18px;padding:16px;display:flex;flex-direction:column;backdrop-filter:blur(12px);transition:all .25s;position:relative;overflow:hidden;box-shadow:${T.shadowSm}}
     .stk-card:hover{transform:translateY(-4px);box-shadow:${T.shadowCard}}
 
-    .trx-card{background:${T.card};border:1px solid ${T.border};border-radius:16px;margin-bottom:10px;overflow:hidden;transition:all .22s;backdrop-filter:blur(10px);box-shadow:${T.shadowSm}}
+    .trx-card{background:${T.card};border:1px solid ${T.border};border-radius:16px;margin-bottom:10px;overflow:hidden;transition:all .22s;backdrop-filter:blur(10px);box-shadow:${T.shadowSm};max-width:100%;word-wrap:break-word}
     .trx-card:hover{border-color:${T.borderHover};box-shadow:${T.shadowCard}}
-    .trx-head{padding:14px 18px;border-bottom:1px solid ${T.border};display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .trx-head{padding:14px 18px;border-bottom:1px solid ${T.border};display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
     .trx-body{padding:10px 14px 13px;display:flex;flex-wrap:wrap;gap:6px}
+    .trx-stats{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;text-align:right}
     .itm-pill{display:inline-flex;align-items:center;gap:6px;background:${dark?"rgba(0,0,0,0.15)":T.surface};border:1px solid ${T.border};border-radius:9px;padding:5px 10px}
+
+    .audit-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid ${T.border};flex-wrap:wrap}
+    .audit-row:last-child{border-bottom:none}
+    .audit-col-action{flex:1 1 180px;min-width:0}
+    .audit-col-target{flex:0 0 110px;min-width:0}
+    .audit-col-date{flex:1 1 120px;min-width:0;display:flex;align-items:center;gap:6px;color:${T.muted};font-size:12px;font-weight:600}
+    .audit-col-id{flex-shrink:0}
+    .audit-col-arrow{flex-shrink:0}
 
     .fbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
     .cat-btn{padding:7px 14px;border-radius:9px;border:1px solid ${T.border};background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .18s}
@@ -1079,17 +1349,27 @@ export default function App(){
       .stats-g{grid-template-columns:repeat(2,1fr)}
       .hist-g{grid-template-columns:repeat(2,1fr)}
       .two-col{grid-template-columns:1fr}
+      .stat5-g{grid-template-columns:repeat(3,1fr)}
     }
     @media(max-width:860px){
       .stock-g{grid-template-columns:repeat(2,1fr)}
       .body-area{padding:20px 16px 44px}
+      .stat5-g{grid-template-columns:repeat(3,1fr)}
+      .trx-col-name{width:160px}
+      .trx-col-time{width:90px}
+      .trx-col-count{display:none}
     }
     @media(max-width:660px){
       .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);box-shadow:20px 0 50px rgba(0,0,0,.5);z-index:260}
       .sidebar.open{transform:translateX(0)}
       .sb-inner{padding-bottom:88px}
       .backdrop-mob{display:block}
-      .topbar{padding:0 12px;gap:8px}
+      .topbar{padding:0 10px;gap:6px;height:58px}
+      .tb-btn.tb-backup,.tb-btn.tb-restore,.tb-btn.tb-reset-dummy{display:none !important}
+      .date-btn{display:none !important}
+      .tb-logout{display:inline-flex !important}
+      .page-title{font-size:15px}
+      .notif-wrap{margin:0 -4px}
       .page-title{font-size:16px}
       .tb-reset-dummy{display:none}
       .nav-item.mobile-logout{display:flex}
@@ -1099,19 +1379,50 @@ export default function App(){
       .mgrid{grid-template-columns:1fr}
       .mspan{grid-column:span 1}
       .modal{padding:20px 14px;border-radius:18px}
-      .trx-head{flex-direction:column;gap:6px;align-items:flex-start}
-      .fbar{gap:6px}
+      .trx-head{flex-direction:column;gap:8px;align-items:stretch;padding:12px 14px}
+      .trx-stats{width:100%;text-align:left;align-items:flex-start;flex-direction:row;justify-content:space-between;gap:8px;flex-wrap:wrap}
+      .trx-stats button{width:100%}
+      .fbar{gap:4px;flex-wrap:wrap}
+      .fbar input[type=date]{width:120px !important;font-size:11px}
+      .fbar select{width:100px !important;font-size:11px}
+      .fbar span{display:none}
+      .audit-col-target{display:none}
+      .audit-col-arrow{display:none}
+      .trx-card{margin-bottom:8px}
+      .audit-col-action{flex:1 1 auto}
+      .audit-col-target{flex:0 0 110px}
       .cat-btn{padding:6px 10px;font-size:11px}
       .toggle-lbl{display:none}
-      .stat-card{padding:16px}
+      .stat-card{padding:16px 14px}
       .card{padding:16px 16px}
       .date-btn{display:none}
-      .dash-hero{padding:18px 18px 20px}
+      .dash-hero{padding:14px 14px 16px;border-radius:18px;margin-bottom:14px}
+      .dash-hero-title{font-size:17px}
+      .dash-hero-btn{padding:10px 16px;font-size:13px;width:100%}
+      .dash-hero-copy{min-width:0}
       .dash-hero-illus{display:none}
-      .dash-stat{align-items:flex-start}
-      .dash-stat-icon{width:46px;height:46px;border-radius:15px;font-size:20px}
+      .stats-g{gap:10px;margin-bottom:14px}
+      .two-col{gap:12px}
+      .dash-stat{flex-direction:column;align-items:flex-start;gap:8px;min-height:auto}
+      .dash-stat-icon{width:40px;height:40px;border-radius:13px;font-size:18px}
+      .dash-stat-value{font-size:clamp(22px,6vw,30px)}
+      .dash-stat-sub{margin-top:4px}
+      .dash-panel-title{font-size:14px}
+      .two-col>.card{margin-bottom:0}
       .dash-transaction-card{gap:10px}
       .dash-unit-pill{padding:6px 10px;font-size:10.5px}
+      .stat5-g{grid-template-columns:repeat(2,1fr);gap:8px}
+      .trx-row-inner{flex-wrap:wrap;padding:10px 10px 10px 6px;gap:6px}
+      .trx-col-name{width:100%;padding-right:0;order:1}
+      .trx-col-time{width:auto;flex-shrink:1;padding-right:0;order:2}
+      .trx-col-items{min-width:0;width:100%;padding-right:0;order:4}
+      .trx-col-count{display:none}
+      .trx-col-total{width:auto;text-align:left;padding-right:0;order:3}
+      .fbar input{width:130px !important;font-size:12px}
+      .fbar select{width:130px !important;font-size:12px}
+      .audit-col-action{flex:1 1 100%;order:1}
+      .audit-col-target{flex:1 1 auto;order:2}
+      .audit-row{flex-wrap:wrap;gap:10px;padding:12px 14px}
     }
     @media(max-width:420px){
       .stats-g{grid-template-columns:1fr 1fr}
@@ -1119,9 +1430,13 @@ export default function App(){
       .stock-g{grid-template-columns:1fr}
       .stk-card{padding:14px}
       .body-area{padding:12px 10px 36px}
-      .topbar{padding:0 10px}
+      .topbar{padding:0 8px;gap:4px;height:54px}
+      .page-title{font-size:13px}
+      .tb-btn{padding:6px 10px;font-size:11px}
       .modal{padding:16px 12px}
       .cart-row{flex-wrap:wrap}
+      .stat5-g{grid-template-columns:1fr 1fr;gap:6px}
+      .fbar input[type=date]{width:110px !important}
     }
   `;
 
@@ -1294,12 +1609,12 @@ export default function App(){
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
               {isAdmin&&tab!=="login"&&(
-                <button className="tb-btn" onClick={downloadBackupData} style={{fontWeight:700}}>
+                <button className="tb-btn tb-backup" onClick={downloadBackupData} style={{fontWeight:700}}>
                   ⬇ Backup
                 </button>
               )}
               {isAdmin&&tab!=="login"&&(
-                <button className="tb-btn" onClick={()=>restoreInputRef.current?.click()} style={{fontWeight:700}}>
+                <button className="tb-btn tb-restore" onClick={()=>restoreInputRef.current?.click()} style={{fontWeight:700}}>
                   ⤴ Restore
                 </button>
               )}
@@ -1353,8 +1668,8 @@ export default function App(){
                   <div className="dash-hero-content">
                     <div className="dash-hero-copy">
                       <div style={{display:"inline-flex",alignItems:"center",gap:6,background:T.navActive,border:`1px solid ${T.navActiveBorder}`,borderRadius:999,padding:"4px 12px",fontSize:10.5,fontWeight:800,color:T.navActiveText,marginBottom:10}}>🏭 Sistem Gudang Aktif</div>
-                      <div style={{fontSize:18,color:T.text,fontWeight:800,marginBottom:4}}>Ringkasan Hari Ini</div>
-                      <div style={{fontSize:12.5,color:T.muted,fontWeight:600,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                      <div className="dash-hero-title">Ringkasan Hari Ini</div>
+                      <div style={{fontSize:12,color:T.muted,fontWeight:600,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:4}}>
                         <span>📅 {todayFmt()}</span>
                         <span style={{color:T.primary}}>•</span>
                         <span><b style={{color:T.primaryLight}}>{todayTrx.length}</b> transaksi</span>
@@ -1362,7 +1677,7 @@ export default function App(){
                         <span><b style={{color:T.primaryLight}}>{todayUnits}</b> unit keluar</span>
                       </div>
                     </div>
-                    <BtnP onClick={()=>setShowModal(true)} style={{flexShrink:0,padding:"12px 20px",borderRadius:14,fontWeight:800}}>＋ Catat Pengambilan</BtnP>
+                    <BtnP onClick={()=>setShowModal(true)} className="dash-hero-btn">＋ Catat Pengambilan</BtnP>
                     <div className="dash-hero-illus" aria-hidden="true">
                       <div className="dash-box b1"/>
                       <div className="dash-box b2"/>
@@ -1500,12 +1815,14 @@ export default function App(){
                             <Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>Admin: {t.admin}</Badge>
                           </div>
                         </div>
-                        <div style={{textAlign:"right",flexShrink:0}}>
-                          <div style={{fontSize:26,fontWeight:900,color:T.primaryLight,lineHeight:1}}>{t.items.length}</div>
-                          <div style={{fontSize:10,color:T.muted,fontWeight:600}}>jenis</div>
-                          <div style={{fontSize:11.5,fontWeight:700,color:T.green,marginTop:3}}>{t.items.reduce((a,i)=>a+i.qty,0)} unit</div>
+                        <div className="trx-stats">
+                          <div>
+                            <div style={{fontSize:26,fontWeight:900,color:T.primaryLight,lineHeight:1}}>{t.items.length}</div>
+                            <div style={{fontSize:10,color:T.muted,fontWeight:600}}>jenis</div>
+                            <div style={{fontSize:11.5,fontWeight:700,color:T.green,marginTop:3}}>{t.items.reduce((a,i)=>a+i.qty,0)} unit</div>
+                          </div>
                           {isAdmin&&(
-                            <button onClick={()=>deleteTransaction(t.id)} style={{marginTop:8,background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Hapus</button>
+                            <button onClick={()=>deleteTransaction(t.id)} style={{marginTop:0,background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>🗑 Hapus</button>
                           )}
                         </div>
                       </div>
@@ -1637,22 +1954,155 @@ export default function App(){
               </div>
             )}
 
+            {/* ══ REPORT ══ */}
+            {tab==="report"&&(
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:12,fontWeight:800,color:T.muted,letterSpacing:".08em",textTransform:"uppercase"}}>Periode</span>
+                    {[
+                      {id:"week",label:"Minggu"},
+                      {id:"month",label:"Bulan"},
+                      {id:"year",label:"Tahun"},
+                    ].map(p=>(
+                      <button key={p.id} className={`cat-btn${reportPeriod===p.id?" on":""}`} onClick={()=>setReportPeriod(p.id)}>
+                        {p.label}
+                      </button>
+                    ))}
+                    <span style={{fontSize:11.5,color:T.muted}}>• {fmtDate(reportRange.start)} - {fmtDate(reportRange.end)}</span>
+                  </div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    <BtnG onClick={exportReportExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Export Excel</BtnG>
+                    <BtnG onClick={exportReportPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}Export PDF</BtnG>
+                  </div>
+                </div>
+
+                <div className="stats-g" style={{marginBottom:16}}>
+                  {[
+                    {label:"Total Keluar",value:`${reportTotalOutUnits.toLocaleString("id-ID")} unit`,sub:"Unit pengambilan",color:T.red,bg:T.redBg,icon:"↗"},
+                    {label:"Total Masuk",value:`${reportTotalInUnits.toLocaleString("id-ID")} unit`,sub:"Unit penerimaan",color:T.green,bg:T.greenBg,icon:"↙"},
+                    {label:"Nilai Estimasi",value:fmtMoney(Math.round(reportEstimatedValue)),sub:"Keluar + masuk",color:T.primary,bg:T.navActive,icon:"💰"},
+                    {label:"Item Kritis",value:`${lowStock.length} item`,sub:"Stok <= minimum",color:T.amber,bg:T.amberBg,icon:"⚠"},
+                  ].map((kpi,idx)=>(
+                    <div key={idx} className="stat-card" style={{padding:"16px 18px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                        <div>
+                          <div style={{fontSize:10.5,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".09em",marginBottom:7}}>{kpi.label}</div>
+                          <div style={{fontSize:22,fontWeight:900,color:T.text,lineHeight:1.2}}>{kpi.value}</div>
+                          <div style={{fontSize:11.5,color:T.muted,marginTop:6}}>{kpi.sub}</div>
+                        </div>
+                        <div style={{width:36,height:36,borderRadius:11,background:kpi.bg,color:kpi.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,border:`1px solid ${T.border}`}}>
+                          {kpi.icon}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="two-col" style={{marginBottom:16}}>
+                  <div className="card" style={{padding:"16px 18px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                      <div className="dash-panel-title">Bar Chart Transaksi per Hari</div>
+                      <div style={{display:"flex",gap:10,fontSize:11.5,color:T.muted,fontWeight:700}}>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block"}}/>Keluar</span>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:T.green,display:"inline-block"}}/>Masuk</span>
+                      </div>
+                    </div>
+                    {reportTxnSeries.length===0||reportTxnSeries.every(s=>s.out===0&&s.in===0)
+                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada transaksi pada periode ini</div>
+                      :(
+                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnSeries.length}, minmax(20px, 1fr))`,gap:8,alignItems:"end",height:250}}>
+                          {reportTxnSeries.map(point=>(
+                            <div key={point.key} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",minWidth:0,height:"100%"}}>
+                              <div style={{display:"flex",alignItems:"end",gap:3,height:190}}>
+                                <div title={`Keluar: ${point.out}`} style={{width:9,height:`${Math.max(4,(point.out/reportTxnMax)*180)}px`,background:T.red,borderRadius:"6px 6px 0 0",opacity:0.92}}/>
+                                <div title={`Masuk: ${point.in}`} style={{width:9,height:`${Math.max(4,(point.in/reportTxnMax)*180)}px`,background:T.green,borderRadius:"6px 6px 0 0",opacity:0.92}}/>
+                              </div>
+                              <div style={{fontSize:9.5,color:T.muted,marginTop:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{point.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  </div>
+
+                  <div className="card" style={{padding:"16px 18px"}}>
+                    <div className="dash-panel-title" style={{marginBottom:12}}>Top 5 Item Paling Sering Diambil</div>
+                    {reportTopItems.length===0
+                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan</div>
+                      :(
+                        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                          {reportTopItems.map((row,idx)=>(
+                            <div key={row.name} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 12px"}}>
+                              <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:6}}>
+                                <div style={{fontSize:12.5,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{idx+1}. {row.name}</div>
+                                <div style={{fontSize:11.5,fontWeight:800,color:T.navActiveText,whiteSpace:"nowrap"}}>{row.total} unit</div>
+                              </div>
+                              <div style={{height:8,borderRadius:10,background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)",overflow:"hidden"}}>
+                                <div style={{height:"100%",width:`${row.pct}%`,background:`linear-gradient(90deg,${T.primary},${T.primaryLight})`,borderRadius:10,transition:"width .35s ease"}}/>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  </div>
+                </div>
+
+                <div className="card" style={{padding:"16px 18px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
+                    <div className="dash-panel-title">Breakdown Pengambilan per Departemen</div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      {reportDeptCats.map(cat=>(
+                        <span key={cat} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:10.5,fontWeight:700,color:T.muted,padding:"2px 8px",border:`1px solid ${T.border}`,borderRadius:999}}>
+                          <span style={{width:8,height:8,borderRadius:"50%",background:reportCatPalette[cat]||"#64748b",display:"inline-block"}}/>{cat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {reportDeptStack.length===0
+                    ?<div style={{padding:"32px 0",textAlign:"center",color:T.muted}}>Belum ada pengambilan pada periode ini</div>
+                    :(
+                      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                        {reportDeptStack.map(row=>(
+                          <div key={row.dept} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 12px"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:7}}>
+                              <div style={{fontSize:12.5,fontWeight:800,color:T.text}}>{row.dept}</div>
+                              <div style={{fontSize:11.5,fontWeight:800,color:T.muted}}>{row.total} unit</div>
+                            </div>
+                            <div style={{height:12,borderRadius:999,overflow:"hidden",display:"flex",background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)"}}>
+                              {reportDeptCats.map(cat=>{
+                                const val=Number(row.cats?.[cat]||0);
+                                if(!val) return null;
+                                const pct=clamp01(val/Math.max(1,row.total))*100;
+                                return <div key={`${row.dept}-${cat}`} title={`${cat}: ${val} unit`} style={{width:`${pct}%`,background:reportCatPalette[cat]||"#64748b"}}/>;
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
+                </div>
+              </div>
+            )}
+
             {/* ══ HISTORY ══ */}
             {tab==="history"&&(
               <div>
                 {/* Sub-tab toggle + actions */}
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:14}}>
-                  <div style={{display:"flex",gap:4,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,width:"fit-content"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
+                  <div style={{display:"flex",gap:4,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
                     {[
                       {id:"all",icon:"🧾",label:`Semua (${allHistory.length})`},
                       {id:"out",icon:"📤",label:`Pengambilan (${trx.length})`},
                       {id:"in",icon:"📋",label:`Penerimaan (${receives.length})`},
                       ...(isAdmin?[{id:"audit",icon:"🛡",label:`Audit (${auditTotal})`}]:[]),
                     ].map(tb=>(
-                      <button key={tb.id} onClick={()=>setHistoryTab(tb.id)} style={{padding:"8px 16px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab===tb.id?T.primary:"transparent",color:historyTab===tb.id?"white":T.muted,boxShadow:historyTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap"}}>{tb.icon} {tb.label}</button>
+                      <button key={tb.id} onClick={()=>setHistoryTab(tb.id)} style={{padding:"8px 14px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab===tb.id?T.primary:"transparent",color:historyTab===tb.id?"white":T.muted,boxShadow:historyTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap",flexShrink:0}}>{tb.icon} {tb.label}</button>
                     ))}
                   </div>
-                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                     {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
                     {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
@@ -1716,20 +2166,20 @@ export default function App(){
                                     <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:accentColor,textTransform:"uppercase"}}>{isIn?"MASUK":"KELUAR"}</span>
                                   </div>
                                   {/* Content */}
-                                  <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"nowrap",minWidth:0}}>
+                                  <div className="trx-row-inner">
                                     {/* Name + dept */}
-                                    <div style={{width:210,flexShrink:0,paddingRight:16}}>
+                                    <div className="trx-col-name">
                                       <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{isIn?(row.itemName||itemsArr[0]?.itemName||"-"):(row.taker||"-")}</div>
                                       <div style={{fontSize:11,color:T.muted,marginTop:2}}>{isIn?`Admin: ${row.admin||"-"}`:(row.dept||"-")}</div>
                                       {!isIn&&<div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {row.admin||"-"}</div>}
                                     </div>
                                     {/* Time */}
-                                    <div style={{width:110,flexShrink:0,paddingRight:16}}>
+                                    <div className="trx-col-time">
                                       <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{row.time||"-"}</div>
                                       <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(row.date)}</div>
                                     </div>
                                     {/* Items */}
-                                    <div style={{flex:"1 1 auto",minWidth:280,paddingRight:16}}>
+                                    <div className="trx-col-items">
                                       {isIn
                                         ?<>
                                           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
@@ -1754,7 +2204,7 @@ export default function App(){
                                       {!isIn&&itemsArr.length>3&&<div style={{fontSize:10,color:T.muted,marginTop:2}}>+{itemsArr.length-3} item lainnya</div>}
                                     </div>
                                     {/* Jenis + Unit */}
-                                    <div style={{width:90,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
+                                    <div className="trx-col-count" style={{display:"flex",flexDirection:"column",gap:5}}>
                                       <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                                         <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{jenis}</span>
                                         <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
@@ -1765,7 +2215,7 @@ export default function App(){
                                       </div>
                                     </div>
                                     {/* Total */}
-                                    <div style={{width:140,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                                    <div className="trx-col-total" style={{paddingRight:isAdmin?14:0}}>
                                       <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
                                       <div style={{fontSize:14,fontWeight:900,color:accentColor}}>{fmtMoney(totalCost)}</div>
                                     </div>
@@ -1811,7 +2261,7 @@ export default function App(){
                 {historyTab==="out"&&(
                   <div>
                     {/* Stats 5 columns */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
+                    <div className="stat5-g">
                       {(()=>{
                         const totalNilai=trx.reduce((acc,t)=>acc+Number(t.totalCostOut??t.items.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0)),0)),0);
                         return [
@@ -1822,13 +2272,13 @@ export default function App(){
                           {label:"Total Nilai",sub:"estimasi harga rata-rata",val:null,valStr:fmtMoney(totalNilai),icon:"Rp",dot:T.primary},
                         ];
                       })().map((s,i)=>(
-                        <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",gap:0,padding:"16px 18px"}}>
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
+                        <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",gap:0,padding:"16px 14px"}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                            <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
                             <span style={{width:6,height:6,borderRadius:"50%",background:s.dot,display:"inline-block"}}/>
                           </div>
-                          <div style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:6,lineHeight:1.3}}>{s.label}</div>
-                          <div style={{fontSize:28,fontWeight:900,lineHeight:1.2,color:s.dot,marginBottom:5,wordBreak:"break-word",overflowWrap:"break-word"}}>{s.val!==null?s.val:s.valStr}</div>
+                          <div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:4,lineHeight:1.3}}>{s.label}</div>
+                          <div className="stat-val" style={{fontSize:"clamp(15px,3.5vw,28px)",fontWeight:900,lineHeight:1.2,color:s.dot,marginBottom:4,wordBreak:"break-word",overflowWrap:"break-word"}}>{s.val!==null?s.val:s.valStr}</div>
                           <div style={{fontSize:10,color:T.muted,fontWeight:500}}>{s.sub}</div>
                         </div>
                       ))}
@@ -1875,20 +2325,20 @@ export default function App(){
                             <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.red,textTransform:"uppercase"}}>KELUAR</span>
                           </div>
                           {/* Content */}
-                          <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"nowrap",minWidth:0}}>
+                          <div className="trx-row-inner">
                             {/* Name + dept */}
-                            <div style={{width:210,flexShrink:0,paddingRight:16}}>
+                            <div className="trx-col-name">
                               <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{t.taker}</div>
                               <div style={{fontSize:11,color:T.muted,marginTop:2}}>{t.dept}</div>
                               <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {t.admin}</div>
                             </div>
                             {/* Time */}
-                            <div style={{width:110,flexShrink:0,paddingRight:16}}>
+                            <div className="trx-col-time">
                               <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{t.time||"-"}</div>
                               <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(t.date)}</div>
                             </div>
                             {/* Items */}
-                            <div style={{flex:"1 1 auto",minWidth:280,paddingRight:16}}>
+                            <div className="trx-col-items">
                               {t.items.slice(0,3).map((it,ii)=>(
                                 <div key={ii} style={{display:"grid",gridTemplateColumns:"14px minmax(0,1fr) auto",alignItems:"center",columnGap:8,marginBottom:4}}>
                                   <span style={{fontSize:11}}>📦</span>
@@ -1899,7 +2349,7 @@ export default function App(){
                               {t.items.length>3&&<div style={{fontSize:10,color:T.muted}}>+{t.items.length-3} item lainnya</div>}
                             </div>
                             {/* Jenis + Unit */}
-                            <div style={{width:90,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
+                            <div className="trx-col-count" style={{display:"flex",flexDirection:"column",gap:5}}>
                               <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                                 <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{t.items.length}</span>
                                 <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
@@ -1910,7 +2360,7 @@ export default function App(){
                               </div>
                             </div>
                             {/* Total */}
-                            <div style={{width:140,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                            <div className="trx-col-total" style={{paddingRight:isAdmin?14:0}}>
                               <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
                               <div style={{fontSize:14,fontWeight:900,color:T.red}}>{fmtMoney(totalCostRow)}</div>
                             </div>
@@ -1958,7 +2408,7 @@ export default function App(){
                 {historyTab==="in"&&(
                   <div>
                     {/* Stats 5 columns */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
+                    <div className="stat5-g">
                       {(()=>{
                         const totalNilaiIn=receives.reduce((acc,r)=>{
                           const it=itemMap[Number(r.itemId)];
@@ -1972,13 +2422,13 @@ export default function App(){
                           {label:"Total Nilai",sub:"estimasi harga beli",val:null,valStr:fmtMoney(totalNilaiIn),icon:"Rp",dot:T.primary},
                         ];
                       })().map((s,i)=>(
-                        <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",padding:"16px 18px"}}>
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                            <div style={{width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
+                        <div key={i} className="stat-card" style={{display:"flex",flexDirection:"column",padding:"16px 14px"}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                            <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:400,background:dark?"rgba(16,185,129,0.13)":"rgba(16,185,129,0.09)",border:`1px solid ${T.navActiveBorder}`,flexShrink:0,color:s.dot}}>{s.icon}</div>
                             <span style={{width:6,height:6,borderRadius:"50%",background:s.dot,display:"inline-block"}}/>
                           </div>
-                          <div style={{fontSize:9.5,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
-                          <div style={{fontSize:28,fontWeight:900,lineHeight:1.2,color:s.dot,marginBottom:5,wordBreak:"break-word",overflowWrap:"break-word"}}>{s.val!==null?s.val:s.valStr}</div>
+                          <div style={{fontSize:9,fontWeight:800,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginBottom:4,lineHeight:1.3}}>{s.label}</div>
+                          <div className="stat-val" style={{fontSize:"clamp(15px,3.5vw,28px)",fontWeight:900,lineHeight:1.2,color:s.dot,marginBottom:4,wordBreak:"break-word",overflowWrap:"break-word"}}>{s.val!==null?s.val:s.valStr}</div>
                           <div style={{fontSize:10,color:T.muted,fontWeight:500}}>{s.sub}</div>
                         </div>
                       ))}
@@ -1998,19 +2448,19 @@ export default function App(){
                                 <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.green,textTransform:"uppercase"}}>MASUK</span>
                               </div>
                               {/* Content */}
-                              <div style={{flex:1,display:"flex",gap:0,alignItems:"center",padding:"12px 14px 12px 8px",flexWrap:"nowrap",minWidth:0}}>
+                              <div className="trx-row-inner">
                                 {/* Name */}
-                                <div style={{width:210,flexShrink:0,paddingRight:16}}>
+                                <div className="trx-col-name">
                                   <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{r.itemName||"-"}</div>
                                   <div style={{fontSize:11,color:T.muted,marginTop:2}}>Admin: {r.admin||"-"}</div>
                                 </div>
                                 {/* Time */}
-                                <div style={{width:110,flexShrink:0,paddingRight:16}}>
+                                <div className="trx-col-time">
                                   <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{r.time||"-"}</div>
                                   <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(r.date)}</div>
                                 </div>
                                 {/* Items */}
-                                <div style={{flex:"1 1 auto",minWidth:280,paddingRight:16}}>
+                                <div className="trx-col-items">
                                   <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
                                     <span style={{fontSize:12}}>📦</span>
                                     <span style={{fontSize:12.5,fontWeight:700,color:T.text}}>{r.itemName||"-"}</span>
@@ -2023,7 +2473,7 @@ export default function App(){
                                   </div>
                                 </div>
                                 {/* Jenis + Unit */}
-                                <div style={{width:90,flexShrink:0,paddingRight:16,display:"flex",flexDirection:"column",gap:5}}>
+                                <div className="trx-col-count" style={{display:"flex",flexDirection:"column",gap:5}}>
                                   <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                                     <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>1</span>
                                     <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
@@ -2034,7 +2484,7 @@ export default function App(){
                                   </div>
                                 </div>
                                 {/* Total */}
-                                <div style={{width:140,flexShrink:0,textAlign:"right",paddingRight:isAdmin?14:0}}>
+                                <div className="trx-col-total" style={{paddingRight:isAdmin?14:0}}>
                                   <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
                                   <div style={{fontSize:14,fontWeight:900,color:T.green}}>{fmtMoney(totalCostR)}</div>
                                 </div>
@@ -2043,6 +2493,13 @@ export default function App(){
                                   <button onClick={()=>deleteReceive(r.id)}
                                     style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 12px",fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
                                     🗑 Hapus
+                                  </button>
+                                )}
+                                {r.hasAttachment&&(
+                                  <button onClick={()=>fetchReceiveAttachment(r.id)}
+                                    title="Lihat Lampiran"
+                                    style={{background:T.navActive,border:`1px solid ${T.navActiveBorder}`,color:T.navActiveText,borderRadius:8,padding:"7px 10px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                                    📎
                                   </button>
                                 )}
                               </div>
@@ -2110,7 +2567,7 @@ export default function App(){
                     {auditRows.length===0
                       ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🛡</div>Belum ada audit log</div>
                       :(
-                        <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,overflow:"hidden"}}>
+                        <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,overflow:"hidden",minWidth:0}}>
                           {auditRows.map((a,ri)=>{
                             const actionIconMap:Record<string,string>={
                               "auth.login":"🔑","auth.logout":"🚪",
@@ -2133,7 +2590,7 @@ export default function App(){
                             const dt=new Date(a.createdAt);
                             const dateStr=`${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}, ${dt.getHours().toString().padStart(2,"0")}.${dt.getMinutes().toString().padStart(2,"0")}.${dt.getSeconds().toString().padStart(2,"0")}`;
                             return(
-                              <div key={a.id} style={{display:"flex",alignItems:"center",gap:16,padding:"14px 20px",borderBottom:ri<auditRows.length-1?`1px solid ${T.border}`:"none",transition:"background .15s"}}
+                              <div key={a.id} className="audit-row"
                                 onMouseEnter={e=>{e.currentTarget.style.background=dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)";}}
                                 onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
                                 {/* Icon circle */}
@@ -2141,7 +2598,7 @@ export default function App(){
                                   {icon}
                                 </div>
                                 {/* Action + badges */}
-                                <div style={{flex:"0 0 260px",minWidth:0}}>
+                                <div className="audit-col-action">
                                   <div style={{fontSize:13.5,fontWeight:800,color:T.text,marginBottom:6}}>{a.action}</div>
                                   <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                                     <span style={{fontSize:10.5,fontWeight:700,color:T.navActiveText,background:T.navActive,padding:"2px 9px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`}}>Actor: {a.actor?.username||"-"}</span>
@@ -2149,20 +2606,20 @@ export default function App(){
                                   </div>
                                 </div>
                                 {/* Target */}
-                                <div style={{flex:"0 0 130px",minWidth:0}}>
+                                <div className="audit-col-target">
                                   <div style={{fontSize:9.5,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".07em",marginBottom:4}}>Target</div>
                                   <div style={{fontSize:12.5,fontWeight:600,color:T.text}}>{a.target||"-"}</div>
                                 </div>
                                 {/* Date */}
-                                <div style={{flex:1,display:"flex",alignItems:"center",gap:7,color:T.muted,fontSize:12.5,fontWeight:600}}>
+                                <div className="audit-col-date">
                                   <span>📅</span><span>{dateStr}</span>
                                 </div>
                                 {/* ID badge */}
-                                <div style={{flexShrink:0,background:T.amberBg,border:`1px solid ${T.amberBorder}`,color:T.amberText,borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:800}}>
+                                <div className="audit-col-id" style={{background:T.amberBg,border:`1px solid ${T.amberBorder}`,color:T.amberText,borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:800}}>
                                   #{a.id}
                                 </div>
                                 {/* Arrow btn */}
-                                <div style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:T.muted,fontSize:14,flexShrink:0,transition:"all .15s"}}
+                                <div className="audit-col-arrow" style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:T.muted,fontSize:14,flexShrink:0,transition:"all .15s"}}
                                   onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor=color;(e.currentTarget as HTMLDivElement).style.color=color;}}
                                   onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor=T.border;(e.currentTarget as HTMLDivElement).style.color=T.muted;}}>
                                   →
@@ -2403,9 +2860,81 @@ export default function App(){
                 ):null;})()}
               </div>
             </div>
+            {/* ── Lampiran ── */}
+            <div className="sect-box">
+              <div className="sect-lbl">📎 Lampiran Dokumen <span style={{fontWeight:400,fontSize:10,color:T.muted}}>(opsional · PDF, JPG, PNG · maks 1MB)</span></div>
+              <div
+                onDragOver={e=>{e.preventDefault();setAddFormDragOver(true);}}
+                onDragLeave={()=>setAddFormDragOver(false)}
+                onDrop={e=>{
+                  e.preventDefault();setAddFormDragOver(false);
+                  const f=e.dataTransfer.files?.[0];if(!f)return;
+                  if(!["image/jpeg","image/png","application/pdf"].includes(f.type)){toast$("Hanya PDF, JPG, PNG yang diizinkan","err");return;}
+                  if(f.size>1048576){toast$("Ukuran lampiran maks 1MB","err");return;}
+                  const reader=new FileReader();
+                  reader.onload=ev=>setAddForm(p=>({...p,attachment:ev.target?.result as string||null}));
+                  reader.readAsDataURL(f);
+                }}
+                style={{border:`2px dashed ${addFormDragOver?T.primary:T.border}`,borderRadius:12,padding:"18px 16px",textAlign:"center",transition:"border-color .2s",background:addFormDragOver?T.navActive:"transparent",cursor:"pointer"}}
+                onClick={()=>{if(!addForm.attachment)(document.getElementById("attach-upload-input") as HTMLInputElement)?.click();}}
+              >
+                {addForm.attachment?(()=>{
+                  const isPdf=addForm.attachment.startsWith("data:application/pdf");
+                  return(
+                    <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"center"}}>
+                      <span style={{fontSize:28}}>{isPdf?"📄":"🖼️"}</span>
+                      <div style={{textAlign:"left"}}>
+                        <div style={{fontSize:12,fontWeight:700,color:T.navActiveText}}>{isPdf?"Dokumen PDF":"Gambar"} terlampir</div>
+                        <div style={{fontSize:10,color:T.muted,marginTop:2}}>Klik ✕ untuk hapus</div>
+                      </div>
+                      <button onClick={e=>{e.stopPropagation();setAddForm(p=>({...p,attachment:null}));}} style={{marginLeft:8,background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:16,fontWeight:700}}>✕</button>
+                    </div>
+                  );
+                })():(
+                  <div>
+                    <div style={{fontSize:24,marginBottom:6}}>📂</div>
+                    <div style={{fontSize:12,fontWeight:600,color:T.muted}}>Drag & drop file ke sini, atau <span style={{color:T.primary,fontWeight:700}}>klik untuk pilih</span></div>
+                  </div>
+                )}
+                <input id="attach-upload-input" type="file" accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf" style={{display:"none"}} onChange={e=>{
+                  const f=e.target.files?.[0];if(!f)return;
+                  if(!["image/jpeg","image/png","application/pdf"].includes(f.type)){toast$("Hanya PDF, JPG, PNG yang diizinkan","err");return;}
+                  if(f.size>1048576){toast$("Ukuran lampiran maks 1MB","err");return;}
+                  const reader=new FileReader();
+                  reader.onload=ev=>setAddForm(p=>({...p,attachment:ev.target?.result as string||null}));
+                  reader.readAsDataURL(f);
+                  e.target.value="";
+                }}/>
+              </div>
+            </div>
             <div style={{display:"flex",gap:10}}>
               <BtnP onClick={submitAdd} style={{flex:1,padding:"13px",fontSize:14,borderRadius:12}}>💾 Simpan Penerimaan</BtnP>
               <BtnG onClick={()=>setShowAdd(false)}>Batal</BtnG>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL ATTACHMENT PREVIEW ══ */}
+      {attachPreview&&(
+        <div className="overlay" onClick={()=>setAttachPreview(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:700,width:"95vw"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <div style={{fontSize:18,fontWeight:900,...gText()}}>{attachPreview.mimeType==="application/pdf"?"📄":"🖼️"} Lampiran #{attachPreview.receiveId}</div>
+              <BtnG onClick={()=>setAttachPreview(null)} style={{padding:"6px 14px",fontSize:12}}>✕ Tutup</BtnG>
+            </div>
+            {attachPreview.mimeType==="application/pdf"
+              ?<iframe
+                  src={attachPreview.data}
+                  title={attachPreview.name}
+                  style={{width:"100%",height:"65vh",border:"none",borderRadius:10,background:"#fff"}}
+                />
+              :<img src={attachPreview.data} alt={attachPreview.name} style={{width:"100%",maxHeight:"65vh",objectFit:"contain",borderRadius:10,border:`1px solid ${T.border}`}}/>
+            }
+            <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
+              <a href={attachPreview.data} download={attachPreview.name} style={{textDecoration:"none"}}>
+                <BtnG style={{fontSize:12,padding:"8px 16px"}}>⬇ Download</BtnG>
+              </a>
             </div>
           </div>
         </div>
@@ -2451,6 +2980,24 @@ export default function App(){
               <BtnP onClick={submitEdit} style={{flex:1,padding:"13px",fontSize:14,borderRadius:12}}>💾 Simpan Perubahan</BtnP>
               <BtnG onClick={()=>{setShowEdit(false);setEditItem(null);}}>Batal</BtnG>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* IDLE WARNING POPUP */}
+      {idleWarning&&(
+        <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.65)",backdropFilter:"blur(4px)"}}>
+          <div style={{background:T.surfaceSolid,border:`1px solid ${T.amberBorder}`,borderRadius:20,padding:"36px 40px",maxWidth:400,width:"90%",textAlign:"center",boxShadow:T.shadowCard}}>
+            <div style={{fontSize:44,marginBottom:12}}>⏳</div>
+            <div style={{fontSize:18,fontWeight:800,color:T.text,marginBottom:8}}>Sesi Hampir Berakhir</div>
+            <div style={{fontSize:14,color:T.muted,marginBottom:20,lineHeight:1.6}}>
+              Tidak ada aktivitas terdeteksi.<br/>
+              Anda akan logout otomatis dalam
+            </div>
+            <div style={{fontSize:52,fontWeight:900,color:T.amber,marginBottom:24,fontVariantNumeric:"tabular-nums",letterSpacing:"-1px"}}>{idleCountdown}<span style={{fontSize:22,fontWeight:600}}>s</span></div>
+            <BtnP onClick={()=>keepAliveRef.current?.()} style={{width:"100%",padding:"14px",fontSize:15,borderRadius:14}}>
+              Tetap Login
+            </BtnP>
           </div>
         </div>
       )}
