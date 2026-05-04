@@ -2067,7 +2067,6 @@ export default function App(){
                 )}
               </div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:11,display:"var(--date-display,inline-flex)"}}>📅 {todayFmt()}</div>
-              <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:10,display:"var(--date-display,inline-flex)"}}>🧩 {CLIENT_MODE} · {CLIENT_BUILD_VERSION.slice(0,7)} · API {API_DISPLAY}</div>
               <button className="tb-btn tb-logout" onClick={logout} title="Keluar akun" style={{padding:"7px 10px"}}>⎋ Keluar</button>
             </div>
           </header>
