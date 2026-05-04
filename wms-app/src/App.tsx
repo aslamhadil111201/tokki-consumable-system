@@ -322,6 +322,8 @@ export default function App(){
   const [pendingApprovalCount,setPendingApprovalCount]=useState(0);
   const [approvalBusyKey,setApprovalBusyKey]=useState("");
   const [slaTick,setSlaTick]=useState(0);
+  const [notifHistory,setNotifHistory]=useState<any[]>(()=>{try{return JSON.parse(localStorage.getItem("wms_notif_history")||"[]");}catch{return [];}});
+  const [notifTab,setNotifTab]=useState("notif");
   const prevPendingCountRef=useRef(-1);
   const prevTrxStatusRef=useRef<Record<string,string>>({});
   const isFirstTrxFetchRef=useRef(true);
@@ -675,6 +677,11 @@ export default function App(){
             const diff=nextTotal-prevPendingCountRef.current;
             setToast({msg:`🔔 ${diff} permintaan baru menunggu approval`,type:"ok"});
             setTimeout(()=>setToast(null),4500);
+            setNotifHistory(prev=>{
+              const next=[{id:Date.now(),msg:`🔔 ${diff} permintaan baru menunggu approval`,type:"ok",ts:new Date().toISOString(),read:false},...prev].slice(0,50);
+              localStorage.setItem("wms_notif_history",JSON.stringify(next));
+              return next;
+            });
           }
           prevPendingCountRef.current=nextTotal;
           setPendingApprovalCount(nextTotal);
@@ -798,15 +805,15 @@ export default function App(){
         const prevS=prev[id];
         const currS=trxApprovalStatus(t);
         if(prevS==="pending"&&currS==="approved"){
-          setToast({msg:`✅ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  telah di-approve`,type:"ok"});
-          setTimeout(()=>setToast(null),4000);
+          const m=`✅ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  telah di-approve`;
+          setToast({msg:m,type:"ok"});setTimeout(()=>setToast(null),4000);
+          setNotifHistory(prev=>{const next=[{id:Date.now(),msg:m,type:"ok",ts:new Date().toISOString(),read:false},...prev].slice(0,50);localStorage.setItem("wms_notif_history",JSON.stringify(next));return next;});
         } else if(prevS==="pending"&&currS==="rejected"){
-          setToast({msg:`⛔ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  ditolak`,type:"err"});
-          setTimeout(()=>setToast(null),4000);
+          const m=`⛔ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  ditolak`;
+          setToast({msg:m,type:"err"});setTimeout(()=>setToast(null),4000);
+          setNotifHistory(prev=>{const next=[{id:Date.now(),msg:m,type:"err",ts:new Date().toISOString(),read:false},...prev].slice(0,50);localStorage.setItem("wms_notif_history",JSON.stringify(next));return next;});
         }
-      });
-    }
-    prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+      prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
   },[trx]);
 
   const addToCart=()=>{
@@ -1975,33 +1982,75 @@ export default function App(){
               <Toggle/>
               {/* NOTIF */}
               <div className="notif-wrap" ref={notifRef}>
-                <button className="tb-btn" onClick={()=>setNotif(!notif)} style={{position:"relative",padding:"7px 12px"}}>
-                  🔔
-                  {lowStock.length>0&&<span style={{position:"absolute",top:-3,right:-3,background:T.red,color:"white",fontSize:9,fontWeight:800,borderRadius:"50%",width:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>{lowStock.length}</span>}
-                </button>
+                {(()=>{
+                  const unread=notifHistory.filter(n=>!n.read).length;
+                  const totalBadge=unread+lowStock.length;
+                  return(
+                    <button className="tb-btn" onClick={()=>setNotif(!notif)} style={{position:"relative",padding:"7px 12px"}}>
+                      🔔
+                      {totalBadge>0&&<span style={{position:"absolute",top:-3,right:-3,background:unread>0?"#f59e0b":T.red,color:"white",fontSize:9,fontWeight:800,borderRadius:"50%",width:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>{totalBadge}</span>}
+                    </button>
+                  );
+                })()}
                 {notif&&(
-                  <div className="notif-drop">
-                    <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,background:T.surface}}>
-                      <div style={{fontSize:13,fontWeight:800,...gText()}}>⚠️ Alert Stok</div>
-                      <div style={{fontSize:11,color:T.muted,marginTop:2}}>{lowStock.length} item perlu perhatian</div>
+                  <div className="notif-drop" style={{width:320}}>
+                    <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`,background:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{fontSize:13,fontWeight:800,...gText()}}>Notifikasi</div>
+                      <div style={{display:"flex",gap:6}}>
+                        {notifTab==="notif"&&notifHistory.filter(n=>!n.read).length>0&&(
+                          <button onClick={()=>{const marked=notifHistory.map(n=>({...n,read:true}));setNotifHistory(marked);localStorage.setItem("wms_notif_history",JSON.stringify(marked));}} style={{fontSize:10,fontWeight:700,background:"transparent",border:`1px solid ${T.border}`,borderRadius:6,padding:"2px 8px",color:T.muted,cursor:"pointer"}}>Baca semua</button>
+                        )}
+                        {notifTab==="notif"&&notifHistory.length>0&&(
+                          <button onClick={()=>{setNotifHistory([]);localStorage.removeItem("wms_notif_history");}} style={{fontSize:10,fontWeight:700,background:"transparent",border:`1px solid ${T.border}`,borderRadius:6,padding:"2px 8px",color:T.red,cursor:"pointer"}}>Hapus</button>
+                        )}
+                      </div>
                     </div>
-                    <div style={{maxHeight:260,overflowY:"auto"}}>
-                      {lowStock.length===0
-                        ?<div style={{padding:16,textAlign:"center",color:T.muted,fontSize:12}}>Semua stok aman ✅</div>
-                        :lowStock.map(it=>{const s=stockStatus(it);return(
-                          <div key={it.id} style={{padding:"10px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10}}>
-                            <div style={{flex:1,minWidth:0}}>
-                              <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.name}</div>
-                              <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Sisa {it.stock} / min {it.minStock} {it.unit}</div>
-                              <Prog pct={it.minStock?it.stock/it.minStock*100:0} color={s.dot}/>
+                    <div style={{display:"flex",borderBottom:`1px solid ${T.border}`}}>
+                      {[{id:"notif",label:"Aktivitas",badge:notifHistory.filter(n=>!n.read).length},{id:"stok",label:"Alert Stok",badge:lowStock.length}].map(tb=>(
+                        <button key={tb.id} onClick={()=>setNotifTab(tb.id)} style={{flex:1,padding:"9px 0",fontSize:11.5,fontWeight:700,background:"transparent",border:"none",cursor:"pointer",color:notifTab===tb.id?T.primary:T.muted,borderBottom:notifTab===tb.id?`2px solid ${T.primary}`:`2px solid transparent`,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                          {tb.label}{tb.badge>0&&<span style={{background:tb.id==="notif"?"#f59e0b":T.red,color:"white",fontSize:9,fontWeight:800,borderRadius:999,padding:"1px 5px",minWidth:14,textAlign:"center"}}>{tb.badge}</span>}
+                        </button>
+                      ))}
+                    </div>
+                    {notifTab==="notif"&&(
+                      <div style={{maxHeight:280,overflowY:"auto"}}>
+                        {notifHistory.length===0
+                          ?<div style={{padding:"24px 16px",textAlign:"center",color:T.muted,fontSize:12}}><div style={{fontSize:28,marginBottom:8}}>🔕</div>Belum ada notifikasi</div>
+                          :notifHistory.map(n=>{
+                            const fmtTs=(iso)=>{try{const d=new Date(iso);return d.toLocaleDateString("id-ID",{day:"2-digit",month:"short"})+" "+d.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});}catch{return "";}};
+                            return(
+                              <div key={n.id} onClick={()=>{setNotifHistory(prev=>{const next=prev.map(x=>x.id===n.id?{...x,read:true}:x);localStorage.setItem("wms_notif_history",JSON.stringify(next));return next;});}} style={{padding:"10px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:10,alignItems:"flex-start",cursor:"pointer",background:n.read?"transparent":dark?"rgba(245,158,11,.07)":"rgba(245,158,11,.06)",transition:"background .15s"}}>
+                                <div style={{width:8,height:8,borderRadius:"50%",background:n.read?T.border:n.type==="err"?T.red:"#f59e0b",marginTop:5,flexShrink:0}}/>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:12,fontWeight:n.read?500:700,color:T.text,lineHeight:1.4}}>{n.msg}</div>
+                                  <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtTs(n.ts)}</div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        }
+                      </div>
+                    )}
+                    {notifTab==="stok"&&(
+                      <div style={{maxHeight:280,overflowY:"auto"}}>
+                        {lowStock.length===0
+                          ?<div style={{padding:"24px 16px",textAlign:"center",color:T.muted,fontSize:12}}><div style={{fontSize:28,marginBottom:8}}>✅</div>Semua stok aman</div>
+                          :lowStock.map(it=>{const s=stockStatus(it);return(
+                            <div key={it.id} style={{padding:"10px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.name}</div>
+                                <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Sisa {it.stock} / min {it.minStock} {it.unit}</div>
+                                <Prog pct={it.minStock?it.stock/it.minStock*100:0} color={s.dot}/>
+                              </div>
+                              <Badge bg={s.bg} color={s.text} border={s.border}>{s.label}</Badge>
                             </div>
-                            <Badge bg={s.bg} color={s.text} border={s.border}>{s.label}</Badge>
-                          </div>
-                        );})}
-                    </div>
+                          );})
+                        }
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+              </div>              </div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:11,display:"var(--date-display,inline-flex)"}}>📅 {todayFmt()}</div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:10,display:"var(--date-display,inline-flex)"}}>🧩 {CLIENT_MODE} · {CLIENT_BUILD_VERSION.slice(0,7)} · API {API_DISPLAY}</div>
               <button className="tb-btn tb-logout" onClick={logout} title="Keluar akun" style={{padding:"7px 10px"}}>⎋ Keluar</button>
