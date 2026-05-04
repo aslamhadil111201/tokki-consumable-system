@@ -813,7 +813,9 @@ export default function App(){
           setToast({msg:m,type:"err"});setTimeout(()=>setToast(null),4000);
           setNotifHistory(prev=>{const next=[{id:Date.now(),msg:m,type:"err",ts:new Date().toISOString(),read:false},...prev].slice(0,50);localStorage.setItem("wms_notif_history",JSON.stringify(next));return next;});
         }
+      });
       prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+    }
   },[trx]);
 
   const addToCart=()=>{
@@ -2050,7 +2052,7 @@ export default function App(){
                     )}
                   </div>
                 )}
-              </div>              </div>
+              </div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:11,display:"var(--date-display,inline-flex)"}}>📅 {todayFmt()}</div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:10,display:"var(--date-display,inline-flex)"}}>🧩 {CLIENT_MODE} · {CLIENT_BUILD_VERSION.slice(0,7)} · API {API_DISPLAY}</div>
               <button className="tb-btn tb-logout" onClick={logout} title="Keluar akun" style={{padding:"7px 10px"}}>⎋ Keluar</button>
