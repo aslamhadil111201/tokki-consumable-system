@@ -1476,12 +1476,13 @@ export default function App(){
   const CSS=`
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body,#root{max-width:100%;overflow-x:hidden}
     body{font-family:'Plus Jakarta Sans',sans-serif;background:${T.bg};color:${T.text};min-height:100vh;-webkit-font-smoothing:antialiased;transition:background .4s,color .3s;font-size:13px;line-height:1.6}
     ::-webkit-scrollbar{width:4px;height:4px}
     ::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:${T.border};border-radius:4px}
 
-    .shell{display:flex;min-height:100vh;position:relative;z-index:1}
+    .shell{display:flex;min-height:100vh;position:relative;z-index:1;width:100%;max-width:100%;overflow-x:hidden}
 
     /* SIDEBAR */
     .sidebar{width:228px;flex-shrink:0;background:${T.sidebarBg};border-right:1px solid ${T.border};display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);transition:transform .28s cubic-bezier(.4,0,.2,1),width .22s ease;z-index:100}
@@ -1732,7 +1733,7 @@ export default function App(){
       .tb-btn.tb-backup,.tb-btn.tb-restore,.tb-btn.tb-reset-dummy{display:none !important}
       .date-btn{display:none !important}
       .tb-logout{display:inline-flex !important}
-      .page-title{font-size:15px;max-width:none;line-height:1.1}
+      .page-title{font-size:15px;max-width:none;line-height:1.12;font-weight:800;letter-spacing:.01em}
       .notif-wrap{margin:0 -4px}
       .tb-reset-dummy{display:none}
       .nav-item.mobile-logout{display:flex}
@@ -1798,7 +1799,7 @@ export default function App(){
       .stk-card{padding:14px}
       .body-area{padding:12px 10px 36px}
       .topbar{padding:0 8px;gap:4px;height:54px}
-      .page-title{font-size:13px;line-height:1.1}
+      .page-title{font-size:13px;line-height:1.12;font-weight:800;letter-spacing:.01em}
       .tb-btn{padding:6px 10px;font-size:11px}
       .modal{padding:16px 12px}
       .cart-row{flex-wrap:wrap}
