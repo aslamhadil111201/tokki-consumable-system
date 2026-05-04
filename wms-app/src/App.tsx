@@ -3040,11 +3040,10 @@ export default function App(){
             <div style={{fontSize:20,fontWeight:900,...gText(),marginBottom:4}}>↩ Catat Retur Barang</div>
             <div style={{fontSize:12,color:T.muted,marginBottom:18}}>Barang yang diretur akan otomatis menambah stok kembali.</div>
             <div className="sect-box">
-              <div className="sect-lbl">👤 Nama Karyawan</div>
-              <input className="ifield" list="retur-employee-list" style={{width:"100%"}} placeholder="Ketik nama karyawan..." value={returForm.employee} onChange={e=>setReturForm(p=>({...p,employee:e.target.value}))}/>
-              <datalist id="retur-employee-list">
-                {employees.map((emp:any)=><option key={emp.id} value={emp.name} />)}
-              </datalist>
+              <div className="sect-lbl">👤 Data Pengembali</div>
+              <div><FL>Nama Pengembali *</FL>
+                <SearchSelect options={employees.map(e=>({value:e.name,label:e.name}))} value={returForm.employee} onChange={v=>setReturForm(p=>({...p,employee:v}))} placeholder="— Cari/pilih karyawan —"/>
+              </div>
             </div>
             <div className="sect-box">
               <div className="sect-lbl">📦 Barang yang Diretur</div>
