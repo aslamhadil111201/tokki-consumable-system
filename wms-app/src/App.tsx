@@ -2136,7 +2136,17 @@ export default function App(){
                     const diff=resolvedAt-created;
                     return sum+(diff>0?diff:0);
                   },0)/resolved.length:0;
-                  const avgSlaLabel=resolved.length===0?"—":avgSlaMs<60000?"<1 mnt":avgSlaMs<3600000?`${Math.round(avgSlaMs/60000)} mnt`:`${Math.floor(avgSlaMs/3600000)}j ${Math.round((avgSlaMs%3600000)/60000)}m`;
+                  const avgApprovalTimeLabel=(()=>{
+                    if(resolved.length===0) return "Belum ada data";
+                    if(avgSlaMs<60000) return "Kurang dari 1 menit";
+                    const totalMinutes=Math.round(avgSlaMs/60000);
+                    const days=Math.floor(totalMinutes/(60*24));
+                    const hours=Math.floor((totalMinutes%(60*24))/60);
+                    const minutes=totalMinutes%60;
+                    if(days>0) return `${days} hari ${hours} jam`;
+                    if(hours>0) return `${hours} jam ${minutes} menit`;
+                    return `${minutes} menit`;
+                  })();
                   return(
                     <div style={{marginBottom:20}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -2149,7 +2159,7 @@ export default function App(){
                           {label:"Pending",val:String(apPending),sub:"menunggu approval",dot:apPending>0?"#f59e0b":T.muted,icon:"⏳"},
                           {label:"Disetujui",val:String(apApproved),sub:"approved",dot:"#10b981",icon:"✅"},
                           {label:"Ditolak",val:String(apRejected),sub:"rejected",dot:apRejected>0?T.red:T.muted,icon:"❌"},
-                          {label:"Avg SLA",val:avgSlaLabel,sub:"30 hari terakhir",dot:"#6366f1",icon:"⏱"},
+                          {label:"Rata-rata Waktu Approval",val:avgApprovalTimeLabel,sub:"pengajuan yang sudah diproses dalam 30 hari terakhir",dot:"#6366f1",icon:"⏱"},
                         ].map((s,i)=>(
                           <div key={i} className="stat-card" style={{padding:"16px 18px",minWidth:0}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
