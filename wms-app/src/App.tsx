@@ -294,6 +294,7 @@ export default function App(){
   const [allHistory,setAllHistory]=useState([]);
   const [historyTab,setHistoryTab]=useState("out");
   const [historyQuery,setHistoryQuery]=useState("");
+  const [historyApprovalStatus,setHistoryApprovalStatus]=useState("all");
   const [addFormDragOver,setAddFormDragOver]=useState(false);
   const [attachPreview,setAttachPreview]=useState<{data:string;name:string;mimeType:string;receiveId:number}|null>(null);
   const [historyFrom,setHistoryFrom]=useState("");
@@ -309,6 +310,7 @@ export default function App(){
   const [auditAction,setAuditAction]=useState("");
   const [auditFrom,setAuditFrom]=useState("");
   const [auditTo,setAuditTo]=useState("");
+  const [pendingApprovalCount,setPendingApprovalCount]=useState(0);
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [idleWarning,setIdleWarning]=useState(false);
   const [idleCountdown,setIdleCountdown]=useState(60);
@@ -455,6 +457,10 @@ export default function App(){
   };
   const q=historyQuery.trim().toLowerCase();
   const filteredOut=[...trx].filter(t=>dateMatch(t.date)&&(q===""||[t.taker,t.dept,t.admin,t.workOrder,t.note,...(t.items||[]).map(i=>i.itemName)].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
+  const filteredOutByApproval=filteredOut.filter(t=>{
+    if(historyApprovalStatus==="all") return true;
+    return trxApprovalStatus(t)===historyApprovalStatus;
+  });
   const filteredPending=filteredOut.filter(t=>trxApprovalStatus(t)==="pending");
   const filteredIn=[...receives].filter(r=>dateMatch(r.date)&&(q===""||[r.itemName,r.poNumber,r.doNumber,r.admin].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
   const filteredAll=[...allHistory].filter(t=>dateMatch(t.date)&&(q===""||[
@@ -470,10 +476,10 @@ export default function App(){
     t.doNumber,
     ...(t.items||[]).map(i=>i.itemName),
   ].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
-  const outTotalPages=Math.max(1,Math.ceil(filteredOut.length/historyPageSize));
+  const outTotalPages=Math.max(1,Math.ceil(filteredOutByApproval.length/historyPageSize));
   const inTotalPages=Math.max(1,Math.ceil(filteredIn.length/historyPageSize));
   const allTotalPages=Math.max(1,Math.ceil(filteredAll.length/historyPageSize));
-  const pagedOut=filteredOut.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
+  const pagedOut=filteredOutByApproval.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
   const pagedIn=filteredIn.slice((historyInPage-1)*historyPageSize,historyInPage*historyPageSize);
   const pagedAll=filteredAll.slice((historyOutPage-1)*historyPageSize,historyOutPage*historyPageSize);
   const auditTotalPages=Math.max(1,Math.ceil(auditTotal/auditPageSize));
@@ -604,7 +610,7 @@ export default function App(){
   })();
 
   useEffect(()=>{document.body.style.background=T.bg;document.body.style.transition="background .4s,color .3s";},[dark]);
-  useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize]);
+  useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize,historyApprovalStatus]);
   useEffect(()=>{if(historyOutPage>(historyTab==="all"?allTotalPages:outTotalPages))setHistoryOutPage(historyTab==="all"?allTotalPages:outTotalPages);},[historyOutPage,outTotalPages,allTotalPages,historyTab]);
   useEffect(()=>{if(historyInPage>inTotalPages)setHistoryInPage(inTotalPages);},[historyInPage,inTotalPages]);
   useEffect(()=>{setAuditPage(1);},[auditActor,auditAction,auditFrom,auditTo,auditPageSize]);
@@ -629,6 +635,50 @@ export default function App(){
     })();
     return()=>{canceled=true;};
   },[loggedIn,isAdmin,tab,historyTab,auditPage,auditPageSize,auditActor,auditAction,auditFrom,auditTo]);
+
+  useEffect(()=>{
+    if(!isAdmin){
+      setPendingApprovalCount(0);
+      return;
+    }
+    setPendingApprovalCount(pendingApprovalTrx.length);
+  },[isAdmin,pendingApprovalTrx.length]);
+
+  useEffect(()=>{
+    if(!loggedIn||!isAdmin) return;
+    let canceled=false;
+
+    const pullPendingCount=async()=>{
+      try{
+        const r=await apiFetch("/transactions?approvalStatus=pending&page=1&pageSize=1");
+        if(!r.ok) return;
+        const data=await r.json();
+        if(canceled) return;
+        const nextTotal=Number(data?.total);
+        if(Number.isFinite(nextTotal)){
+          setPendingApprovalCount(nextTotal);
+          return;
+        }
+        if(Array.isArray(data?.rows)){
+          setPendingApprovalCount(data.rows.length);
+          return;
+        }
+        if(Array.isArray(data)){
+          setPendingApprovalCount(data.length);
+        }
+      }catch{}
+    };
+
+    pullPendingCount();
+    const iv=window.setInterval(()=>{
+      if(document.visibilityState==="visible") pullPendingCount();
+    },30000);
+
+    return()=>{
+      canceled=true;
+      window.clearInterval(iv);
+    };
+  },[loggedIn,isAdmin,authToken]);
 
   useEffect(()=>{
     const h=e=>{if(notifRef.current&&!notifRef.current.contains(e.target))setNotif(false);};
@@ -1641,6 +1691,7 @@ export default function App(){
               <button key={t.id} className={`nav-item${tab===t.id?" active":""}`} onClick={()=>{setTab(t.id);setSidebar(false);}}>
                 <span className="nav-icon">{t.icon}</span><span className="nav-text">{t.label}</span>
                 {t.id==="transaction"&&todayTrx.length>0&&<span className="nav-pill">{todayTrx.length}</span>}
+                {t.id==="history"&&pendingApprovalCount>0&&<span className="nav-pill">{pendingApprovalCount}</span>}
               </button>
             ))}
             <button className="nav-item mobile-logout" onClick={logout}>
@@ -2282,7 +2333,7 @@ export default function App(){
                       {id:"all",icon:"🧾",label:`Semua (${allHistory.length})`},
                       {id:"out",icon:"📤",label:`Pengambilan (${trx.length})`},
                       {id:"in",icon:"📋",label:`Penerimaan (${receives.length})`},
-                      ...(isAdmin?[{id:"approval",icon:"⏳",label:`Approval (${pendingApprovalTrx.length})`}]:[]),
+                      ...(isAdmin?[{id:"approval",icon:"⏳",label:`Approval (${pendingApprovalCount})`}]:[]),
                       ...(isAdmin?[{id:"audit",icon:"🛡",label:`Audit (${auditTotal})`}]:[]),
                     ].map(tb=>(
                       <button key={tb.id} onClick={()=>setHistoryTab(tb.id)} style={{padding:"8px 14px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab===tb.id?T.primary:"transparent",color:historyTab===tb.id?"white":T.muted,boxShadow:historyTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap",flexShrink:0}}>{tb.icon} {tb.label}</button>
@@ -2301,6 +2352,14 @@ export default function App(){
                 {historyTab!=="audit"&&(
                   <div className="fbar" style={{marginBottom:14}}>
                     <input className="ifield" style={{width:220}} placeholder="🔍 Cari nama/item/admin/PO/DO..." value={historyQuery} onChange={e=>setHistoryQuery(e.target.value)}/>
+                    {historyTab==="out"&&(
+                      <select className="ifield" style={{width:190}} value={historyApprovalStatus} onChange={e=>setHistoryApprovalStatus(e.target.value)}>
+                        <option value="all">Semua Status Approval</option>
+                        <option value="approved">Approved</option>
+                        <option value="pending">Pending</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    )}
                     <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Dari</span>
                     <input type="date" className="ifield" style={{width:160}} value={historyFrom} onChange={e=>setHistoryFrom(e.target.value)}/>
                     <span style={{fontSize:11.5,color:T.muted,fontWeight:700}}>Sampai</span>
@@ -2308,9 +2367,9 @@ export default function App(){
                     <select className="ifield" style={{width:120}} value={historyPageSize} onChange={e=>setHistoryPageSize(Number(e.target.value)||6)}>
                       {[6,10,15,20].map(n=><option key={n} value={n}>{n}/hal</option>)}
                     </select>
-                    <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setHistoryQuery("");setHistoryFrom("");setHistoryTo("");}}>✕ Reset</BtnG>
+                    <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setHistoryQuery("");setHistoryFrom("");setHistoryTo("");setHistoryApprovalStatus("all");}}>✕ Reset</BtnG>
                     <span style={{marginLeft:"auto",fontSize:11.5,color:T.muted,fontWeight:600,whiteSpace:"nowrap"}}>
-                      {historyTab==="all"?filteredAll.length:historyTab==="out"?filteredOut.length:historyTab==="approval"?filteredPending.length:filteredIn.length} transaksi ditemukan
+                      {historyTab==="all"?filteredAll.length:historyTab==="out"?filteredOutByApproval.length:historyTab==="approval"?filteredPending.length:filteredIn.length} transaksi ditemukan
                     </span>
                   </div>
                 )}
@@ -2640,9 +2699,9 @@ export default function App(){
                       );
                     })}
                     {/* Pagination */}
-                    {filteredOut.length>0&&(
+                    {filteredOutByApproval.length>0&&(
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:16,gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredOut.length)} dari {filteredOut.length} transaksi</span>
+                        <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>Menampilkan {(historyOutPage-1)*historyPageSize+1}-{Math.min(historyOutPage*historyPageSize,filteredOutByApproval.length)} dari {filteredOutByApproval.length} transaksi</span>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <button onClick={()=>setHistoryOutPage(p=>Math.max(1,p-1))} disabled={historyOutPage<=1}
                             style={{display:"flex",alignItems:"center",gap:4,padding:"8px 16px",borderRadius:9,border:`1px solid ${T.border}`,background:T.surface,color:historyOutPage<=1?T.muted:T.text,fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:700,cursor:historyOutPage<=1?"default":"pointer",opacity:historyOutPage<=1?0.5:1,transition:"all .18s"}}>
