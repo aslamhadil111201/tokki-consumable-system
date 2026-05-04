@@ -331,6 +331,7 @@ export default function App(){
   T=getT(dark);
 
   const logout=useCallback((message="")=>{
+    const safeMessage = typeof message === "string" ? message : "";
     setLoggedIn(false);
     setUser(null);
     setAuthToken("");
@@ -342,8 +343,8 @@ export default function App(){
     setItems([]);
     setTrx([]);
     window.history.replaceState(null,"","/Login");
-    if(message){
-      setToast({msg:message,type:"err"});
+    if(safeMessage){
+      setToast({msg:safeMessage,type:"err"});
       setTimeout(()=>setToast(null),3200);
     }
   },[]);
