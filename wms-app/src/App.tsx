@@ -2064,14 +2064,15 @@ export default function App(){
                   const apPending=pendingApprovalTrx.length;
                   const apApproved=trx.filter(t=>trxApprovalStatus(t)==="approved").length;
                   const apRejected=trx.filter(t=>trxApprovalStatus(t)==="rejected").length;
-                  const resolved=trx.filter(t=>trxApprovalStatus(t)!=="pending"&&t.approvedAt);
+                  const cutoff30d=Date.now()-30*24*60*60*1000;
+                  const resolved=trx.filter(t=>trxApprovalStatus(t)!=="pending"&&t.approvedAt&&new Date(t.approvedAt).getTime()>=cutoff30d);
                   const avgSlaMs=resolved.length>0?resolved.reduce((sum,t)=>{
                     const created=Number(t.id)||0;
                     const resolvedAt=t.approvedAt?new Date(t.approvedAt).getTime():0;
                     const diff=resolvedAt-created;
                     return sum+(diff>0?diff:0);
                   },0)/resolved.length:0;
-                  const avgSlaLabel=avgSlaMs<=0?"—":avgSlaMs<3600000?`${Math.round(avgSlaMs/60000)} mnt`:`${Math.floor(avgSlaMs/3600000)}j ${Math.round((avgSlaMs%3600000)/60000)}m`;
+                  const avgSlaLabel=resolved.length===0?"—":avgSlaMs<60000?"<1 mnt":avgSlaMs<3600000?`${Math.round(avgSlaMs/60000)} mnt`:`${Math.floor(avgSlaMs/3600000)}j ${Math.round((avgSlaMs%3600000)/60000)}m`;
                   return(
                     <div style={{marginBottom:20}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -2084,7 +2085,7 @@ export default function App(){
                           {label:"Pending",val:String(apPending),sub:"menunggu approval",dot:apPending>0?"#f59e0b":T.muted,icon:"⏳"},
                           {label:"Disetujui",val:String(apApproved),sub:"approved",dot:"#10b981",icon:"✅"},
                           {label:"Ditolak",val:String(apRejected),sub:"rejected",dot:apRejected>0?T.red:T.muted,icon:"❌"},
-                          {label:"Avg SLA",val:avgSlaLabel,sub:"waktu resolusi",dot:"#6366f1",icon:"⏱"},
+                          {label:"Avg SLA",val:avgSlaLabel,sub:"30 hari terakhir",dot:"#6366f1",icon:"⏱"},
                         ].map((s,i)=>(
                           <div key={i} className="stat-card" style={{padding:"16px 18px",minWidth:0}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
