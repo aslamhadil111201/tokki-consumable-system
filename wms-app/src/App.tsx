@@ -13,6 +13,15 @@ const IDLE_TIMEOUT_MINUTES = Math.max(
   Number(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || 3),
 );
 const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MINUTES * 60 * 1000;
+const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || import.meta.env.VITE_GIT_SHA || "dev-local");
+const CLIENT_MODE = import.meta.env.DEV ? "local" : "production";
+const API_DISPLAY = (() => {
+  try {
+    return API.startsWith("http") ? new URL(API).host : "same-origin";
+  } catch {
+    return API;
+  }
+})();
 
 // ─── DESIGN TOKENS (FIXED) ────────────────────────────────────────
 const getT = (dark) => dark ? {
@@ -957,8 +966,44 @@ export default function App(){
               }
               throw new Error(message);
             }
+
+            const prevTrx=trx.find(tx=>Number(tx?.id)===Number(id));
+            const wasPending=trxApprovalStatus(prevTrx)==="pending";
+            const fallbackUpdated={
+              approvalStatus: actionLabel==="approve"?"approved":"rejected",
+              approvalNote: note,
+              approvedBy: String(user?.username||prevTrx?.approvedBy||""),
+              approvedAt: new Date().toISOString(),
+            };
+            const updatedTrx=(data&&typeof data==="object")?data:fallbackUpdated;
+
+            setTrx(prev=>prev.map(tx=>Number(tx?.id)===Number(id)?{...tx,...updatedTrx}:tx));
+            setAllHistory(prev=>prev.map(row=>(
+              String(row?.type||"out").toLowerCase()==="out"&&Number(row?.id)===Number(id)
+                ? {...row,...updatedTrx}
+                : row
+            )));
+
+            if(actionLabel==="approve"&&wasPending&&Array.isArray(prevTrx?.items)){
+              const qtyByItemId=(prevTrx.items||[]).reduce((acc,line)=>{
+                const itemId=Number(line?.itemId);
+                if(!Number.isInteger(itemId)||itemId<=0) return acc;
+                acc[itemId]=(acc[itemId]||0)+Number(line?.qty||0);
+                return acc;
+              },{} as Record<number,number>);
+
+              setItems(prev=>prev.map(it=>{
+                const dec=Number(qtyByItemId[Number(it?.id)]||0);
+                if(dec<=0) return it;
+                const nextStock=Math.max(0,Number(it?.stock||0)-dec);
+                const avg=Number(it?.averageCost??it?.lastPrice??0);
+                return {...it,stock:nextStock,totalValue:Math.round(nextStock*avg*100)/100};
+              }));
+            }
+
+            if(wasPending) setPendingApprovalCount(c=>Math.max(0,c-1));
             toast$(actionLabel==="approve"?"Transaksi berhasil di-approve":"Transaksi ditolak");
-            await fetchAll();
+            fetchAll();
           }catch(e){toast$(e?.message||"Gagal memproses approval","err");}
         },actionLabel==="approve"?"Sedang meng-approve transaksi":"Sedang menolak transaksi");
       }finally{
@@ -1047,6 +1092,24 @@ export default function App(){
     if(historyFrom) return `>= ${fmtDate(historyFrom)}`;
     if(historyTo) return `<= ${fmtDate(historyTo)}`;
     return "Semua Periode";
+  };
+
+  const approvalMetaChips = (row:any) => {
+    const status=trxApprovalStatus(row);
+    if(status==="pending") return null;
+    const approvedAtText=row?.approvedAt?new Date(row.approvedAt).toLocaleString("id-ID"):"";
+    const approvedBy=String(row?.approvedBy||"").trim();
+    const note=String(row?.approvalNote||"").trim();
+    const reason=String(row?.approvalReason||"").trim();
+    if(!approvedBy&&!approvedAtText&&!note&&!reason) return null;
+    return (
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:4}}>
+        {approvedBy&&<Badge bg={T.navActive} color={T.navActiveText} border={T.navActiveBorder}>👤 {approvedBy}</Badge>}
+        {approvedAtText&&<Badge bg={T.surface} color={T.muted} border={T.border}>🕒 {approvedAtText}</Badge>}
+        {note&&<Badge bg={T.surface} color={T.muted} border={T.border}>📝 {note}</Badge>}
+        {reason&&<Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>Alasan: {reason}</Badge>}
+      </div>
+    );
   };
 
   const exportTransactionsExcel=()=>{
@@ -1798,6 +1861,7 @@ export default function App(){
                 )}
               </div>
               <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:11,display:"var(--date-display,inline-flex)"}}>📅 {todayFmt()}</div>
+              <div className="tb-btn date-btn" style={{cursor:"default",userSelect:"none",fontSize:10,display:"var(--date-display,inline-flex)"}}>🧩 {CLIENT_MODE} · {CLIENT_BUILD_VERSION.slice(0,7)} · API {API_DISPLAY}</div>
               <button className="tb-btn tb-logout" onClick={logout} title="Keluar akun" style={{padding:"7px 10px"}}>⎋ Keluar</button>
             </div>
           </header>
@@ -2508,6 +2572,7 @@ export default function App(){
                                             if(status==="rejected") return <Badge bg={T.redBg} color={T.redText} border={T.redBorder}>⛔ Rejected</Badge>;
                                             return <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>✅ Approved</Badge>;
                                           })()}
+                                          {approvalMetaChips(row)}
                                         </div>
                                       )}
                                     </div>
@@ -2676,6 +2741,7 @@ export default function App(){
                                   if(status==="rejected") return <Badge bg={T.redBg} color={T.redText} border={T.redBorder}>⛔ Rejected</Badge>;
                                   return <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>✅ Approved</Badge>;
                                 })()}
+                                {approvalMetaChips(t)}
                               </div>
                             </div>
                             {/* Time */}

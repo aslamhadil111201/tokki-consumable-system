@@ -34,6 +34,12 @@ npm install
 npm run dev
 ```
 
+## Backend Lokal Yang Dipakai
+
+- Gunakan backend utama di folder workspace `c:\WHS\wms-backend`.
+- Jalankan backend utama pada port `3001` agar frontend tetap konsisten ke `http://localhost:3001/api`.
+- Hindari menjalankan dua backend sekaligus (`c:\WHS\wms-backend` dan `c:\WHS\wms-app\wms-backend`) karena bisa menyebabkan perilaku berbeda saat testing.
+
 ## Login Default Seed
 
 - username: `admin`
