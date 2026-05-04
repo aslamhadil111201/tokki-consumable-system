@@ -6,6 +6,7 @@ const path = require("path");
 const app = express();
 const PORT = 3001;
 const DB_PATH = path.join(__dirname, "db.json");
+const APPROVAL_QTY_THRESHOLD = Math.max(1, Number(process.env.APPROVAL_QTY_THRESHOLD || 20));
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -98,25 +99,164 @@ app.delete("/api/items/:id", (req, res) => {
 });
 
 // ── TRANSACTIONS ─────────────────────────────────────────────────
-app.get("/api/transactions", (req, res) => res.json(readDB().transactions));
+app.get("/api/transactions", (req, res) => {
+  const scope = String(req.query.scope || "out").toLowerCase();
+  const approvalStatus = String(req.query.approvalStatus || "").toLowerCase();
+  const rows = readDB().transactions || [];
+  let filtered =
+    scope === "all"
+      ? rows
+      : rows.filter(t => !t.type || String(t.type).toLowerCase() === "out");
+  if (["pending", "approved", "rejected"].includes(approvalStatus)) {
+    filtered = filtered.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === approvalStatus);
+  }
+  res.json(filtered);
+});
 
 app.post("/api/transactions", (req, res) => {
   const db = readDB();
-  const trx = { id: Date.now(), ...req.body };
+  const reqItems = Array.isArray(req.body.items) ? req.body.items : [];
+  if (reqItems.length === 0) {
+    return res.status(400).json({ error: "Item transaksi tidak boleh kosong" });
+  }
 
-  // Kurangi stok
-  trx.items.forEach(ci => {
-    const item = db.items.find(i => i.id === ci.itemId);
-    if (item) item.stock = Math.max(0, item.stock - ci.qty);
-  });
+  const resolvedItems = [];
+  const approvalReasons = [];
+  for (const line of reqItems) {
+    const itemId = Number(line?.itemId);
+    const qtyOut = Number(line?.qty);
+    if (!Number.isInteger(qtyOut) || qtyOut <= 0) {
+      return res.status(400).json({ error: "Qty keluar harus bilangan bulat > 0" });
+    }
+
+    const itemIndex = db.items.findIndex(i => i.id === itemId);
+    if (itemIndex === -1) {
+      return res.status(404).json({ error: `Item ID ${itemId} tidak ditemukan` });
+    }
+
+    const item = db.items[itemIndex];
+    const currentStock = Number(item?.stock || 0);
+    if (qtyOut > currentStock) {
+      return res.status(400).json({ error: `Qty keluar untuk ${item.name} melebihi stok (${currentStock})` });
+    }
+
+    const nextQty = currentStock - qtyOut;
+    const avgCost = Number(item?.averageCost || 0);
+    const totalCostOut = Math.round(qtyOut * avgCost * 100) / 100;
+
+    if (qtyOut > APPROVAL_QTY_THRESHOLD) {
+      approvalReasons.push(`Qty ${item.name} melebihi batas approval (${APPROVAL_QTY_THRESHOLD})`);
+    }
+    if (nextQty < Number(item?.minStock || 0)) {
+      approvalReasons.push(`Stok ${item.name} akan di bawah minimum (${Number(item?.minStock || 0)})`);
+    }
+
+    resolvedItems.push({ itemIndex, item, qtyOut, nextQty, totalCostOut });
+  }
+
+  const needApproval = approvalReasons.length > 0;
+  if (!needApproval) {
+    resolvedItems.forEach(row => {
+      db.items[row.itemIndex] = {
+        ...row.item,
+        stock: row.nextQty,
+      };
+    });
+  }
+
+  const trx = {
+    id: Date.now(),
+    type: "out",
+    movementType: "keluar",
+    ...req.body,
+    items: resolvedItems.map(row => ({
+      itemId: row.item.id,
+      itemName: row.item.name,
+      qty: row.qtyOut,
+      unit: row.item.unit,
+      averageCost: Number(row.item?.averageCost || 0),
+      totalCost: row.totalCostOut,
+    })),
+    totalCostOut: Math.round(resolvedItems.reduce((s, row) => s + row.totalCostOut, 0) * 100) / 100,
+    approvalStatus: needApproval ? "pending" : "approved",
+    approvalReason: needApproval ? [...new Set(approvalReasons)].join("; ") : "",
+    approvalNote: "",
+    approvedBy: needApproval ? null : "system",
+    approvedAt: needApproval ? null : new Date().toISOString(),
+  };
 
   db.transactions.push(trx);
   writeDB(db);
-  res.status(201).json(trx);
+  res.status(trx.approvalStatus === "pending" ? 202 : 201).json(trx);
+});
+
+app.patch("/api/transactions/:id/approval", (req, res) => {
+  const db = readDB();
+  const id = Number(req.params.id);
+  const action = String(req.body?.action || "").toLowerCase();
+  const note = String(req.body?.note || "").trim();
+
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "ID tidak valid" });
+  if (!["approve", "reject"].includes(action)) return res.status(400).json({ error: "Action approval tidak valid" });
+
+  const trxIndex = (db.transactions || []).findIndex(t => t.id === id);
+  if (trxIndex === -1) return res.status(404).json({ error: "Transaksi tidak ditemukan" });
+
+  const trx = db.transactions[trxIndex];
+  if (String(trx.type || "out").toLowerCase() !== "out") {
+    return res.status(400).json({ error: "Hanya transaksi keluar yang bisa di-approval" });
+  }
+  if (String(trx.approvalStatus || "approved").toLowerCase() !== "pending") {
+    return res.status(400).json({ error: "Transaksi ini bukan antrian approval" });
+  }
+
+  if (action === "approve") {
+    for (const line of Array.isArray(trx.items) ? trx.items : []) {
+      const itemIndex = (db.items || []).findIndex(i => i.id === Number(line?.itemId));
+      if (itemIndex === -1) return res.status(400).json({ error: `Item ID ${line?.itemId} tidak ditemukan saat approval` });
+
+      const item = db.items[itemIndex];
+      const qtyOut = Number(line?.qty || 0);
+      const currentStock = Number(item?.stock || 0);
+      if (qtyOut > currentStock) {
+        return res.status(400).json({ error: `Stok ${item?.name || line?.itemId} tidak cukup saat approval` });
+      }
+
+      db.items[itemIndex] = {
+        ...item,
+        stock: currentStock - qtyOut,
+      };
+    }
+  }
+
+  db.transactions[trxIndex] = {
+    ...trx,
+    approvalStatus: action === "approve" ? "approved" : "rejected",
+    approvalNote: note,
+    approvedBy: "admin",
+    approvedAt: new Date().toISOString(),
+  };
+
+  writeDB(db);
+  res.json(db.transactions[trxIndex]);
 });
 
 app.delete("/api/transactions/:id", (req, res) => {
   const db = readDB();
+  const trx = db.transactions.find(t => t.id === +req.params.id);
+  if (!trx) return res.status(404).json({ error: "Transaksi tidak ditemukan" });
+
+  const approvalStatus = String(trx.approvalStatus || "approved").toLowerCase();
+  const stockWasDeducted = approvalStatus === "approved" || !trx.approvalStatus;
+
+  if (stockWasDeducted) {
+    (trx.items || []).forEach(line => {
+      const item = db.items.find(i => i.id === Number(line?.itemId));
+      if (!item) return;
+      item.stock = Number(item.stock || 0) + Number(line?.qty || 0);
+    });
+  }
+
   db.transactions = db.transactions.filter(t => t.id !== +req.params.id);
   writeDB(db);
   res.json({ ok: true });

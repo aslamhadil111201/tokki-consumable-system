@@ -10,7 +10,7 @@ const API = (
 ).replace(/\/$/, "");
 const IDLE_TIMEOUT_MINUTES = Math.max(
   1,
-  Number(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || 10),
+  Number(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || 3),
 );
 const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MINUTES * 60 * 1000;
 
@@ -103,6 +103,8 @@ const todayFmt=()=>new Date().toLocaleDateString("id-ID",{weekday:"short",day:"2
 const fmtMoney=n=>`Rp ${Number(n||0).toLocaleString("id-ID")}`;
 const isoDate=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const clamp01=(n)=>Math.max(0,Math.min(1,Number(n)||0));
+const trxApprovalStatus=(t)=>String(t?.approvalStatus||"approved").toLowerCase();
+const isApprovedOutTrx=(t)=>trxApprovalStatus(t)==="approved";
 const emptyForm=(overrides={})=>({taker:"",dept:"",workOrder:"",note:"",date:todayStr(),admin:"",cart:[],...overrides});
 const emptyNewItem=()=>({name:"",itemCode:"",category:"APD",unit:"pcs",minStock:"",stock:"",hargaAwal:"",photo:null});
 const emptyAddForm=(overrides={})=>({poNumber:"",doNumber:"",date:todayStr(),admin:"",itemId:"",qty:"",buyPrice:"",attachment:null,...overrides});
@@ -436,9 +438,11 @@ export default function App(){
   },[tab,visibleTabs]);
 
   const lowStock=items.filter(i=>i.stock<=i.minStock);
-  const todayTrx=trx.filter(t=>t.date===todayStr());
+  const approvedOutTrx=trx.filter(isApprovedOutTrx);
+  const pendingApprovalTrx=trx.filter(t=>trxApprovalStatus(t)==="pending");
+  const todayTrx=approvedOutTrx.filter(t=>t.date===todayStr());
   const todayUnits=todayTrx.reduce((a,t)=>a+t.items.reduce((b,i)=>b+i.qty,0),0);
-  const totalOut=trx.reduce((a,t)=>a+t.items.reduce((b,i)=>b+i.qty,0),0);
+  const totalOut=approvedOutTrx.reduce((a,t)=>a+t.items.reduce((b,i)=>b+i.qty,0),0);
   const totalIn=receives.reduce((a,r)=>a+r.qty,0);
   const itemMap=Object.fromEntries(items.map(i=>[Number(i.id),i]));
   const filtItems=items.filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()));
@@ -451,6 +455,7 @@ export default function App(){
   };
   const q=historyQuery.trim().toLowerCase();
   const filteredOut=[...trx].filter(t=>dateMatch(t.date)&&(q===""||[t.taker,t.dept,t.admin,t.workOrder,t.note,...(t.items||[]).map(i=>i.itemName)].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
+  const filteredPending=filteredOut.filter(t=>trxApprovalStatus(t)==="pending");
   const filteredIn=[...receives].filter(r=>dateMatch(r.date)&&(q===""||[r.itemName,r.poNumber,r.doNumber,r.admin].filter(Boolean).join(" ").toLowerCase().includes(q))).sort((a,b)=>b.id-a.id);
   const filteredAll=[...allHistory].filter(t=>dateMatch(t.date)&&(q===""||[
     t.type,
@@ -489,7 +494,7 @@ export default function App(){
     return {start:isoDate(s),end,label:"Bulan Berjalan"};
   })();
   const inReportRange=(d)=>Boolean(d)&&d>=reportRange.start&&d<=reportRange.end;
-  const reportOut=trx.filter(t=>inReportRange(t.date));
+  const reportOut=approvedOutTrx.filter(t=>inReportRange(t.date));
   const reportIn=receives.filter(r=>inReportRange(r.date));
   const reportTotalOutUnits=reportOut.reduce((a,t)=>a+toSafeRows(t.items).reduce((b,i)=>b+Number(i.qty||0),0),0);
   const reportTotalInUnits=reportIn.reduce((a,r)=>a+Number(r.qty||0),0);
@@ -714,11 +719,14 @@ export default function App(){
     await withLoading(async()=>{
       try{
         const r=await apiFetch("/transactions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-        if(!r.ok)throw new Error();
-        toast$(`Transaksi ${form.taker} tercatat`);
+        let data:any=null;
+        try{data=await r.json();}catch{data=null;}
+        if(!r.ok)throw new Error(data?.error||"Gagal menyimpan transaksi");
+        if(String(data?.approvalStatus||"").toLowerCase()==="pending") toast$(`Transaksi ${form.taker} masuk antrian approval admin`,`err`);
+        else toast$(`Transaksi ${form.taker} tercatat`);
         setForm(emptyForm());setPickerItem("");setPickerQty("");setShowModal(false);
         await fetchAll();
-      }catch{toast$("Gagal menyimpan transaksi","err");}
+      }catch(e){toast$(e?.message||"Gagal menyimpan transaksi","err");}
     },"Sedang menyimpan transaksi");
   };
   const openQuickOut=item=>{
@@ -865,6 +873,25 @@ export default function App(){
       }catch(e){toast$(e?.message||"Gagal menghapus transaksi","err");}
     },"Sedang menghapus transaksi");
   };
+
+    const processTransactionApproval=async(id,action)=>{
+      if(!isAdmin){toast$("Hanya admin yang boleh approval transaksi","err");return;}
+      const actionLabel=action==="approve"?"approve":"reject";
+      const note=window.prompt(`Catatan ${actionLabel} (opsional):`,"")||"";
+      await withLoading(async()=>{
+        try{
+          const r=await apiFetch(`/transactions/${id}/approval`,{
+            method:"PATCH",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:actionLabel,note:String(note||"").trim()}),
+          });
+          const data=await r.json().catch(()=>null);
+          if(!r.ok) throw new Error(data?.error||"Gagal memproses approval");
+          toast$(actionLabel==="approve"?"Transaksi berhasil di-approve":"Transaksi ditolak");
+          await fetchAll();
+        }catch(e){toast$(e?.message||"Gagal memproses approval","err");}
+      },actionLabel==="approve"?"Sedang meng-approve transaksi":"Sedang menolak transaksi");
+    };
 
   const deleteReceive=async(id)=>{
     if(!isAdmin){toast$("Hanya admin yang boleh menghapus riwayat penerimaan","err");return;}
@@ -2255,17 +2282,18 @@ export default function App(){
                       {id:"all",icon:"🧾",label:`Semua (${allHistory.length})`},
                       {id:"out",icon:"📤",label:`Pengambilan (${trx.length})`},
                       {id:"in",icon:"📋",label:`Penerimaan (${receives.length})`},
+                      ...(isAdmin?[{id:"approval",icon:"⏳",label:`Approval (${pendingApprovalTrx.length})`}]:[]),
                       ...(isAdmin?[{id:"audit",icon:"🛡",label:`Audit (${auditTotal})`}]:[]),
                     ].map(tb=>(
                       <button key={tb.id} onClick={()=>setHistoryTab(tb.id)} style={{padding:"8px 14px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab===tb.id?T.primary:"transparent",color:historyTab===tb.id?"white":T.muted,boxShadow:historyTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap",flexShrink:0}}>{tb.icon} {tb.label}</button>
                     ))}
                   </div>
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
-                    {isAdmin&&historyTab!=="audit"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
+                    {isAdmin&&historyTab!=="audit"&&historyTab!=="approval"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
+                    {isAdmin&&historyTab!=="audit"&&historyTab!=="approval"&&<BtnG onClick={historyTab==="in"?exportReceivesPdf:exportTransactionsPdf} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
                     {isAdmin&&historyTab==="audit"&&<BtnG onClick={exportAuditPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
-                    {isAdmin&&historyTab!=="in"&&historyTab!=="audit"&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
+                    {isAdmin&&historyTab!=="in"&&historyTab!=="audit"&&historyTab!=="approval"&&<BtnP onClick={()=>setShowModal(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Pengambilan</BtnP>}
                     {canManage&&historyTab==="in"&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"8px 16px",fontSize:12,fontWeight:800}}>＋ Catat Penerimaan</BtnP>}
                   </div>
                 </div>
@@ -2282,8 +2310,68 @@ export default function App(){
                     </select>
                     <BtnG style={{fontSize:11.5,padding:"7px 12px"}} onClick={()=>{setHistoryQuery("");setHistoryFrom("");setHistoryTo("");}}>✕ Reset</BtnG>
                     <span style={{marginLeft:"auto",fontSize:11.5,color:T.muted,fontWeight:600,whiteSpace:"nowrap"}}>
-                      {historyTab==="all"?filteredAll.length:historyTab==="out"?filteredOut.length:filteredIn.length} transaksi ditemukan
+                      {historyTab==="all"?filteredAll.length:historyTab==="out"?filteredOut.length:historyTab==="approval"?filteredPending.length:filteredIn.length} transaksi ditemukan
                     </span>
+                  </div>
+                )}
+
+                {historyTab==="approval"&&isAdmin&&(
+                  <div>
+                    {filteredPending.length===0
+                      ?<div style={{textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>✅</div>Tidak ada transaksi yang menunggu approval</div>
+                      :filteredPending.map((t:any)=>{
+                        const totalUnits=(t.items||[]).reduce((a:number,i:any)=>a+Number(i.qty||0),0);
+                        const totalCostRow=Number(t.totalCostOut??(t.items||[]).reduce((acc:number,it:any)=>{const avg=Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0);return acc+(Number(it.qty||0)*avg);},0));
+                        return(
+                          <div key={t.id} style={{display:"flex",alignItems:"stretch",gap:0,background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${T.amber}`,borderRadius:14,marginBottom:8,overflow:"hidden",boxShadow:T.shadowSm}}>
+                            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"14px 12px",gap:5,minWidth:70,flexShrink:0}}>
+                              <div style={{width:48,height:48,borderRadius:"50%",background:T.amberBg,border:`2px solid ${T.amber}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,lineHeight:1}}>⏳</div>
+                              <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.amber,textTransform:"uppercase"}}>PENDING</span>
+                            </div>
+                            <div className="trx-row-inner">
+                              <div className="trx-col-name">
+                                <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{t.taker||"-"}</div>
+                                <div style={{fontSize:11,color:T.muted,marginTop:2}}>{t.dept||"-"}</div>
+                                <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {t.admin||"-"}</div>
+                              </div>
+                              <div className="trx-col-time">
+                                <div style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{t.time||"-"}</div>
+                                <div style={{fontSize:10.5,color:T.muted,marginTop:3}}>{fmtDate(t.date)}</div>
+                              </div>
+                              <div className="trx-col-items">
+                                {(t.items||[]).slice(0,3).map((it:any,ii:number)=>(
+                                  <div key={ii} style={{display:"grid",gridTemplateColumns:"14px minmax(0,1fr) auto",alignItems:"center",columnGap:8,marginBottom:4}}>
+                                    <span style={{fontSize:11}}>📦</span>
+                                    <span style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>{it.itemName}</span>
+                                    <span style={{fontSize:10,fontWeight:800,color:T.navActiveText,background:T.navActive,padding:"1px 7px",borderRadius:5,border:`1px solid ${T.navActiveBorder}`,flexShrink:0}}>×{it.qty} {it.unit}</span>
+                                  </div>
+                                ))}
+                                {(t.items||[]).length>3&&<div style={{fontSize:10,color:T.muted}}>+{(t.items||[]).length-3} item lainnya</div>}
+                                {t.approvalReason&&<div style={{fontSize:10.5,color:T.amber,fontWeight:700,marginTop:4}}>Alasan: {t.approvalReason}</div>}
+                              </div>
+                              <div className="trx-col-count" style={{display:"flex",flexDirection:"column",gap:5}}>
+                                <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                                  <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{(t.items||[]).length}</span>
+                                  <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>jenis</span>
+                                </div>
+                                <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                                  <span style={{fontSize:16,fontWeight:900,color:T.text,lineHeight:1}}>{totalUnits}</span>
+                                  <span style={{fontSize:10.5,fontWeight:600,color:T.muted}}>unit</span>
+                                </div>
+                              </div>
+                              <div className="trx-col-total">
+                                <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
+                                <div style={{fontSize:14,fontWeight:900,color:T.amber}}>{fmtMoney(totalCostRow)}</div>
+                              </div>
+                              <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+                                <button onClick={()=>processTransactionApproval(t.id,"approve")} style={{background:T.greenBg,border:`1px solid ${T.greenBorder}`,color:T.greenText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>✅ Approve</button>
+                                <button onClick={()=>processTransactionApproval(t.id,"reject")} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>⛔ Reject</button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    }
                   </div>
                 )}
 
@@ -2330,6 +2418,16 @@ export default function App(){
                                       <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{isIn?(row.itemName||itemsArr[0]?.itemName||"-"):(row.taker||"-")}</div>
                                       <div style={{fontSize:11,color:T.muted,marginTop:2}}>{isIn?`Admin: ${row.admin||"-"}`:(row.dept||"-")}</div>
                                       {!isIn&&<div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {row.admin||"-"}</div>}
+                                      {!isIn&&(
+                                        <div style={{marginTop:4}}>
+                                          {(()=>{
+                                            const status=trxApprovalStatus(row);
+                                            if(status==="pending") return <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>⏳ Pending Approval</Badge>;
+                                            if(status==="rejected") return <Badge bg={T.redBg} color={T.redText} border={T.redBorder}>⛔ Rejected</Badge>;
+                                            return <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>✅ Approved</Badge>;
+                                          })()}
+                                        </div>
+                                      )}
                                     </div>
                                     {/* Time */}
                                     <div className="trx-col-time">
@@ -2421,12 +2519,12 @@ export default function App(){
                     {/* Stats 5 columns */}
                     <div className="stat5-g">
                       {(()=>{
-                        const totalNilai=trx.reduce((acc,t)=>acc+Number(t.totalCostOut??t.items.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0)),0)),0);
+                        const totalNilai=approvedOutTrx.reduce((acc,t)=>acc+Number(t.totalCostOut??t.items.reduce((a,it)=>a+(Number(it.qty||0)*Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0)),0)),0);
                         return [
-                          {label:"Total Transaksi",sub:"pengambilan",val:trx.length,valStr:null,icon:"📋",dot:T.primary},
+                          {label:"Total Transaksi",sub:"pengambilan approved",val:approvedOutTrx.length,valStr:null,icon:"📋",dot:T.primary},
                           {label:"Total Unit Keluar",sub:"unit total",val:totalOut,valStr:null,icon:"📦",dot:T.green},
-                          {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(trx.flatMap(t=>t.items.map(i=>i.itemId)))].length,valStr:null,icon:"🏷",dot:T.primaryLight},
-                          {label:"Jumlah Pengambil",sub:"karyawan",val:[...new Set(trx.map(t=>t.taker))].length,valStr:null,icon:"👥",dot:T.amber},
+                          {label:"Item Berbeda",sub:"jenis barang",val:[...new Set(approvedOutTrx.flatMap(t=>t.items.map(i=>i.itemId)))].length,valStr:null,icon:"🏷",dot:T.primaryLight},
+                          {label:"Jumlah Pengambil",sub:"karyawan",val:[...new Set(approvedOutTrx.map(t=>t.taker))].length,valStr:null,icon:"👥",dot:T.amber},
                           {label:"Total Nilai",sub:"estimasi harga rata-rata",val:null,valStr:fmtMoney(totalNilai),icon:"Rp",dot:T.primary},
                         ];
                       })().map((s,i)=>(
@@ -2446,7 +2544,7 @@ export default function App(){
                     <div className="card" style={{marginBottom:18}}>
                       <div style={{fontSize:16,fontWeight:800,...gText(),marginBottom:16}}>🏆 Barang Paling Sering Diambil</div>
                       {(()=>{
-                        const agg=trx.flatMap(t=>t.items).reduce((acc,it)=>{acc[it.itemName]=(acc[it.itemName]||0)+it.qty;return acc;},{} as Record<string,number>);
+                        const agg=approvedOutTrx.flatMap(t=>t.items).reduce((acc,it)=>{acc[it.itemName]=(acc[it.itemName]||0)+it.qty;return acc;},{} as Record<string,number>);
                         const sorted=Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,5);
                         const max=sorted[0]?.[1]||1;
                         const grandTotal=sorted.reduce((a,[,v])=>a+v,0)||1;
@@ -2489,6 +2587,14 @@ export default function App(){
                               <div style={{fontSize:13.5,fontWeight:800,color:T.text,lineHeight:1.3}}>{t.taker}</div>
                               <div style={{fontSize:11,color:T.muted,marginTop:2}}>{t.dept}</div>
                               <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Admin: {t.admin}</div>
+                              <div style={{marginTop:4}}>
+                                {(()=>{
+                                  const status=trxApprovalStatus(t);
+                                  if(status==="pending") return <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>⏳ Pending Approval</Badge>;
+                                  if(status==="rejected") return <Badge bg={T.redBg} color={T.redText} border={T.redBorder}>⛔ Rejected</Badge>;
+                                  return <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>✅ Approved</Badge>;
+                                })()}
+                              </div>
                             </div>
                             {/* Time */}
                             <div className="trx-col-time">
@@ -2708,7 +2814,7 @@ export default function App(){
                         <option value="">Semua action</option>
                         {[
                           "auth.login","admin.resetDummy","admin.backupExport","admin.restoreBackup","items.create","items.update","items.delete",
-                          "transactions.create","transactions.delete","receives.create","receives.delete",
+                          "transactions.create","transactions.pending","transactions.approve","transactions.reject","transactions.delete","receives.create","receives.delete",
                           "master.create","master.delete",
                         ].map(a=><option key={a} value={a}>{a}</option>)}
                       </select>
@@ -2730,7 +2836,7 @@ export default function App(){
                             const actionIconMap:Record<string,string>={
                               "auth.login":"🔑","auth.logout":"🚪",
                               "items.create":"📦","items.update":"✏️","items.delete":"🗑️",
-                              "transactions.create":"↗️","transactions.delete":"🗑️",
+                              "transactions.create":"↗️","transactions.pending":"⏳","transactions.approve":"✅","transactions.reject":"⛔","transactions.delete":"🗑️",
                               "receives.create":"🚚","receives.delete":"🗑️",
                               "admin.resetDummy":"⚙️","admin.backupExport":"💾","admin.restoreBackup":"♻️",
                               "master.create":"🏷️","master.delete":"🗑️",
@@ -2738,7 +2844,7 @@ export default function App(){
                             const actionColorMap:Record<string,string>={
                               "auth.login":T.green,"auth.logout":T.muted,
                               "items.create":"#0ea5e9","items.update":"#6366f1","items.delete":T.red,
-                              "transactions.create":"#8b5cf6","transactions.delete":T.red,
+                              "transactions.create":"#8b5cf6","transactions.pending":T.amber,"transactions.approve":T.green,"transactions.reject":T.red,"transactions.delete":T.red,
                               "receives.create":T.amber,"receives.delete":T.red,
                               "admin.resetDummy":T.red,"admin.backupExport":"#f97316","admin.restoreBackup":"#14b8a6",
                               "master.create":"#ec4899","master.delete":T.red,

@@ -12,6 +12,7 @@ const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 const AUDIT_RETENTION_DAYS = Math.max(1, Number(process.env.AUDIT_RETENTION_DAYS || 90));
 const AUDIT_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const APPROVAL_QTY_THRESHOLD = Math.max(1, Number(process.env.APPROVAL_QTY_THRESHOLD || 20));
 
 const MASTER_MAP = {
   admins: "admins",
@@ -785,9 +786,13 @@ export default async function handler(req, res) {
 
       if (method === "GET" && parts.length === 1) {
         const scope = String(requestUrl.searchParams.get("scope") || "out").toLowerCase();
+        const statusFilter = String(requestUrl.searchParams.get("approvalStatus") || "").toLowerCase();
         const query = scope === "all"
           ? {}
           : { $or: [{ type: { $exists: false } }, { type: "out" }] };
+        if (["pending", "approved", "rejected"].includes(statusFilter)) {
+          query.approvalStatus = statusFilter;
+        }
         const docs = await transactionsCol.find(query).sort({ id: 1 }).toArray();
         return sendJson(res, 200, docs);
       }
@@ -798,6 +803,7 @@ export default async function handler(req, res) {
 
         const trx = await runWithMongoTransaction(async (session) => {
           const resolvedItems = [];
+          const approvalReasons = [];
           for (const ci of reqItems) {
             const itemId = Number(ci?.itemId);
             const qtyOut = Number(ci?.qty);
@@ -818,6 +824,14 @@ export default async function handler(req, res) {
             const totalCostOut = roundMoney(qtyOut * averageCost);
             const nextTotalValue = roundMoney(nextQty * averageCost);
 
+            if (qtyOut > APPROVAL_QTY_THRESHOLD) {
+              approvalReasons.push(`Qty ${item.name} melebihi batas approval (${APPROVAL_QTY_THRESHOLD})`);
+            }
+
+            if (nextQty < toNumber(item.minStock, 0)) {
+              approvalReasons.push(`Stok ${item.name} akan di bawah minimum (${toNumber(item.minStock, 0)})`);
+            }
+
             resolvedItems.push({
               source: ci,
               item,
@@ -827,14 +841,6 @@ export default async function handler(req, res) {
               totalCostOut,
               nextTotalValue,
             });
-          }
-
-          for (const r of resolvedItems) {
-            await itemsCol.updateOne(
-              { id: r.item.id },
-              { $set: { stock: r.nextQty, averageCost: r.averageCost, totalValue: r.nextTotalValue } },
-              withSessionOptions(session),
-            );
           }
 
           const trxItems = resolvedItems.map((r) => ({
@@ -847,6 +853,17 @@ export default async function handler(req, res) {
             totalCost: r.totalCostOut,
           }));
 
+          const needApproval = approvalReasons.length > 0;
+          if (!needApproval) {
+            for (const r of resolvedItems) {
+              await itemsCol.updateOne(
+                { id: r.item.id },
+                { $set: { stock: r.nextQty, averageCost: r.averageCost, totalValue: r.nextTotalValue } },
+                withSessionOptions(session),
+              );
+            }
+          }
+
           const nextTransactionId = await getNextId(db, "transactions", session);
           const transactionRow = {
             id: nextTransactionId,
@@ -855,6 +872,11 @@ export default async function handler(req, res) {
             ...body,
             items: trxItems,
             totalCostOut: roundMoney(resolvedItems.reduce((acc, r) => acc + r.totalCostOut, 0)),
+            approvalStatus: needApproval ? "pending" : "approved",
+            approvalReason: needApproval ? [...new Set(approvalReasons)].join("; ") : "",
+            approvalNote: "",
+            approvedBy: needApproval ? null : String(auth.payload?.username || ""),
+            approvedAt: needApproval ? null : new Date().toISOString(),
           };
 
           await transactionsCol.insertOne(transactionRow, withSessionOptions(session));
@@ -863,11 +885,98 @@ export default async function handler(req, res) {
 
         await writeAuditLog(db, {
           actor: auth.payload,
-          action: "transactions.create",
+          action: trx.approvalStatus === "pending" ? "transactions.pending" : "transactions.create",
           target: "transactions",
-          meta: { id: trx.id, taker: trx.taker, totalCostOut: trx.totalCostOut },
+          meta: {
+            id: trx.id,
+            taker: trx.taker,
+            totalCostOut: trx.totalCostOut,
+            approvalStatus: trx.approvalStatus,
+          },
         });
-        return sendJson(res, 201, trx);
+        return sendJson(res, trx.approvalStatus === "pending" ? 202 : 201, trx);
+      }
+
+      if (method === "PATCH" && parts.length === 3 && parts[2] === "approval") {
+        if (!ensureAdmin(auth.payload, res)) return;
+        const id = Number(parts[1]);
+        const action = String(body?.action || "").toLowerCase();
+        const note = String(body?.note || "").trim();
+        if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { error: "ID tidak valid" });
+        if (!["approve", "reject"].includes(action)) {
+          return sendJson(res, 400, { error: "Action approval tidak valid" });
+        }
+
+        const updated = await runWithMongoTransaction(async (session) => {
+          const existing = await transactionsCol.findOne({ id }, withSessionOptions(session));
+          if (!existing) return null;
+          if (String(existing.type || "out").toLowerCase() !== "out") {
+            throw new Error("Hanya transaksi keluar yang bisa di-approval");
+          }
+          if (String(existing.approvalStatus || "approved").toLowerCase() !== "pending") {
+            throw new Error("Transaksi ini bukan antrian approval");
+          }
+
+          if (action === "approve") {
+            for (const line of Array.isArray(existing.items) ? existing.items : []) {
+              const itemId = Number(line?.itemId);
+              const qtyOut = Number(line?.qty);
+              if (!Number.isInteger(itemId) || !Number.isInteger(qtyOut) || qtyOut <= 0) continue;
+
+              const item = await itemsCol.findOne({ id: itemId }, withSessionOptions(session));
+              if (!item) throw new Error(`Item ID ${itemId} tidak ditemukan saat approval`);
+
+              const currentQty = toNumber(item.stock, 0);
+              if (qtyOut > currentQty) {
+                throw new Error(`Stok ${item.name} tidak cukup saat approval`);
+              }
+
+              const averageCost = roundMoney(line?.averageCost ?? item.averageCost);
+              const nextQty = currentQty - qtyOut;
+              await itemsCol.updateOne(
+                { id: itemId },
+                {
+                  $set: {
+                    stock: nextQty,
+                    averageCost,
+                    totalValue: roundMoney(nextQty * averageCost),
+                  },
+                },
+                withSessionOptions(session),
+              );
+            }
+          }
+
+          const approvalStatus = action === "approve" ? "approved" : "rejected";
+          await transactionsCol.updateOne(
+            { id },
+            {
+              $set: {
+                approvalStatus,
+                approvalNote: note,
+                approvedBy: String(auth.payload?.username || ""),
+                approvedAt: new Date().toISOString(),
+              },
+            },
+            withSessionOptions(session),
+          );
+
+          return transactionsCol.findOne({ id }, withSessionOptions(session));
+        });
+
+        if (!updated) return sendJson(res, 404, { error: "Transaksi tidak ditemukan" });
+
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: action === "approve" ? "transactions.approve" : "transactions.reject",
+          target: "transactions",
+          meta: {
+            id,
+            note,
+          },
+        });
+
+        return sendJson(res, 200, updated);
       }
 
       if (method === "DELETE" && parts.length === 2) {
@@ -883,27 +992,32 @@ export default async function handler(req, res) {
             throw new Error("Gunakan hapus riwayat penerimaan untuk transaksi masuk");
           }
 
-          for (const line of Array.isArray(existing.items) ? existing.items : []) {
-            const itemId = Number(line?.itemId);
-            const qtyRestore = Number(line?.qty);
-            if (!Number.isInteger(itemId) || !Number.isInteger(qtyRestore) || qtyRestore <= 0) continue;
+          const approvalStatus = String(existing.approvalStatus || "approved").toLowerCase();
+          const stockWasDeducted = approvalStatus === "approved" || !existing.approvalStatus;
 
-            const item = await itemsCol.findOne({ id: itemId }, withSessionOptions(session));
-            if (!item) continue;
+          if (stockWasDeducted) {
+            for (const line of Array.isArray(existing.items) ? existing.items : []) {
+              const itemId = Number(line?.itemId);
+              const qtyRestore = Number(line?.qty);
+              if (!Number.isInteger(itemId) || !Number.isInteger(qtyRestore) || qtyRestore <= 0) continue;
 
-            const averageCost = roundMoney(line?.averageCost ?? item.averageCost);
-            const nextQty = toNumber(item.stock, 0) + qtyRestore;
-            await itemsCol.updateOne(
-              { id: itemId },
-              {
-                $set: {
-                  stock: nextQty,
-                  averageCost,
-                  totalValue: roundMoney(nextQty * averageCost),
+              const item = await itemsCol.findOne({ id: itemId }, withSessionOptions(session));
+              if (!item) continue;
+
+              const averageCost = roundMoney(line?.averageCost ?? item.averageCost);
+              const nextQty = toNumber(item.stock, 0) + qtyRestore;
+              await itemsCol.updateOne(
+                { id: itemId },
+                {
+                  $set: {
+                    stock: nextQty,
+                    averageCost,
+                    totalValue: roundMoney(nextQty * averageCost),
+                  },
                 },
-              },
-              withSessionOptions(session),
-            );
+                withSessionOptions(session),
+              );
+            }
           }
 
           await transactionsCol.deleteOne({ id }, withSessionOptions(session));
