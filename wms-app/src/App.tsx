@@ -334,6 +334,8 @@ export default function App(){
     setLoggedIn(false);
     setUser(null);
     setAuthToken("");
+    setLoadingCount(0);
+    setLoadingText("Sedang memproses data");
     localStorage.removeItem("wms_user");
     localStorage.removeItem("wms_token");
     setTab("login");
@@ -380,7 +382,8 @@ export default function App(){
     const mapped = pathToTab(currentPath);
 
     if (!loggedIn) {
-      if (!mapped) window.history.replaceState(null, "", "/Login");
+      if (tab !== "login") setTab("login");
+      if (mapped !== "login") window.history.replaceState(null, "", "/Login");
       return;
     }
 
