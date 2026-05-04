@@ -584,6 +584,20 @@ export default function App(){
     Lainnya:"#64748b",
   };
 
+  const reportProjectUsage=(()=>{
+    const map:Record<string,number>={};
+    reportOut.forEach(t=>{
+      const key=t.workOrder?String(t.workOrder).trim():null;
+      if(!key) return;
+      toSafeRows(t.items).forEach(it=>{
+        map[key]=(map[key]||0)+Number(it.qty||0);
+      });
+    });
+    const rows=Object.entries(map).map(([name,total])=>({name,total})).sort((a,b)=>b.total-a.total).slice(0,8);
+    const max=Math.max(1,...rows.map(r=>r.total));
+    return rows.map(r=>({...r,pct:Math.round((r.total/max)*100)}));
+  })();
+
   useEffect(()=>{document.body.style.background=T.bg;document.body.style.transition="background .4s,color .3s";},[dark]);
   useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize]);
   useEffect(()=>{if(historyOutPage>(historyTab==="all"?allTotalPages:outTotalPages))setHistoryOutPage(historyTab==="all"?allTotalPages:outTotalPages);},[historyOutPage,outTotalPages,allTotalPages,historyTab]);
@@ -2199,6 +2213,28 @@ export default function App(){
                                 const pct=clamp01(val/Math.max(1,row.total))*100;
                                 return <div key={`${row.dept}-${cat}`} title={`${cat}: ${val} unit`} style={{width:`${pct}%`,background:reportCatPalette[cat]||"#64748b"}}/>;
                               })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
+                </div>
+
+                <div className="card" style={{padding:"16px 18px"}}>
+                  <div className="dash-panel-title" style={{marginBottom:12}}>Project yang Paling Sering Dipakai</div>
+                  {reportProjectUsage.length===0
+                    ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan dengan project</div>
+                    :(
+                      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                        {reportProjectUsage.map((row,idx)=>(
+                          <div key={row.name} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 12px"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:6}}>
+                              <div style={{fontSize:12.5,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{idx+1}. {row.name}</div>
+                              <div style={{fontSize:11.5,fontWeight:800,color:T.navActiveText,whiteSpace:"nowrap"}}>{row.total} unit</div>
+                            </div>
+                            <div style={{height:8,borderRadius:10,background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)",overflow:"hidden"}}>
+                              <div style={{height:"100%",width:`${row.pct}%`,background:`linear-gradient(90deg,#f59e0b,#fbbf24)`,borderRadius:10,transition:"width .35s ease"}}/>
                             </div>
                           </div>
                         ))}
