@@ -927,7 +927,9 @@ export default function App(){
     const processTransactionApproval=async(id,action)=>{
       if(!isAdmin){toast$("Hanya admin yang boleh approval transaksi","err");return;}
       const actionLabel=action==="approve"?"approve":"reject";
-      const note=window.prompt(`Catatan ${actionLabel} (opsional):`,"")||"";
+      const yes=window.confirm(actionLabel==="approve"?"Approve transaksi ini?":"Reject transaksi ini?");
+      if(!yes) return;
+      const note="";
       await withLoading(async()=>{
         try{
           const r=await apiFetch(`/transactions/${id}/approval`,{
@@ -2423,8 +2425,8 @@ export default function App(){
                                 <div style={{fontSize:14,fontWeight:900,color:T.amber}}>{fmtMoney(totalCostRow)}</div>
                               </div>
                               <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-                                <button onClick={()=>processTransactionApproval(t.id,"approve")} style={{background:T.greenBg,border:`1px solid ${T.greenBorder}`,color:T.greenText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>✅ Approve</button>
-                                <button onClick={()=>processTransactionApproval(t.id,"reject")} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>⛔ Reject</button>
+                                <button type="button" onClick={()=>processTransactionApproval(t.id,"approve")} style={{background:T.greenBg,border:`1px solid ${T.greenBorder}`,color:T.greenText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>✅ Approve</button>
+                                <button type="button" onClick={()=>processTransactionApproval(t.id,"reject")} style={{background:T.redBg,border:`1px solid ${T.redBorder}`,color:T.redText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>⛔ Reject</button>
                               </div>
                             </div>
                           </div>
