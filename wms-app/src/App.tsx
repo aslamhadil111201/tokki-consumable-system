@@ -321,6 +321,11 @@ export default function App(){
   const [auditTo,setAuditTo]=useState("");
   const [pendingApprovalCount,setPendingApprovalCount]=useState(0);
   const [approvalBusyKey,setApprovalBusyKey]=useState("");
+  const [slaTick,setSlaTick]=useState(0);
+  const prevPendingCountRef=useRef(-1);
+  const prevTrxStatusRef=useRef<Record<string,string>>({});
+  const isFirstTrxFetchRef=useRef(true);
+  const userRef=useRef(user);
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [idleWarning,setIdleWarning]=useState(false);
   const [idleCountdown,setIdleCountdown]=useState(60);
@@ -666,6 +671,12 @@ export default function App(){
         if(canceled) return;
         const nextTotal=Number(data?.total);
         if(Number.isFinite(nextTotal)){
+          if(prevPendingCountRef.current>=0&&nextTotal>prevPendingCountRef.current){
+            const diff=nextTotal-prevPendingCountRef.current;
+            setToast({msg:`🔔 ${diff} permintaan baru menunggu approval`,type:"ok"});
+            setTimeout(()=>setToast(null),4500);
+          }
+          prevPendingCountRef.current=nextTotal;
           setPendingApprovalCount(nextTotal);
           return;
         }
@@ -760,6 +771,44 @@ export default function App(){
       clearAllTimers();
     };
   },[loggedIn,logout]);
+
+  // ── SYNC userRef ──────────────────────────────────────────────────
+  useEffect(()=>{userRef.current=user;},[user]);
+
+  // ── SLA TICK (every 30s) for pending card age display ─────────────
+  useEffect(()=>{
+    if(!loggedIn) return;
+    const iv=window.setInterval(()=>setSlaTick(c=>c+1),30000);
+    return()=>window.clearInterval(iv);
+  },[loggedIn]);
+
+  // ── OPERATOR NOTIFICATION: detect when own pending trx changes status ──
+  useEffect(()=>{
+    if(!loggedIn) return;
+    if(isFirstTrxFetchRef.current){
+      isFirstTrxFetchRef.current=false;
+      prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+      return;
+    }
+    const role=(userRef.current?.role||"").toLowerCase();
+    if(role==="operator"){
+      const prev=prevTrxStatusRef.current;
+      trx.forEach((t:any)=>{
+        const id=String(t.id);
+        const prevS=prev[id];
+        const currS=trxApprovalStatus(t);
+        if(prevS==="pending"&&currS==="approved"){
+          setToast({msg:`✅ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  telah di-approve`,type:"ok"});
+          setTimeout(()=>setToast(null),4000);
+        } else if(prevS==="pending"&&currS==="rejected"){
+          setToast({msg:`⛔ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  ditolak`,type:"err"});
+          setTimeout(()=>setToast(null),4000);
+        }
+      });
+    }
+    prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+  },[trx]);
+
   const addToCart=()=>{
     if(!pickerItem||!pickerQty||+pickerQty<1){toast$("Pilih barang dan isi jumlah","err");return;}
     const it=items.find(i=>i.id===+pickerItem);if(!it){toast$("Barang tidak ditemukan","err");return;}
@@ -1110,6 +1159,22 @@ export default function App(){
         {reason&&<Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>Alasan: {reason}</Badge>}
       </div>
     );
+  };
+
+  // ── SLA helper: compute age + urgency of a pending transaction ────
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const getSlaInfo=(t:any,_tick:number)=>{
+    // t.id is a unix timestamp in ms (used as primary key)
+    const createdMs=t.createdAt?new Date(t.createdAt).getTime():Number(t.id)||0;
+    if(!createdMs||createdMs>Date.now()+60000) return{label:"",urgency:"normal" as const,ageMin:0};
+    const ageMs=Date.now()-createdMs;
+    const ageMin=Math.floor(ageMs/60000);
+    let label="";
+    if(ageMin<1) label="baru saja";
+    else if(ageMin<60) label=`${ageMin} mnt`;
+    else{const h=Math.floor(ageMin/60);const m=ageMin%60;label=m>0?`${h}j ${m}m`:`${h} jam`;}
+    const urgency=ageMin>=30?"critical":ageMin>=15?"warning":"normal";
+    return{label,urgency,ageMin};
   };
 
   const exportTransactionsExcel=()=>{
@@ -2468,11 +2533,17 @@ export default function App(){
                       :filteredPending.map((t:any)=>{
                         const totalUnits=(t.items||[]).reduce((a:number,i:any)=>a+Number(i.qty||0),0);
                         const totalCostRow=Number(t.totalCostOut??(t.items||[]).reduce((acc:number,it:any)=>{const avg=Number(it.averageCost??itemMap[Number(it.itemId)]?.averageCost??0);return acc+(Number(it.qty||0)*avg);},0));
+                        const sla=getSlaInfo(t,slaTick);
+                        const slaColor=sla.urgency==="critical"?T.red:sla.urgency==="warning"?"#f97316":T.amber;
+                        const slaIcon=sla.urgency==="critical"?"🔴":sla.urgency==="warning"?"⚠️":"⏱";
+                        const slaBorderLeft=`4px solid ${slaColor}`;
+                        const slaCardBg=sla.urgency==="critical"?`linear-gradient(90deg,rgba(239,68,68,0.07) 0%,transparent 120px)`:sla.urgency==="warning"?`linear-gradient(90deg,rgba(249,115,22,0.07) 0%,transparent 120px)`:"none";
                         return(
-                          <div key={t.id} style={{display:"flex",alignItems:"stretch",gap:0,background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${T.amber}`,borderRadius:14,marginBottom:8,overflow:"hidden",boxShadow:T.shadowSm}}>
+                          <div key={t.id} style={{display:"flex",alignItems:"stretch",gap:0,background:T.card,backgroundImage:slaCardBg,border:`1px solid ${sla.urgency==="critical"?T.redBorder:sla.urgency==="warning"?"rgba(249,115,22,0.3)":T.border}`,borderLeft:slaBorderLeft,borderRadius:14,marginBottom:8,overflow:"hidden",boxShadow:T.shadowSm}}>
                             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"14px 12px",gap:5,minWidth:70,flexShrink:0}}>
-                              <div style={{width:48,height:48,borderRadius:"50%",background:T.amberBg,border:`2px solid ${T.amber}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,lineHeight:1}}>⏳</div>
-                              <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:T.amber,textTransform:"uppercase"}}>PENDING</span>
+                              <div style={{width:48,height:48,borderRadius:"50%",background:sla.urgency==="critical"?T.redBg:T.amberBg,border:`2px solid ${slaColor}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,lineHeight:1}}>⏳</div>
+                              <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:slaColor,textTransform:"uppercase"}}>PENDING</span>
+                              {sla.label&&<span style={{fontSize:9,fontWeight:800,color:slaColor,textAlign:"center",lineHeight:1.2}}>{slaIcon} {sla.label}</span>}
                             </div>
                             <div className="trx-row-inner">
                               <div className="trx-col-name">
@@ -2507,7 +2578,8 @@ export default function App(){
                               </div>
                               <div className="trx-col-total">
                                 <div style={{fontSize:10,color:T.muted,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>Total</div>
-                                <div style={{fontSize:14,fontWeight:900,color:T.amber}}>{fmtMoney(totalCostRow)}</div>
+                                <div style={{fontSize:14,fontWeight:900,color:slaColor}}>{fmtMoney(totalCostRow)}</div>
+                                {sla.urgency!=="normal"&&<div style={{fontSize:9,fontWeight:700,color:slaColor,marginTop:3}}>{sla.urgency==="critical"?"🚨 Segera diproses!":"⚠ Menunggu lama"}</div>}
                               </div>
                               <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
                                 <button type="button" disabled={Boolean(approvalBusyKey)} onClick={()=>processTransactionApproval(t.id,"approve")} style={{background:T.greenBg,border:`1px solid ${T.greenBorder}`,color:T.greenText,borderRadius:8,padding:"7px 10px",fontSize:11,fontWeight:700,cursor:approvalBusyKey?"not-allowed":"pointer",whiteSpace:"nowrap",opacity:approvalBusyKey?0.65:1}}>{approvalBusyKey===`${t.id}:approve`?"Memproses...":"✅ Approve"}</button>
