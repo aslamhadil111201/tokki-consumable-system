@@ -1512,7 +1512,7 @@ export default function App(){
     .sb-footer{margin-top:auto;padding-top:14px;border-top:1px solid ${T.border};flex-shrink:0}
 
     /* MAIN */
-    .main{flex:1;display:flex;flex-direction:column;min-width:0}
+    .main{flex:1;display:flex;flex-direction:column;min-width:0;width:100%;overflow-x:hidden}
     .topbar{height:64px;background:${T.topbarBg};border-bottom:1px solid ${T.border};padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
     .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;line-height:1.15;margin:0}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
@@ -1737,7 +1737,8 @@ export default function App(){
       .tb-reset-dummy{display:none}
       .nav-item.mobile-logout{display:flex}
       .body-area{padding:14px 12px 40px}
-      .stock-g{grid-template-columns:1fr 1fr}
+      .stock-g{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .stats-g{grid-template-columns:repeat(2,minmax(0,1fr))}
       .two-col{grid-template-columns:1fr}
       .mgrid{grid-template-columns:1fr}
       .mspan{grid-column:span 1}
@@ -1757,8 +1758,8 @@ export default function App(){
       .cat-btn{padding:6px 10px;font-size:11px}
       .toggle-lbl{display:none}
       .toggle-wrap.mini .toggle-lbl{display:inline-flex !important}
-      .stat-card{padding:16px 14px}
-      .card{padding:16px 16px}
+      .stat-card{padding:16px 14px;min-width:0}
+      .card{padding:16px 16px;min-width:0}
       .date-btn{display:none}
       .dash-hero{padding:14px 14px 16px;border-radius:18px;margin-bottom:14px}
       .dash-hero-title{font-size:17px}
@@ -1790,9 +1791,9 @@ export default function App(){
       .audit-row{flex-wrap:wrap;gap:10px;padding:12px 14px}
     }
     @media(max-width:420px){
-      .stats-g{grid-template-columns:1fr 1fr}
-      .approval-ov-g{grid-template-columns:1fr 1fr !important}
-      .hist-g{grid-template-columns:1fr 1fr}
+      .stats-g{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .approval-ov-g{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+      .hist-g{grid-template-columns:repeat(2,minmax(0,1fr))}
       .stock-g{grid-template-columns:1fr}
       .stk-card{padding:14px}
       .body-area{padding:12px 10px 36px}
