@@ -2711,6 +2711,7 @@ export default function App(){
 
                 <div className="card" style={{padding:"16px 18px",marginTop:20}}>
                   <div className="dash-panel-title" style={{marginBottom:12}}>Project yang Paling Sering Dipakai</div>
+                  {reportProjectUsage.length===0
                     ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan dengan project</div>
                     :(
                       <div style={{display:"flex",flexDirection:"column",gap:10}}>
