@@ -577,10 +577,22 @@ export default function App(){
     }).filter(row=>row.key<=todayStr());
   })();
   const reportTxnMax=Math.max(1,...reportTxnSeries.map(s=>Math.max(s.out,s.in)));
-  const reportTxnTitle=reportPeriod==="year"?"Bar Chart Transaksi per Bulan":"Bar Chart Transaksi per Hari";
+  const reportTxnTitle=reportPeriod==="week"
+    ?"Bar Chart Transaksi Harian (7 Hari Terakhir)"
+    :reportPeriod==="month"
+      ?"Bar Chart Transaksi Harian (Bulan Berjalan)"
+      :`Bar Chart Transaksi Bulanan (Tahun ${new Date().getFullYear()})`;
   const reportTrendTitle="Tren Penggunaan per Item";
-  const reportTrendCurrentLabel=reportPeriod==="year"?"Tahun ini":"Periode ini";
-  const reportTrendPrevLabel=reportPeriod==="year"?"Tahun lalu":"Periode lalu";
+  const reportTrendCurrentLabel=reportPeriod==="week"
+    ?"7 Hari Terakhir"
+    :reportPeriod==="month"
+      ?"Bulan Berjalan"
+      :"Tahun Berjalan";
+  const reportTrendPrevLabel=reportPeriod==="week"
+    ?"7 Hari Sebelumnya"
+    :reportPeriod==="month"
+      ?"Bulan Sebelumnya"
+      :"Tahun Sebelumnya";
 
   const reportRangeDays=(()=>{
     const start=new Date(reportRange.start);
