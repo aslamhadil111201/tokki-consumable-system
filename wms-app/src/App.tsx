@@ -1631,7 +1631,7 @@ export default function App(){
     .sec::after{content:'';flex:1;height:1px;background:${T.border}}
 
     .stats-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-    .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+    .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
     .report-botgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
     .stock-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
     .hist-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
