@@ -3753,6 +3753,43 @@ export default function App(){
         </div>
       )}
 
+      {/* MODAL PREVIEW LAMPIRAN */}
+      {attachPreview&&(
+        <div className="overlay" onClick={()=>setAttachPreview(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:680,width:"95%",padding:"28px 28px 22px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+              <div style={{fontSize:16,fontWeight:900,color:T.text}}>📎 Lampiran Dokumen</div>
+              <button onClick={()=>setAttachPreview(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:T.muted,lineHeight:1,padding:4}}>✕</button>
+            </div>
+            <div style={{fontSize:12,color:T.muted,marginBottom:14,wordBreak:"break-all"}}>{attachPreview.name}</div>
+            {attachPreview.mimeType==="application/pdf"?(
+              <div style={{textAlign:"center",padding:"32px 0",background:T.surface,borderRadius:12,border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:48,marginBottom:12}}>📄</div>
+                <div style={{fontSize:13,color:T.text,fontWeight:700,marginBottom:6}}>File PDF</div>
+                <div style={{fontSize:11.5,color:T.muted,marginBottom:20}}>Browser tidak dapat menampilkan PDF secara inline. Unduh untuk membuka.</div>
+                <a
+                  href={attachPreview.data}
+                  download={attachPreview.name}
+                  style={{display:"inline-flex",alignItems:"center",gap:8,background:T.primary,color:"#fff",borderRadius:10,padding:"10px 22px",fontSize:13,fontWeight:700,textDecoration:"none"}}
+                >⬇ Unduh PDF</a>
+              </div>
+            ):(
+              <div style={{textAlign:"center",borderRadius:12,overflow:"hidden",border:`1px solid ${T.border}`,background:T.surface,maxHeight:520,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <img src={attachPreview.data} alt="Lampiran" style={{maxWidth:"100%",maxHeight:520,objectFit:"contain"}}/>
+              </div>
+            )}
+            <div style={{display:"flex",justifyContent:"flex-end",marginTop:16,gap:10}}>
+              <a
+                href={attachPreview.data}
+                download={attachPreview.name}
+                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:8,border:`1px solid ${T.border}`,background:T.surface,color:T.text,fontSize:12,fontWeight:700,textDecoration:"none"}}
+              >⬇ Unduh</a>
+              <BtnG onClick={()=>setAttachPreview(null)}>Tutup</BtnG>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TOAST */}
       {toast&&<div className="toast" style={{background:toast.type==="err"?T.redBg:T.greenBg,border:`1px solid ${toast.type==="err"?T.redBorder:T.greenBorder}`,color:toast.type==="err"?T.redText:T.greenText}}>
         <span style={{fontSize:15}}>{toast.type==="err"?"✕":"✓"}</span>{toast.msg}
