@@ -2724,7 +2724,7 @@ export default function App(){
                       :(
                         <div style={{display:"flex",flexDirection:"column",gap:8}}>
                           {reportMonthlyTrend.filter(r=>{
-                            if(trendFilter==="up") return r.pctChange>0&&!r.isSpike;
+                            if(trendFilter==="up") return r.pctChange>0;
                             if(trendFilter==="down") return r.pctChange<0;
                             if(trendFilter==="spike") return r.isSpike;
                             return true;
