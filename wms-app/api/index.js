@@ -34,7 +34,7 @@ const sendStockAlertEmail = async (lowItems) => {
     const html = `
     <div style="font-family:'Segoe UI',sans-serif;max-width:600px;margin:0 auto;background:#f9fafb;padding:24px;border-radius:12px;">
       <div style="background:linear-gradient(135deg,#059669,#34d399);border-radius:10px;padding:20px 24px;margin-bottom:20px;">
-        <div style="font-size:22px;font-weight:800;color:#fff;">🏭 TOKKI WMS</div>
+        <div style="font-size:22px;font-weight:800;color:#fff;">🏭 TOKKI - WHS</div>
         <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px;">Notifikasi Restock Barang</div>
       </div>
       <div style="background:#fff;border-radius:10px;padding:20px 24px;border:1px solid #e5e7eb;margin-bottom:16px;">
@@ -68,7 +68,7 @@ const sendStockAlertEmail = async (lowItems) => {
       body: JSON.stringify({
         from: "onboarding@resend.dev",
         to: [ALERT_EMAIL],
-        subject: `⚠️ Alert Restock: ${lowItems.length} Item Perlu Ditindak — TOKKI WMS`,
+        subject: `⚠️ Alert Restock: ${lowItems.length} Item Perlu Ditindak — TOKKI - WHS`,
         html,
       }),
     });
