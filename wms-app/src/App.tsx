@@ -477,6 +477,21 @@ export default function App(){
   const totalOut=approvedOutTrx.reduce((a,t)=>a+t.items.reduce((b,i)=>b+i.qty,0),0);
   const totalIn=receives.reduce((a,r)=>a+r.qty,0);
   const itemMap=Object.fromEntries(items.map(i=>[Number(i.id),i]));
+  // ── Dashboard insight data ───────────────────────────────────────
+  const dashStockAman=items.filter(i=>Number(i.stock)>Number(i.minStock)).length;
+  const dashStockMenipis=items.filter(i=>Number(i.stock)>0&&Number(i.stock)<=Number(i.minStock)).length;
+  const dashStockHabis=items.filter(i=>Number(i.stock)===0).length;
+  const dashTotalStokPcs=items.reduce((a,i)=>a+Number(i.stock||0),0);
+  const dashTotalNilaiStok=items.reduce((a,it)=>a+(Number(it.stock||0)*Number(it.averageCost||it.lastPrice||0)),0);
+  const _d7s=new Date();_d7s.setDate(_d7s.getDate()-6);const dashLast7Start=isoDate(_d7s);
+  const dashLast7Days=Array.from({length:7}).map((_,idx)=>{const d=new Date();d.setDate(d.getDate()-(6-idx));return isoDate(d);});
+  const dashLast7OutQty=dashLast7Days.map(day=>approvedOutTrx.filter(t=>t.date===day).reduce((a,t)=>a+(t.items||[]).reduce((b,i)=>b+Number(i.qty||0),0),0));
+  const dashItemUsageMap:{[k:string]:number}={};
+  approvedOutTrx.filter(t=>t.date>=dashLast7Start).forEach(t=>(t.items||[]).forEach(it=>{const k=String(it.itemName||"");dashItemUsageMap[k]=(dashItemUsageMap[k]||0)+Number(it.qty||0);}));
+  const dashTopEntry=Object.entries(dashItemUsageMap).sort((a,b)=>b[1]-a[1])[0];
+  const dashTopItemName=dashTopEntry?.[0]||"-";
+  const dashTopItemQty=dashTopEntry?.[1]||0;
+  const dashRecentReceives=[...receives].sort((a,b)=>Number(b.id)-Number(a.id)).slice(0,4);
   const filtItems=items.filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()));
   const filtTrx=[...trx].reverse().filter(t=>!trxDate||t.date===trxDate);
   const dateMatch=(d)=>{
@@ -2225,28 +2240,123 @@ export default function App(){
                   </div>
                 </div>
 
-                <div className="stats-g">
+                {/* Insight cards */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
                   {[
-                    {label:"Total Item",val:items.length,sub:`${filtItems.length} tampilan`,dot:T.primary,icon:"📦"},
-                    {label:"Transaksi Hari Ini",val:todayTrx.length,sub:`${todayUnits} unit keluar`,dot:"#10b981",icon:"⤵"},
-                    {label:"Unit Keluar Hari Ini",val:todayUnits,sub:"unit total",dot:"#34d399",icon:"🧊"},
-                    {label:"Perlu Restok",val:lowStock.length,sub:"item alert",dot:lowStock.length>0?T.red:T.muted,icon:"🔔"},
-                  ].map((s,i)=>(
-                    <div key={i} className="stat-card">
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                        <div className="dash-stat" style={{gap:12}}>
-                          <div className="dash-stat-icon">{s.icon}</div>
-                          <div className="dash-stat-meta">
-                            <div className="dash-stat-label">{s.label}</div>
-                            <div className="dash-stat-value">{s.val}</div>
-                            <div className="dash-stat-sub">{s.sub}</div>
-                          </div>
-                        </div>
-                        <div style={{width:8,height:8,borderRadius:"50%",background:s.dot,boxShadow:`0 0 8px ${s.dot}`,marginLeft:8,marginTop:4,flexShrink:0}}/>
+                    {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang Hampir Habis",val:`${dashStockMenipis} Item`,sub:"Stok di bawah batas minimum",color:T.amber,onClick:()=>setTab("stock")},
+                    {icon:"📈",bg:T.greenBg,label:"Barang Paling Sering Keluar",val:dashTopItemName,sub:`${dashTopItemQty} pcs dalam 7 hari terakhir`,color:T.primaryLight,onClick:null},
+                    {icon:"📦",bg:dark?"rgba(96,165,250,0.12)":"#dbeafe",label:"Disarankan Restock",val:`${dashStockHabis} Item`,sub:"Stok habis, perlu restock",color:"#60a5fa",onClick:()=>setTab("stock")},
+                    {icon:"🕐",bg:dark?"rgba(167,139,250,0.12)":"#ede9fe",label:"Total Item",val:`${items.length} Item`,sub:"Semua item dalam inventaris",color:"#a78bfa",onClick:null},
+                  ].map((c,i)=>(
+                    <div key={i} className="stat-card" style={{display:"flex",alignItems:"flex-start",gap:12,cursor:c.onClick?"pointer":"default"}} onClick={c.onClick||undefined}>
+                      <div style={{width:38,height:38,borderRadius:10,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{c.icon}</div>
+                      <div style={{minWidth:0,flex:1}}>
+                        <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>{c.label}</div>
+                        <div style={{fontSize:16,fontWeight:800,color:c.color,wordBreak:"break-word",lineHeight:1.2,marginBottom:2}}>{c.val}</div>
+                        <div style={{fontSize:11,color:T.muted}}>{c.sub}</div>
                       </div>
                     </div>
                   ))}
                 </div>
+
+                {/* Charts 3-col */}
+                {(()=>{
+                  const R=40,C2=2*Math.PI*R;
+                  const dTotal=dashStockAman+dashStockMenipis+dashStockHabis||1;
+                  const donutSegs=[{count:dashStockAman,color:"#10b981"},{count:dashStockMenipis,color:"#f59e0b"},{count:dashStockHabis,color:"#ef4444"}];
+                  let cumLen=0;
+                  const renderedSegs=donutSegs.map(s=>{
+                    const len=(s.count/dTotal)*C2;
+                    const da=`${len} ${C2-len}`;
+                    const doff=-cumLen;
+                    cumLen+=len;
+                    return {color:s.color,da,doff};
+                  });
+                  const svgW=220,svgH=90;
+                  const maxQty=Math.max(...dashLast7OutQty,1);
+                  const linePoints=dashLast7OutQty.map((v,i)=>`${(i/6)*svgW},${svgH-(v/maxQty)*svgH*0.85}`).join(" ");
+                  const areaPoints=`0,${svgH} ${linePoints} ${svgW},${svgH}`;
+                  return(
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20}}>
+                      {/* Donut ringkasan stok */}
+                      <div className="card">
+                        <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Ringkasan Stok</div>
+                        <div style={{display:"flex",alignItems:"center",gap:16}}>
+                          <div style={{position:"relative",width:100,height:100,flexShrink:0}}>
+                            <svg width="100" height="100" viewBox="0 0 100 100">
+                              <circle cx="50" cy="50" r={R} fill="none" stroke={T.border} strokeWidth="14"/>
+                              {renderedSegs.map((s,i)=>(
+                                <circle key={i} cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth="14" strokeDasharray={s.da} strokeDashoffset={s.doff} transform="rotate(-90 50 50)"/>
+                              ))}
+                            </svg>
+                            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",pointerEvents:"none"}}>
+                              <div style={{fontSize:9,color:T.muted,lineHeight:1.3}}>Total</div>
+                              <div style={{fontSize:14,fontWeight:800,color:T.text,lineHeight:1.1}}>{dashTotalStokPcs.toLocaleString("id-ID")}</div>
+                              <div style={{fontSize:9,color:T.muted}}>pcs</div>
+                            </div>
+                          </div>
+                          <div style={{flex:1}}>
+                            {[{label:"Aman",color:"#10b981",count:dashStockAman},{label:"Menipis",color:"#f59e0b",count:dashStockMenipis},{label:"Habis",color:"#ef4444",count:dashStockHabis}].map((l,i)=>(
+                              <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,fontSize:12,color:T.muted}}>
+                                <div style={{width:10,height:10,borderRadius:"50%",background:l.color,flexShrink:0}}/>
+                                <div style={{flex:1}}>{l.label}</div>
+                                <div style={{fontWeight:700,color:T.text}}>{l.count}<span style={{fontSize:10,fontWeight:400,color:T.muted,marginLeft:3}}>item</span></div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua stok →</div>
+                      </div>
+                      {/* Line chart 7 hari */}
+                      <div className="card">
+                        <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:6}}>Trend Keluar (7 Hari Terakhir)</div>
+                        <div style={{display:"flex",gap:12,marginBottom:8,fontSize:11,color:T.muted}}>
+                          <span style={{display:"flex",alignItems:"center",gap:4}}>
+                            <span style={{width:20,height:2,background:T.primary,display:"inline-block",borderRadius:2}}/>Unit Keluar
+                          </span>
+                        </div>
+                        <svg width="100%" viewBox={`0 0 ${svgW} ${svgH+18}`} style={{overflow:"visible",display:"block"}}>
+                          {[0,1,2].map(i=>(
+                            <line key={i} x1="0" y1={(svgH*0.85/2)*i} x2={svgW} y2={(svgH*0.85/2)*i} stroke={T.border} strokeWidth="0.5" strokeDasharray="4 4"/>
+                          ))}
+                          <polygon points={areaPoints} fill={dark?"rgba(16,185,129,0.08)":T.greenBg}/>
+                          <polyline points={linePoints} fill="none" stroke={T.primary} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                          {dashLast7OutQty.map((v,i)=>(
+                            <circle key={i} cx={(i/6)*svgW} cy={svgH-(v/maxQty)*svgH*0.85} r="3" fill={T.primary}/>
+                          ))}
+                          {dashLast7Days.map((d,i)=>(
+                            <text key={i} x={(i/6)*svgW} y={svgH+14} textAnchor="middle" fontSize="8" fill={T.muted}>{d.slice(5).replace("-","/")}</text>
+                          ))}
+                        </svg>
+                        <div style={{fontSize:11,color:T.primary,marginTop:4,cursor:"pointer"}} onClick={()=>setTab("report")}>Lihat laporan lengkap →</div>
+                      </div>
+                      {/* Status stok */}
+                      <div className="card">
+                        <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Status Stok</div>
+                        {[
+                          {dot:"#10b981",name:"Aman",sub:"> Min Stok",count:dashStockAman,color:T.primaryLight},
+                          {dot:"#f59e0b",name:"Menipis",sub:"≤ Min Stok",count:dashStockMenipis,color:"#f59e0b"},
+                          {dot:"#ef4444",name:"Habis",sub:"Stok = 0",count:dashStockHabis,color:"#ef4444"},
+                        ].map((row,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:i<2?`1px solid ${T.border}`:"none"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <div style={{width:10,height:10,borderRadius:"50%",background:row.dot,flexShrink:0}}/>
+                              <div>
+                                <div style={{fontSize:13,color:T.text,fontWeight:600}}>{row.name}</div>
+                                <div style={{fontSize:11,color:T.muted}}>{row.sub}</div>
+                              </div>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <div style={{fontSize:14,fontWeight:700,color:row.color}}>{row.count} Item</div>
+                              <div style={{color:T.primary,fontSize:16,cursor:"pointer",lineHeight:1}} onClick={()=>setTab("stock")}>›</div>
+                            </div>
+                          </div>
+                        ))}
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua item →</div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {isAdmin&&(()=>{
                   const apTotal=trx.length;
@@ -2326,65 +2436,88 @@ export default function App(){
                   </div>
                 )}
 
-                <div className="two-col">
+                {/* Tables 2-col */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+                  {/* Barang Hampir Habis */}
                   <div className="card">
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                      <div className="dash-panel-title">📋 Transaksi Hari Ini</div>
-                      <button className="tb-btn" onClick={()=>setTab("history")} style={{fontSize:11,padding:"5px 11px"}}>Lihat semua →</button>
-                    </div>
-                    {todayTrx.length===0
-                      ?<div style={{textAlign:"center",padding:"34px 0",color:T.muted}}><div style={{fontSize:32,marginBottom:8}}>📭</div>Belum ada transaksi hari ini</div>
-                      :todayTrx.slice(0,4).map(t=>(
-                        <div key={t.id} className="dash-transaction-card">
-                          <div className="dash-avatar">{initials(t.taker)}</div>
-                          <div className="dash-transaction-main">
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
-                              <div style={{minWidth:0}}>
-                                <div className="dash-transaction-name">{t.taker}</div>
-                                <div className="dash-transaction-meta">{t.dept} · {t.time}</div>
-                              </div>
-                              <div className="dash-unit-pill">{t.items.reduce((a,i)=>a+i.qty,0)} unit</div>
-                            </div>
-                            <div className="dash-chip-row">
-                              {t.items.map((it,ii)=>(
-                                <span key={ii} className="dash-chip">
-                                  <span className="dash-chip-text">{it.itemName}</span>
-                                  <span>×{it.qty}</span>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                  <div className="card">
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,gap:10}}>
-                      <div className="dash-panel-title">🔔 Alert Stok</div>
-                      <button className="tb-btn" onClick={()=>setTab("stock")} style={{fontSize:11,padding:"5px 11px"}}>Lihat semua →</button>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                      <div style={{fontSize:14,fontWeight:700,color:T.text}}>Barang Hampir Habis</div>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,background:T.amberBg,color:T.amber,border:`1px solid ${T.amberBorder}`}}>{lowStock.length} Item</span>
                     </div>
                     {lowStock.length===0
-                      ?<div className="dash-alert-empty">
-                        <div className="dash-alert-visual">
-                          <span className="dash-alert-spark s1"/>
-                          <span className="dash-alert-spark s2"/>
-                          <span className="dash-alert-spark s3"/>
-                          <span className="dash-alert-spark s4"/>
-                          <div className="dash-alert-check">✓</div>
+                      ?<div style={{textAlign:"center",padding:"24px 0",color:T.muted}}><div style={{fontSize:28,marginBottom:6}}>✅</div>Semua stok aman</div>
+                      :(<>
+                        <div style={{display:"grid",gridTemplateColumns:"2fr 56px 64px 50px",gap:8,padding:"6px 0 8px",borderBottom:`1px solid ${T.border}`,fontSize:11,color:T.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>
+                          <span>Item</span><span>Stok</span><span>Min Stok</span><span>Satuan</span>
                         </div>
-                        <div style={{fontSize:15,color:T.text,fontWeight:800,marginBottom:6}}>Semua stok aman</div>
-                        <div style={{fontSize:12.5,color:T.muted,maxWidth:260,lineHeight:1.55}}>Tidak ada item yang perlu di-restok saat ini. Pertahankan stok tetap aman.</div>
-                      </div>
-                      :lowStock.slice(0,5).map(it=>{const s=stockStatus(it);return(
-                        <div key={it.id} className="al-row">
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:12.5,fontWeight:700,color:T.text}}>{it.name}</div>
-                            <div style={{fontSize:10.5,color:T.muted,marginTop:2}}>Sisa {it.stock} / min {it.minStock} {it.unit}</div>
-                            <Prog pct={it.minStock?it.stock/it.minStock*100:0} color={s.dot}/>
+                        {lowStock.slice(0,4).map(it=>{const s=stockStatus(it);return(
+                          <div key={it.id} style={{display:"grid",gridTemplateColumns:"2fr 56px 64px 50px",gap:8,padding:"8px 0",borderBottom:`1px solid ${T.border}`,alignItems:"center",fontSize:12,color:T.muted}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+                              <div style={{width:28,height:28,borderRadius:6,background:T.navActive,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>📦</div>
+                              <div style={{minWidth:0}}>
+                                <div style={{fontSize:12,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.name}</div>
+                                <div style={{fontSize:10,color:T.muted}}>{it.category||""}</div>
+                              </div>
+                            </div>
+                            <span style={{color:s.dot,fontWeight:700}}>{it.stock}</span>
+                            <span>{it.minStock}</span>
+                            <span>{it.unit}</span>
                           </div>
-                          <Badge bg={s.bg} color={s.text} border={s.border}><span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block"}}/> {s.label}</Badge>
-                        </div>
-                      );})}
+                        );})}
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua barang hampir habis →</div>
+                      </>)
+                    }
                   </div>
+                  {/* Barang Terakhir Diterima */}
+                  <div className="card">
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                      <div style={{fontSize:14,fontWeight:700,color:T.text}}>Barang Terakhir Diterima</div>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,background:T.navActive,color:T.navActiveText,border:`1px solid ${T.navActiveBorder}`}}>{dashRecentReceives.length} Item</span>
+                    </div>
+                    {dashRecentReceives.length===0
+                      ?<div style={{textAlign:"center",padding:"24px 0",color:T.muted}}><div style={{fontSize:28,marginBottom:6}}>📭</div>Belum ada penerimaan</div>
+                      :(<>
+                        <div style={{display:"grid",gridTemplateColumns:"2fr 68px 90px 56px",gap:8,padding:"6px 0 8px",borderBottom:`1px solid ${T.border}`,fontSize:11,color:T.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>
+                          <span>Item</span><span>Jumlah</span><span>Tanggal</span><span>Oleh</span>
+                        </div>
+                        {dashRecentReceives.map((r,i)=>(
+                          <div key={r.id} style={{display:"grid",gridTemplateColumns:"2fr 68px 90px 56px",gap:8,padding:"8px 0",borderBottom:i<dashRecentReceives.length-1?`1px solid ${T.border}`:"none",alignItems:"center",fontSize:12,color:T.muted}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+                              <div style={{width:28,height:28,borderRadius:6,background:T.navActive,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>📥</div>
+                              <div style={{minWidth:0}}>
+                                <div style={{fontSize:12,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.itemName}</div>
+                                <div style={{fontSize:10,color:T.muted}}>{r.category||""}</div>
+                              </div>
+                            </div>
+                            <span style={{color:T.text,fontWeight:600}}>{r.qty} {r.unit||"pcs"}</span>
+                            <div>
+                              <div style={{color:T.text,fontSize:11}}>{r.date||""}</div>
+                              <div style={{fontSize:10,color:T.muted}}>{r.time||""}</div>
+                            </div>
+                            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.admin||r.receivedBy||"-"}</span>
+                          </div>
+                        ))}
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>{setTab("history");setHistoryTab("in");}}>Lihat riwayat penerimaan →</div>
+                      </>)
+                    }
+                  </div>
+                </div>
+
+                {/* Footer bar */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+                  {[
+                    {icon:"📅",label:"Update Terakhir",val:todayFmt()},
+                    {icon:"🔄",label:"Total Transaksi Hari Ini",val:`${todayTrx.length} Transaksi`},
+                    {icon:"💰",label:"Total Nilai Stok (Est.)",val:fmtMoney(dashTotalNilaiStok)},
+                  ].map((f,i)=>(
+                    <div key={i} className="stat-card" style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:36,height:36,borderRadius:8,background:T.greenBg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{f.icon}</div>
+                      <div>
+                        <div style={{fontSize:11,color:T.muted,marginBottom:3}}>{f.label}</div>
+                        <div style={{fontSize:14,fontWeight:700,color:T.primary}}>{f.val}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
