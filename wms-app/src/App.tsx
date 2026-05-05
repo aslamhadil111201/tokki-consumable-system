@@ -1512,13 +1512,13 @@ export default function App(){
   const CSS=`
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body,#root{max-width:100%;overflow-x:hidden}
+    html,body,#root{height:100%;max-width:100%;overflow:hidden}
     body{font-family:'Plus Jakarta Sans',sans-serif;background:${T.bg};color:${T.text};min-height:100vh;-webkit-font-smoothing:antialiased;transition:background .4s,color .3s;font-size:13px;line-height:1.6}
     ::-webkit-scrollbar{width:4px;height:4px}
     ::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:${T.border};border-radius:4px}
 
-    .shell{display:flex;min-height:100vh;position:relative;z-index:1;width:100%;max-width:100%;overflow-x:hidden}
+    .shell{display:flex;height:100vh;position:relative;z-index:1;width:100%;max-width:100%;overflow:hidden}
 
     /* SIDEBAR */
     .sidebar{width:228px;flex-shrink:0;background:${T.sidebarBg};border-right:1px solid ${T.border};display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:hidden;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);transition:transform .28s cubic-bezier(.4,0,.2,1),width .22s ease;z-index:100}
@@ -1550,7 +1550,7 @@ export default function App(){
     .sb-footer{padding:14px 0 20px;border-top:1px solid ${T.border};flex-shrink:0}
 
     /* MAIN */
-    .main{flex:1;display:flex;flex-direction:column;min-width:0;width:100%;overflow-x:hidden}
+    .main{flex:1;display:flex;flex-direction:column;min-width:0;width:100%;overflow-x:hidden;overflow-y:auto;height:100vh}
     .topbar{height:64px;background:${T.topbarBg};border-bottom:1px solid ${T.border};padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
     .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;line-height:1.15;margin:0}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
