@@ -311,7 +311,7 @@ export default function App(){
   const [historyQuery,setHistoryQuery]=useState("");
   const [historyApprovalStatus,setHistoryApprovalStatus]=useState("all");
   const [addFormDragOver,setAddFormDragOver]=useState(false);
-  const [attachPreview,setAttachPreview]=useState<{data:string;name:string;mimeType:string;receiveId:number}|null>(null);
+  const [attachPreview,setAttachPreview]=useState<{blobUrl:string;data:string;name:string;mimeType:string;receiveId:number}|null>(null);
   const [historyFrom,setHistoryFrom]=useState("");
   const [historyTo,setHistoryTo]=useState("");
   const [historyOutPage,setHistoryOutPage]=useState(1);
@@ -900,7 +900,14 @@ export default function App(){
         const mimeMatch=doc.attachment.match(/^data:([^;]+);/);
         const mimeType=mimeMatch?mimeMatch[1]:"application/octet-stream";
         const name=`lampiran-penerimaan-${receiveId}.${mimeType==="application/pdf"?"pdf":mimeType==="image/png"?"png":"jpg"}`;
-        setAttachPreview({data:doc.attachment,name,mimeType,receiveId});
+        // konvert base64 → Blob URL agar bisa ditampilkan di semua browser
+        const base64=doc.attachment.split(",")[1];
+        const bytes=atob(base64);
+        const arr=new Uint8Array(bytes.length);
+        for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
+        const blob=new Blob([arr],{type:mimeType});
+        const blobUrl=URL.createObjectURL(blob);
+        setAttachPreview({blobUrl,data:doc.attachment,name,mimeType,receiveId});
       }catch{toast$("Gagal memuat lampiran","err");}
     },"Memuat lampiran");
   };
@@ -3755,22 +3762,22 @@ export default function App(){
 
       {/* MODAL PREVIEW LAMPIRAN */}
       {attachPreview&&(
-        <div className="overlay" onClick={()=>setAttachPreview(null)}>
+        <div className="overlay" onClick={()=>{URL.revokeObjectURL(attachPreview.blobUrl);setAttachPreview(null);}}>  
           <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:680,width:"95%",padding:"28px 28px 22px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
               <div style={{fontSize:16,fontWeight:900,color:T.text}}>📎 Lampiran Dokumen</div>
-              <button onClick={()=>setAttachPreview(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:T.muted,lineHeight:1,padding:4}}>✕</button>
+              <button onClick={()=>{URL.revokeObjectURL(attachPreview.blobUrl);setAttachPreview(null);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:T.muted,lineHeight:1,padding:4}}>✕</button>
             </div>
             <div style={{fontSize:12,color:T.muted,marginBottom:14,wordBreak:"break-all"}}>{attachPreview.name}</div>
             {attachPreview.mimeType==="application/pdf"?(
               <iframe
-                src={attachPreview.data}
+                src={attachPreview.blobUrl}
                 title={attachPreview.name}
                 style={{width:"100%",height:520,border:`1px solid ${T.border}`,borderRadius:12,display:"block"}}
               />
             ):(
               <div style={{textAlign:"center",borderRadius:12,overflow:"hidden",border:`1px solid ${T.border}`,background:T.surface,maxHeight:520,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <img src={attachPreview.data} alt="Lampiran" style={{maxWidth:"100%",maxHeight:520,objectFit:"contain"}}/>
+                <img src={attachPreview.blobUrl} alt="Lampiran" style={{maxWidth:"100%",maxHeight:520,objectFit:"contain"}}/>
               </div>
             )}
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:16,gap:10}}>
@@ -3779,7 +3786,7 @@ export default function App(){
                 download={attachPreview.name}
                 style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:8,border:`1px solid ${T.border}`,background:T.surface,color:T.text,fontSize:12,fontWeight:700,textDecoration:"none"}}
               >⬇ Unduh</a>
-              <BtnG onClick={()=>setAttachPreview(null)}>Tutup</BtnG>
+              <BtnG onClick={()=>{URL.revokeObjectURL(attachPreview.blobUrl);setAttachPreview(null);}}>Tutup</BtnG>
             </div>
           </div>
         </div>
