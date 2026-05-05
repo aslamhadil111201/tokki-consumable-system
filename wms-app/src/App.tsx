@@ -2676,8 +2676,8 @@ export default function App(){
                   ))}
                 </div>
 
-                <div className="two-col" style={{marginBottom:16}}>
-                  <div className="card" style={{padding:"16px 18px"}}>
+                <div className="two-col" style={{marginBottom:16,alignItems:"start"}}>
+                  <div className="card" style={{padding:"16px 18px",alignSelf:"start"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                       <div className="dash-panel-title">Bar Chart Transaksi per Hari</div>
                       <div style={{display:"flex",gap:10,fontSize:11.5,color:T.muted,fontWeight:700}}>
