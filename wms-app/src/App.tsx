@@ -593,7 +593,7 @@ export default function App(){
     :reportPeriod==="month"
       ?"Bulan Sebelumnya"
       :"Tahun Sebelumnya";
-  const reportTrendMaxVisibleRows=6;
+  const reportTrendMaxVisibleRows=5;
   const reportTrendRowHeightPx=78;
   const reportTrendScrollMaxHeight=reportTrendMaxVisibleRows*reportTrendRowHeightPx;
 
