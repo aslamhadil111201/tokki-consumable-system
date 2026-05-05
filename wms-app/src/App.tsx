@@ -2676,8 +2676,8 @@ export default function App(){
                   ))}
                 </div>
 
-                <div className="two-col" style={{marginBottom:16,alignItems:"start"}}>
-                  <div className="card" style={{padding:"16px 18px",alignSelf:"start"}}>
+                <div className="two-col" style={{marginBottom:16}}>
+                  <div className="card" style={{padding:"16px 18px"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                       <div className="dash-panel-title">Bar Chart Transaksi per Hari</div>
                       <div style={{display:"flex",gap:10,fontSize:11.5,color:T.muted,fontWeight:700}}>
@@ -2722,7 +2722,7 @@ export default function App(){
                     {reportMonthlyTrend.length===0
                       ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan bulan ini</div>
                       :(
-                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:360,overflowY:"auto",paddingRight:4}}>
                           {reportMonthlyTrend.filter(r=>{
                             if(trendFilter==="up") return r.pctChange>0;
                             if(trendFilter==="down") return r.pctChange<0;
