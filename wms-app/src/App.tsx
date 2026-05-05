@@ -486,7 +486,7 @@ export default function App(){
   const _d7s=new Date();_d7s.setDate(_d7s.getDate()-6);const dashLast7Start=isoDate(_d7s);
   const dashLast7Days=Array.from({length:7}).map((_,idx)=>{const d=new Date();d.setDate(d.getDate()-(6-idx));return isoDate(d);});
   const dashLast7OutQty=dashLast7Days.map(day=>approvedOutTrx.filter(t=>t.date===day).reduce((a,t)=>a+(t.items||[]).reduce((b,i)=>b+Number(i.qty||0),0),0));
-  const dashItemUsageMap:{[k:string]:number}={};
+  const dashItemUsageMap={};
   approvedOutTrx.filter(t=>t.date>=dashLast7Start).forEach(t=>(t.items||[]).forEach(it=>{const k=String(it.itemName||"");dashItemUsageMap[k]=(dashItemUsageMap[k]||0)+Number(it.qty||0);}));
   const dashTopEntry=Object.entries(dashItemUsageMap).sort((a,b)=>b[1]-a[1])[0];
   const dashTopItemName=dashTopEntry?.[0]||"-";
