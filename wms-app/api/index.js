@@ -46,7 +46,7 @@ const sendStockAlertEmail = async (lowItems) => {
         <p style="margin:0 0 8px;color:#374151;font-size:14px;">Halo Admin,</p>
         <p style="margin:0 0 14px;color:#374151;font-size:14px;">Terdapat <strong>${lowItems.length} item</strong> yang memerlukan restock segera:</p>
         <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-          <table style="width:100%;min-width:320px;border-collapse:collapse;font-size:12px;color:#374151;table-layout:fixed;">
+          <table style="width:100%;min-width:480px;border-collapse:collapse;font-size:12px;color:#374151;table-layout:fixed;">
             <colgroup>
               <col style="width:30%"><col style="width:20%"><col style="width:18%"><col style="width:16%"><col style="width:16%">
             </colgroup>
