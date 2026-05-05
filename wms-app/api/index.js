@@ -23,46 +23,51 @@ const sendStockAlertEmail = async (lowItems) => {
     const rows = lowItems.map(it => {
       const s = Number(it.stock);
       const ms = Number(it.minStock);
-      let status, stockColor;
-      if (s === 0) { status = "🔴 HABIS"; stockColor = "#dc2626"; }
-      else if (s <= ms) { status = "🟡 MENIPIS"; stockColor = "#d97706"; }
-      else { status = "🟠 MENDEKATI"; stockColor = "#ea580c"; }
+      let status, statusBg, statusColor, stockColor;
+      if (s === 0) { status = "HABIS"; statusBg = "#fee2e2"; statusColor = "#dc2626"; stockColor = "#dc2626"; }
+      else if (s <= ms) { status = "MENIPIS"; statusBg = "#fef9c3"; statusColor = "#92400e"; stockColor = "#d97706"; }
+      else { status = "MENDEKATI"; statusBg = "#ffedd5"; statusColor = "#9a3412"; stockColor = "#ea580c"; }
       return `<tr style="border-bottom:1px solid #e5e7eb;">
-        <td style="padding:10px 12px;font-weight:600;color:#111;">${it.name}</td>
-        <td style="padding:10px 12px;text-align:center;">${it.category || "-"}</td>
-        <td style="padding:10px 12px;text-align:center;font-weight:700;color:${stockColor};">${it.stock} ${it.unit || "pcs"}</td>
-        <td style="padding:10px 12px;text-align:center;">${it.minStock} ${it.unit || "pcs"}</td>
-        <td style="padding:10px 12px;text-align:center;">${status}</td>
+        <td style="padding:8px 8px;font-weight:600;color:#111;word-break:break-word;max-width:120px;">${it.name}</td>
+        <td style="padding:8px 6px;text-align:center;color:#6b7280;font-size:12px;">${it.category || "-"}</td>
+        <td style="padding:8px 6px;text-align:center;font-weight:700;color:${stockColor};white-space:nowrap;">${it.stock} ${it.unit || "pcs"}</td>
+        <td style="padding:8px 6px;text-align:center;white-space:nowrap;">${it.minStock} ${it.unit || "pcs"}</td>
+        <td style="padding:8px 6px;text-align:center;"><span style="background:${statusBg};color:${statusColor};border-radius:4px;padding:3px 7px;font-size:11px;font-weight:700;white-space:nowrap;">${status}</span></td>
       </tr>`;
     }).join("");
 
-    const html = `
-    <div style="font-family:'Segoe UI',sans-serif;max-width:600px;margin:0 auto;background:#f9fafb;padding:24px;border-radius:12px;">
-      <div style="background:linear-gradient(135deg,#059669,#34d399);border-radius:10px;padding:20px 24px;margin-bottom:20px;">
-        <div style="font-size:22px;font-weight:800;color:#fff;">🏭 TOKKI - WHS</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px;">Notifikasi Restock Barang</div>
+    const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"></head><body style="margin:0;padding:0;background:#f3f4f6;">
+    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:16px auto;background:#f9fafb;padding:16px;border-radius:12px;box-sizing:border-box;">
+      <div style="background:linear-gradient(135deg,#059669,#34d399);border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+        <div style="font-size:20px;font-weight:800;color:#fff;">🏭 TOKKI - WHS</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:4px;">Notifikasi Restock Barang</div>
       </div>
-      <div style="background:#fff;border-radius:10px;padding:20px 24px;border:1px solid #e5e7eb;margin-bottom:16px;">
-        <p style="margin:0 0 12px;color:#374151;font-size:14px;">Halo Admin,</p>
-        <p style="margin:0 0 16px;color:#374151;font-size:14px;">Terdapat <strong>${lowItems.length} item</strong> yang memerlukan restock segera:</p>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;color:#374151;">
-          <thead>
-            <tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">
-              <th style="padding:10px 12px;text-align:left;">Nama Item</th>
-              <th style="padding:10px 12px;text-align:center;">Kategori</th>
-              <th style="padding:10px 12px;text-align:center;">Stok Saat Ini</th>
-              <th style="padding:10px 12px;text-align:center;">Min Stok</th>
-              <th style="padding:10px 12px;text-align:center;">Status</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+      <div style="background:#fff;border-radius:10px;padding:16px;border:1px solid #e5e7eb;margin-bottom:12px;">
+        <p style="margin:0 0 8px;color:#374151;font-size:14px;">Halo Admin,</p>
+        <p style="margin:0 0 14px;color:#374151;font-size:14px;">Terdapat <strong>${lowItems.length} item</strong> yang memerlukan restock segera:</p>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+          <table style="width:100%;min-width:320px;border-collapse:collapse;font-size:12px;color:#374151;table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%"><col style="width:20%"><col style="width:18%"><col style="width:16%"><col style="width:16%">
+            </colgroup>
+            <thead>
+              <tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">
+                <th style="padding:8px 8px;text-align:left;font-size:11px;">Nama Item</th>
+                <th style="padding:8px 6px;text-align:center;font-size:11px;">Kategori</th>
+                <th style="padding:8px 6px;text-align:center;font-size:11px;">Stok</th>
+                <th style="padding:8px 6px;text-align:center;font-size:11px;">Min</th>
+                <th style="padding:8px 6px;text-align:center;font-size:11px;">Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
       </div>
-      <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+      <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
         <p style="margin:0;color:#065f46;font-size:13px;">⚡ Segera lakukan pemesanan ulang untuk menghindari kehabisan stok operasional.</p>
       </div>
       <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center;">TOKKI Engineering &amp; Fabrication · WMS Sistem Gudang · ${new Date().toLocaleString("id-ID",{dateStyle:"full",timeStyle:"short"})}</p>
-    </div>`;
+    </div></body></html>`;
 
     await fetch("https://api.resend.com/emails", {
       method: "POST",
