@@ -2698,16 +2698,16 @@ export default function App(){
                         <span style={{display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:T.green,display:"inline-block"}}/>Masuk</span>
                       </div>
                     </div>
-                    <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+                    <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end",minHeight:220}}>
                     {reportTxnMonthly.every(s=>s.out===0&&s.in===0)
                       ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada transaksi</div>
                       :(
-                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnMonthly.length}, minmax(0, 1fr))`,gap:6,alignItems:"end",height:"100%",minHeight:220}}>
+                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnMonthly.length}, minmax(0, 1fr))`,gap:6,alignItems:"end",height:220}}>
                           {reportTxnMonthly.map(point=>(
                             <div key={point.key} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",minWidth:0,height:"100%"}}>
-                              <div style={{display:"flex",alignItems:"end",gap:2,flex:1,justifyContent:"center",alignSelf:"flex-end"}}>
-                                <div title={`Keluar: ${point.out}`} style={{width:8,height:`${Math.max(point.out>0?6:2,(point.out/reportTxnMonthlyMax)*160)}px`,background:T.red,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
-                                <div title={`Masuk: ${point.in}`} style={{width:8,height:`${Math.max(point.in>0?6:2,(point.in/reportTxnMonthlyMax)*160)}px`,background:T.green,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
+                              <div style={{display:"flex",alignItems:"end",gap:2,height:180}}>
+                                <div title={`Keluar: ${point.out}`} style={{width:8,height:`${Math.max(point.out>0?6:2,(point.out/reportTxnMonthlyMax)*170)}px`,background:T.red,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
+                                <div title={`Masuk: ${point.in}`} style={{width:8,height:`${Math.max(point.in>0?6:2,(point.in/reportTxnMonthlyMax)*170)}px`,background:T.green,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
                               </div>
                               <div style={{fontSize:9,color:T.muted,marginTop:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%",textAlign:"center"}}>{point.label}</div>
                             </div>
