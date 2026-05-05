@@ -23,20 +23,32 @@ const sendStockAlertEmail = async (lowItems) => {
     const cards = lowItems.map(it => {
       const s = Number(it.stock);
       const ms = Number(it.minStock);
-      let status, statusBg, statusColor, stockColor, borderColor;
-      if (s === 0) { status = "🔴 HABIS"; statusBg = "#fee2e2"; statusColor = "#dc2626"; stockColor = "#dc2626"; borderColor = "#fca5a5"; }
-      else if (s <= ms) { status = "🟡 MENIPIS"; statusBg = "#fef9c3"; statusColor = "#92400e"; stockColor = "#d97706"; borderColor = "#fde68a"; }
-      else { status = "🟠 MENDEKATI"; statusBg = "#ffedd5"; statusColor = "#9a3412"; stockColor = "#ea580c"; borderColor = "#fdba74"; }
+      let statusLabel, statusBg, statusColor, stockColor, cardBorder;
+      if (s === 0) { statusLabel = "HABIS"; statusBg = "#fee2e2"; statusColor = "#dc2626"; stockColor = "#dc2626"; cardBorder = "#fca5a5"; }
+      else if (s <= ms) { statusLabel = "MENIPIS"; statusBg = "#fef9c3"; statusColor = "#92400e"; stockColor = "#e67e22"; cardBorder = "#fde68a"; }
+      else { statusLabel = "MENDEKATI"; statusBg = "#ffedd5"; statusColor = "#9a3412"; stockColor = "#ea580c"; cardBorder = "#fdba74"; }
       const unit = it.unit || "pcs";
-      return `<div style="border:1.5px solid ${borderColor};border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <span style="font-weight:700;color:#111;font-size:13px;flex:1;word-break:break-word;">${it.name}</span>
-          <span style="background:${statusBg};color:${statusColor};border-radius:4px;padding:3px 8px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;">${status}</span>
+      const rowStyle = "display:table;width:100%;margin-top:5px;";
+      const labelStyle = "display:table-cell;font-size:12px;color:#9ca3af;width:50%;";
+      const valStyle = "display:table-cell;font-size:12px;color:#374151;text-align:right;font-weight:500;";
+      return `<div style="border:1.5px solid ${cardBorder};border-radius:8px;padding:11px 13px;margin-bottom:8px;background:#fff;">
+        <div style="display:table;width:100%;margin-bottom:4px;">
+          <span style="display:table-cell;font-weight:700;color:#111;font-size:13px;word-break:break-word;vertical-align:middle;">${it.name}</span>
+          <span style="display:table-cell;text-align:right;vertical-align:middle;white-space:nowrap;">
+            <span style="background:${statusBg};color:${statusColor};border-radius:4px;padding:3px 9px;font-size:11px;font-weight:700;">${statusLabel}</span>
+          </span>
         </div>
-        <div style="margin-top:6px;font-size:12px;color:#6b7280;">${it.category || "-"}</div>
-        <div style="margin-top:6px;display:flex;gap:16px;font-size:12px;">
-          <span>Stok: <strong style="color:${stockColor};">${it.stock} ${unit}</strong></span>
-          <span style="color:#6b7280;">Min: ${it.minStock} ${unit}</span>
+        <div style="${rowStyle}">
+          <span style="${labelStyle}">Kategori</span>
+          <span style="${valStyle}">${it.category || "-"}</span>
+        </div>
+        <div style="${rowStyle}">
+          <span style="${labelStyle}">Stok saat ini</span>
+          <span style="${valStyle.replace("#374151", stockColor)}">${it.stock} ${unit}</span>
+        </div>
+        <div style="${rowStyle}">
+          <span style="${labelStyle}">Min. stok</span>
+          <span style="${valStyle}">${it.minStock} ${unit}</span>
         </div>
       </div>`;
     }).join("");
