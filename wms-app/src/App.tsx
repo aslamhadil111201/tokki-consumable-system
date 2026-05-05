@@ -1743,6 +1743,17 @@ export default function App(){
     .stat-card:hover{border-color:${T.borderHover};transform:translateY(-3px);box-shadow:${T.shadowCard}}
     .card{background:${T.card};border:1px solid ${T.border};border-radius:20px;padding:22px 24px;backdrop-filter:blur(12px);transition:all .25s;box-shadow:${T.shadowSm}}
     .card:hover{border-color:${T.borderHover};box-shadow:${T.shadowCard}}
+
+    /* DASHBOARD RESPONSIVE GRIDS */
+    .dash-insight-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+    .dash-charts-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+    .dash-tables-g{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+    .dash-footer-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .dash-low-hdr{display:grid;grid-template-columns:2fr 56px 64px 50px;gap:8px;padding:6px 0 8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    .dash-low-row{display:grid;grid-template-columns:2fr 56px 64px 50px;gap:8px;padding:8px 0;align-items:center;font-size:12px}
+    .dash-recv-hdr{display:grid;grid-template-columns:2fr 68px 90px 56px;gap:8px;padding:6px 0 8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    .dash-recv-row{display:grid;grid-template-columns:2fr 68px 90px 56px;gap:8px;padding:8px 0;align-items:center;font-size:12px}
+
     .stk-card{background:${T.card};border-radius:18px;padding:16px;display:flex;flex-direction:column;backdrop-filter:blur(12px);transition:all .25s;position:relative;overflow:hidden;box-shadow:${T.shadowSm}}
     .stk-card:hover{transform:translateY(-4px);box-shadow:${T.shadowCard}}
 
@@ -1853,6 +1864,8 @@ export default function App(){
       .report-botgrid{grid-template-columns:1fr}
       .stat5-g{grid-template-columns:repeat(3,1fr)}
       .approval-ov-g{grid-template-columns:repeat(3,1fr) !important}
+      .dash-insight-g{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .dash-charts-g{grid-template-columns:1fr 1fr}
     }
     @media(max-width:860px){
       .stock-g{grid-template-columns:repeat(2,1fr)}
@@ -1861,6 +1874,9 @@ export default function App(){
       .trx-col-name{width:160px}
       .trx-col-time{width:90px}
       .trx-col-count{display:none}
+      .dash-charts-g{grid-template-columns:1fr}
+      .dash-tables-g{grid-template-columns:1fr}
+      .dash-footer-g{grid-template-columns:1fr 1fr}
     }
     @media(max-width:660px){
       .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);box-shadow:20px 0 50px rgba(0,0,0,.5);z-index:260}
@@ -1908,6 +1924,16 @@ export default function App(){
       .stats-g{gap:10px;margin-bottom:14px}
       .two-col{gap:12px}
       .approval-ov-g{grid-template-columns:repeat(2,1fr) !important;gap:10px !important}
+      .dash-insight-g{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .dash-charts-g{grid-template-columns:1fr}
+      .dash-tables-g{grid-template-columns:1fr}
+      .dash-footer-g{grid-template-columns:1fr}
+      .dash-low-hdr{grid-template-columns:minmax(0,2fr) 46px 54px}
+      .dash-low-row{grid-template-columns:minmax(0,2fr) 46px 54px}
+      .dash-col-satuan{display:none}
+      .dash-recv-hdr{grid-template-columns:minmax(0,2fr) 60px 80px}
+      .dash-recv-row{grid-template-columns:minmax(0,2fr) 60px 80px}
+      .dash-col-oleh{display:none}
       .dash-stat{flex-direction:column;align-items:flex-start;gap:8px;min-height:auto}
       .dash-stat-icon{width:40px;height:40px;border-radius:13px;font-size:18px}
       .dash-stat-value{font-size:clamp(22px,6vw,30px)}
@@ -1932,6 +1958,7 @@ export default function App(){
     @media(max-width:420px){
       .stats-g{grid-template-columns:repeat(2,minmax(0,1fr))}
       .approval-ov-g{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+      .dash-insight-g{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
       .hist-g{grid-template-columns:repeat(2,minmax(0,1fr))}
       .stock-g{grid-template-columns:1fr}
       .stk-card{padding:14px}
@@ -2241,7 +2268,7 @@ export default function App(){
                 </div>
 
                 {/* Insight cards */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+                <div className="dash-insight-g">
                   {[
                     {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang Hampir Habis",val:`${dashStockMenipis} Item`,sub:"Stok di bawah batas minimum",color:T.amber,onClick:()=>setTab("stock")},
                     {icon:"📈",bg:T.greenBg,label:"Barang Paling Sering Keluar",val:dashTopItemName,sub:`${dashTopItemQty} pcs dalam 7 hari terakhir`,color:T.primaryLight,onClick:null},
@@ -2252,7 +2279,7 @@ export default function App(){
                       <div style={{width:38,height:38,borderRadius:10,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{c.icon}</div>
                       <div style={{minWidth:0,flex:1}}>
                         <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>{c.label}</div>
-                        <div style={{fontSize:16,fontWeight:800,color:c.color,wordBreak:"break-word",lineHeight:1.2,marginBottom:2}}>{c.val}</div>
+                        <div style={{fontSize:14,fontWeight:800,color:c.color,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",lineHeight:1.25,marginBottom:2}}>{c.val}</div>
                         <div style={{fontSize:11,color:T.muted}}>{c.sub}</div>
                       </div>
                     </div>
@@ -2277,7 +2304,7 @@ export default function App(){
                   const linePoints=dashLast7OutQty.map((v,i)=>`${(i/6)*svgW},${svgH-(v/maxQty)*svgH*0.85}`).join(" ");
                   const areaPoints=`0,${svgH} ${linePoints} ${svgW},${svgH}`;
                   return(
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20}}>
+                    <div className="dash-charts-g">
                       {/* Donut ringkasan stok */}
                       <div className="card" style={{display:"flex",flexDirection:"column"}}>
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Ringkasan Stok</div>
@@ -2437,7 +2464,7 @@ export default function App(){
                 )}
 
                 {/* Tables 2-col */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+                <div className="dash-tables-g">
                   {/* Barang Hampir Habis */}
                   <div className="card">
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
@@ -2447,11 +2474,11 @@ export default function App(){
                     {lowStock.length===0
                       ?<div style={{textAlign:"center",padding:"24px 0",color:T.muted}}><div style={{fontSize:28,marginBottom:6}}>✅</div>Semua stok aman</div>
                       :(<>
-                        <div style={{display:"grid",gridTemplateColumns:"2fr 56px 64px 50px",gap:8,padding:"6px 0 8px",borderBottom:`1px solid ${T.border}`,fontSize:11,color:T.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>
-                          <span>Item</span><span>Stok</span><span>Min Stok</span><span>Satuan</span>
+                        <div className="dash-low-hdr" style={{borderBottom:`1px solid ${T.border}`,color:T.muted}}>
+                          <span>Item</span><span>Stok</span><span>Min Stok</span><span className="dash-col-satuan">Satuan</span>
                         </div>
                         {lowStock.slice(0,4).map(it=>{const s=stockStatus(it);return(
-                          <div key={it.id} style={{display:"grid",gridTemplateColumns:"2fr 56px 64px 50px",gap:8,padding:"8px 0",borderBottom:`1px solid ${T.border}`,alignItems:"center",fontSize:12,color:T.muted}}>
+                          <div key={it.id} className="dash-low-row" style={{borderBottom:`1px solid ${T.border}`,color:T.muted}}>
                             <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
                               <div style={{width:28,height:28,borderRadius:6,background:T.navActive,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>📦</div>
                               <div style={{minWidth:0}}>
@@ -2461,7 +2488,7 @@ export default function App(){
                             </div>
                             <span style={{color:s.dot,fontWeight:700}}>{it.stock}</span>
                             <span>{it.minStock}</span>
-                            <span>{it.unit}</span>
+                            <span className="dash-col-satuan">{it.unit}</span>
                           </div>
                         );})}
                         <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua barang hampir habis →</div>
@@ -2477,11 +2504,11 @@ export default function App(){
                     {dashRecentReceives.length===0
                       ?<div style={{textAlign:"center",padding:"24px 0",color:T.muted}}><div style={{fontSize:28,marginBottom:6}}>📭</div>Belum ada penerimaan</div>
                       :(<>
-                        <div style={{display:"grid",gridTemplateColumns:"2fr 68px 90px 56px",gap:8,padding:"6px 0 8px",borderBottom:`1px solid ${T.border}`,fontSize:11,color:T.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>
-                          <span>Item</span><span>Jumlah</span><span>Tanggal</span><span>Oleh</span>
+                        <div className="dash-recv-hdr" style={{borderBottom:`1px solid ${T.border}`,color:T.muted}}>
+                          <span>Item</span><span>Jumlah</span><span>Tanggal</span><span className="dash-col-oleh">Oleh</span>
                         </div>
                         {dashRecentReceives.map((r,i)=>(
-                          <div key={r.id} style={{display:"grid",gridTemplateColumns:"2fr 68px 90px 56px",gap:8,padding:"8px 0",borderBottom:i<dashRecentReceives.length-1?`1px solid ${T.border}`:"none",alignItems:"center",fontSize:12,color:T.muted}}>
+                          <div key={r.id} className="dash-recv-row" style={{borderBottom:i<dashRecentReceives.length-1?`1px solid ${T.border}`:"none",color:T.muted}}>
                             <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
                               <div style={{width:28,height:28,borderRadius:6,background:T.navActive,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>📥</div>
                               <div style={{minWidth:0}}>
@@ -2494,7 +2521,7 @@ export default function App(){
                               <div style={{color:T.text,fontSize:11}}>{r.date||""}</div>
                               <div style={{fontSize:10,color:T.muted}}>{r.time||""}</div>
                             </div>
-                            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.admin||r.receivedBy||"-"}</span>
+                            <span className="dash-col-oleh" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.admin||r.receivedBy||"-"}</span>
                           </div>
                         ))}
                         <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>{setTab("history");setHistoryTab("in");}}>Lihat riwayat penerimaan →</div>
@@ -2504,7 +2531,7 @@ export default function App(){
                 </div>
 
                 {/* Footer bar */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+                <div className="dash-footer-g">
                   {[
                     {icon:"📅",label:"Update Terakhir",val:todayFmt()},
                     {icon:"🔄",label:"Total Transaksi Hari Ini",val:`${todayTrx.length} Transaksi`},
