@@ -593,6 +593,9 @@ export default function App(){
     :reportPeriod==="month"
       ?"Bulan Sebelumnya"
       :"Tahun Sebelumnya";
+  const reportTrendMaxVisibleRows=6;
+  const reportTrendRowHeightPx=78;
+  const reportTrendScrollMaxHeight=reportTrendMaxVisibleRows*reportTrendRowHeightPx;
 
   const reportRangeDays=(()=>{
     const start=new Date(reportRange.start);
@@ -2754,7 +2757,7 @@ export default function App(){
                     {reportMonthlyTrend.length===0
                       ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan pada periode ini</div>
                       :(
-                        <div style={{flex:1,overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
+                        <div style={{overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:8,minHeight:0,maxHeight:reportTrendScrollMaxHeight}}>
                           {reportMonthlyTrend.filter(r=>{
                             if(trendFilter==="up") return r.pctChange>0;
                             if(trendFilter==="down") return r.pctChange<0;
