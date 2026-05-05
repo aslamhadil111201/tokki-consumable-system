@@ -2673,7 +2673,7 @@ export default function App(){
                   </div>
                 </div>
 
-                <div className="card" style={{padding:"16px 18px",marginBottom:20}}>
+                <div className="card" style={{padding:"16px 18px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
                     <div className="dash-panel-title">Breakdown Pengambilan per Departemen</div>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -2709,7 +2709,7 @@ export default function App(){
                   }
                 </div>
 
-                <div className="card" style={{padding:"16px 18px",marginTop:20}}>
+                <div className="card" style={{padding:"16px 18px",marginTop:16}}>
                   <div className="dash-panel-title" style={{marginBottom:12}}>Project yang Paling Sering Dipakai</div>
                   {reportProjectUsage.length===0
                     ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan dengan project</div>
