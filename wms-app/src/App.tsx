@@ -1636,12 +1636,12 @@ export default function App(){
     .sidebar.collapsed .sb-inner{padding:0 8px 0}
     .sb-inner{display:flex;flex-direction:column;height:100%;padding:0 12px 0;overflow:hidden}
     .sb-nav-scroll{flex:1;overflow-y:auto;padding-bottom:8px;min-height:0}
-    .brand{padding:20px 8px 18px;display:flex;align-items:center;gap:11px;border-bottom:1px solid ${T.border};margin-bottom:20px;flex-shrink:0}
+    .brand{padding:22px 8px 20px;display:flex;align-items:center;gap:11px;border-bottom:1px solid ${T.border};margin-bottom:24px;flex-shrink:0}
     .brand-logo{width:48px;height:48px;border-radius:10px;background:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:3px}
     .brand-name{font-size:16px;font-weight:900;color:${T.primaryLight};line-height:1.2}
     .brand-sub{font-size:9px;color:${T.muted};letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-top:2px}
-    .nav-label{font-size:9px;font-weight:800;color:${T.muted};letter-spacing:.18em;text-transform:uppercase;padding:0 8px 10px}
-    .nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px;border-radius:11px;cursor:pointer;border:1px solid transparent;font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:600;color:${T.muted};text-align:left;transition:all .2s ease;margin-bottom:3px;background:transparent}
+    .nav-label{font-size:9px;font-weight:800;color:${T.muted};letter-spacing:.18em;text-transform:uppercase;padding:0 8px 14px}
+    .nav-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:11px;cursor:pointer;border:1px solid transparent;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:${T.muted};text-align:left;transition:all .2s ease;margin-bottom:5px;background:transparent}
     .nav-item:hover{background:${T.surface};color:${T.text};border-color:${T.border}}
     .nav-item.active{background:${T.navActive};color:${T.navActiveText};border-color:${T.navActiveBorder};box-shadow:0 0 12px ${T.primaryGlow}}
     .nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -1651,7 +1651,7 @@ export default function App(){
     /* MAIN */
     .main{flex:1;display:flex;flex-direction:column;min-width:0;width:100%;overflow-x:hidden;overflow-y:auto;height:100vh;height:100dvh}
     .topbar{height:64px;background:${T.topbarBg};border-bottom:1px solid ${T.border};padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-    .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;line-height:1.15;margin:0}
+    .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;line-height:1.3;margin:0}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
     .tb-btn:hover{border-color:${T.borderHover};color:${T.text}}
     .tb-logout{display:none !important}
