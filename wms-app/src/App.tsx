@@ -1644,7 +1644,7 @@ export default function App(){
     .sec::after{content:'';flex:1;height:1px;background:${T.border}}
 
     .stats-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-    .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
+    .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
     .report-botgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
     .stock-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
     .hist-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
@@ -2718,8 +2718,8 @@ export default function App(){
                     </div>
                   </div>
 
-                  <div className="card" style={{padding:"16px 18px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                  <div className="card" style={{padding:"16px 18px",display:"flex",flexDirection:"column"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:10,flexWrap:"wrap",flexShrink:0}}>
                       <div>
                         <div className="dash-panel-title" style={{marginBottom:4}}>Tren Penggunaan Bulanan</div>
                         <div style={{fontSize:11,color:T.muted}}>Bulan ini vs bulan lalu{trendSpikeCount>0&&<span style={{marginLeft:8,background:"#fee2e2",color:"#dc2626",borderRadius:999,padding:"2px 8px",fontWeight:800,fontSize:10.5}}>⚡ {trendSpikeCount} lonjakan</span>}</div>
@@ -2737,7 +2737,7 @@ export default function App(){
                     {reportMonthlyTrend.length===0
                       ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan bulan ini</div>
                       :(
-                        <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:360,overflowY:"auto",paddingRight:4}}>
+                        <div style={{flex:1,overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
                           {reportMonthlyTrend.filter(r=>{
                             if(trendFilter==="up") return r.pctChange>0;
                             if(trendFilter==="down") return r.pctChange<0;
