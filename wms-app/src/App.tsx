@@ -1521,7 +1521,7 @@ export default function App(){
     .shell{display:flex;min-height:100vh;position:relative;z-index:1;width:100%;max-width:100%;overflow-x:hidden}
 
     /* SIDEBAR */
-    .sidebar{width:228px;flex-shrink:0;background:${T.sidebarBg};border-right:1px solid ${T.border};display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);transition:transform .28s cubic-bezier(.4,0,.2,1),width .22s ease;z-index:100}
+    .sidebar{width:228px;flex-shrink:0;background:${T.sidebarBg};border-right:1px solid ${T.border};display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:hidden;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);transition:transform .28s cubic-bezier(.4,0,.2,1),width .22s ease;z-index:100}
     .sidebar.open{transform:translateX(0)!important}
     .sidebar.collapsed{width:82px}
     .sidebar.collapsed .brand{justify-content:center;padding:14px 0 12px}
@@ -1534,8 +1534,9 @@ export default function App(){
     .sidebar.collapsed .sb-user-row{justify-content:center}
     .sidebar.collapsed .sb-logout-text{display:none}
     .sidebar.collapsed .sb-logout-btn{padding:9px 0}
-    .sidebar.collapsed .sb-inner{padding:0 8px 16px}
-    .sb-inner{display:flex;flex-direction:column;height:100%;padding:0 12px 20px}
+    .sidebar.collapsed .sb-inner{padding:0 8px 0}
+    .sb-inner{display:flex;flex-direction:column;height:100%;padding:0 12px 0;overflow:hidden}
+    .sb-nav-scroll{flex:1;overflow-y:auto;padding-bottom:8px;min-height:0}
     .brand{padding:20px 8px 18px;display:flex;align-items:center;gap:11px;border-bottom:1px solid ${T.border};margin-bottom:20px;flex-shrink:0}
     .brand-logo{width:48px;height:48px;border-radius:10px;background:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:3px}
     .brand-name{font-size:16px;font-weight:900;color:${T.primaryLight};line-height:1.2}
@@ -1546,7 +1547,7 @@ export default function App(){
     .nav-item.active{background:${T.navActive};color:${T.navActiveText};border-color:${T.navActiveBorder};box-shadow:0 0 12px ${T.primaryGlow}}
     .nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .nav-pill{margin-left:auto;background:${T.primary};color:white;font-size:10px;font-weight:800;padding:1px 8px;border-radius:20px}
-    .sb-footer{margin-top:auto;padding-top:14px;border-top:1px solid ${T.border};flex-shrink:0}
+    .sb-footer{padding:14px 0 20px;border-top:1px solid ${T.border};flex-shrink:0}
 
     /* MAIN */
     .main{flex:1;display:flex;flex-direction:column;min-width:0;width:100%;overflow-x:hidden}
@@ -1973,6 +1974,7 @@ export default function App(){
                 <div style={{fontSize:9,color:T.muted,letterSpacing:".12em",textTransform:"uppercase",fontWeight:700,marginTop:2}}>Consumable Sys</div>
               </div>
             </button>
+            <div className="sb-nav-scroll">
             <div className="nav-label">Menu Utama</div>
             {visibleTabs.map(t=>(
               <button key={t.id} className={`nav-item${tab===t.id?" active":""}`} onClick={()=>{setTab(t.id);setSidebar(false);}}>
@@ -1984,6 +1986,7 @@ export default function App(){
             <button className="nav-item mobile-logout" onClick={logout}>
               <span className="nav-icon">⎋</span><span className="nav-text">Keluar Akun</span>
             </button>
+            </div>
             <div className="sb-footer">
               <div className="sb-user-row" style={{display:"flex",alignItems:"center",gap:9,padding:"8px 6px"}}>
                 <div style={{width:32,height:32,borderRadius:9,background:`linear-gradient(135deg,${T.primary},${T.primaryLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"white",flexShrink:0}}>
