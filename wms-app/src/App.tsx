@@ -341,6 +341,8 @@ export default function App(){
   const [idleWarning,setIdleWarning]=useState(false);
   const [idleCountdown,setIdleCountdown]=useState(60);
   const [reportPeriod,setReportPeriod]=useState("month");
+  const [reportProjectMode,setReportProjectMode]=useState<"unit"|"rp">("unit");
+  const [trendFilter,setTrendFilter]=useState<"all"|"up"|"down"|"spike">("all");
   const [returns,setReturns]=useState([]);
   const [showRetur,setShowRetur]=useState(false);
   const [returForm,setReturForm]=useState(emptyReturForm());
@@ -636,6 +638,55 @@ export default function App(){
     const max=Math.max(1,...rows.map(r=>r.total));
     return rows.map(r=>({...r,pct:Math.round((r.total/max)*100)}));
   })();
+
+  // project by Rp value
+  const reportProjectByRp=(()=>{
+    const map:Record<string,number>={};
+    reportOut.forEach(t=>{
+      const key=t.workOrder?String(t.workOrder).trim():null;
+      if(!key) return;
+      toSafeRows(t.items).forEach(it=>{
+        const ref=itemMap[Number(it.itemId||0)];
+        const price=Number(ref?.averageCost||ref?.lastPrice||0);
+        map[key]=(map[key]||0)+Number(it.qty||0)*price;
+      });
+    });
+    const rows=Object.entries(map).map(([name,total])=>({name,total})).sort((a,b)=>b.total-a.total).slice(0,8);
+    const max=Math.max(1,...rows.map(r=>r.total));
+    return rows.map(r=>({...r,pct:Math.round((r.total/max)*100)}));
+  })();
+
+  // tren bulanan: bulan ini vs bulan lalu
+  const reportMonthlyTrend=(()=>{
+    const now=new Date();
+    const curYear=now.getFullYear();
+    const curMonth=now.getMonth();
+    const prevYear=curMonth===0?curYear-1:curYear;
+    const prevMonth=curMonth===0?11:curMonth-1;
+    const curPrefix=`${curYear}-${String(curMonth+1).padStart(2,"0")}`;
+    const prevPrefix=`${prevYear}-${String(prevMonth+1).padStart(2,"0")}`;
+    const curMap:Record<string,number>={};
+    const prevMap:Record<string,number>={};
+    approvedOutTrx.forEach(t=>{
+      if(!t.date) return;
+      toSafeRows(t.items).forEach(it=>{
+        const key=it.itemName||`Item ${it.itemId||""}`;
+        if(String(t.date).startsWith(curPrefix)) curMap[key]=(curMap[key]||0)+Number(it.qty||0);
+        if(String(t.date).startsWith(prevPrefix)) prevMap[key]=(prevMap[key]||0)+Number(it.qty||0);
+      });
+    });
+    const allKeys=new Set([...Object.keys(curMap),...Object.keys(prevMap)]);
+    const rows=[...allKeys].map(name=>{
+      const cur=curMap[name]||0;
+      const prev=prevMap[name]||0;
+      const pctChange=prev===0?(cur>0?999:0):Math.round((cur-prev)/prev*100);
+      return {name,cur,prev,pctChange};
+    }).filter(r=>r.cur>0||r.prev>0).sort((a,b)=>b.cur-a.cur).slice(0,8);
+    const maxBar=Math.max(1,...rows.map(r=>Math.max(r.cur,r.prev)));
+    return rows.map(r=>({...r,curPct:Math.round(r.cur/maxBar*100),prevPct:Math.round(r.prev/maxBar*100),isSpike:r.pctChange>=50}));
+  })();
+
+  const trendSpikeCount=reportMonthlyTrend.filter(r=>r.isSpike).length;
 
   useEffect(()=>{document.body.style.background=T.bg;document.body.style.transition="background .4s,color .3s";},[dark]);
   useEffect(()=>{setHistoryOutPage(1);setHistoryInPage(1);},[historyQuery,historyFrom,historyTo,historyPageSize,historyApprovalStatus]);
@@ -1581,6 +1632,7 @@ export default function App(){
 
     .stats-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
     .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+    .report-botgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
     .stock-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
     .hist-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
     .stat5-g{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
@@ -1750,6 +1802,7 @@ export default function App(){
       .stats-g{grid-template-columns:repeat(2,1fr)}
       .hist-g{grid-template-columns:repeat(2,1fr)}
       .two-col{grid-template-columns:1fr}
+      .report-botgrid{grid-template-columns:1fr}
       .stat5-g{grid-template-columns:repeat(3,1fr)}
       .approval-ov-g{grid-template-columns:repeat(3,1fr) !important}
     }
@@ -2651,31 +2704,69 @@ export default function App(){
                   </div>
 
                   <div className="card" style={{padding:"16px 18px"}}>
-                    <div className="dash-panel-title" style={{marginBottom:12}}>Top 5 Item Paling Sering Diambil</div>
-                    {reportTopItems.length===0
-                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan</div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                      <div>
+                        <div className="dash-panel-title" style={{marginBottom:4}}>Tren Penggunaan Bulanan</div>
+                        <div style={{fontSize:11,color:T.muted}}>Bulan ini vs bulan lalu{trendSpikeCount>0&&<span style={{marginLeft:8,background:"#fee2e2",color:"#dc2626",borderRadius:999,padding:"2px 8px",fontWeight:800,fontSize:10.5}}>⚡ {trendSpikeCount} lonjakan</span>}</div>
+                      </div>
+                      <div style={{display:"flex",gap:4,flexShrink:0}}>
+                        {([["all","Semua"],["up","Naik"],["down","Turun"],["spike","Lonjakan!"]] as const).map(([id,label])=>(
+                          <button key={id} onClick={()=>setTrendFilter(id)} style={{padding:"4px 9px",borderRadius:8,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10.5,fontWeight:700,cursor:"pointer",background:trendFilter===id?T.primary:"transparent",color:trendFilter===id?"white":T.muted,transition:"all .18s"}}>{label}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:10,fontSize:10.5,color:T.muted,marginBottom:10}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:dark?"rgba(255,255,255,0.18)":"#d1fae5",display:"inline-block"}}/>Bulan lalu</span>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#10b981",display:"inline-block"}}/>Bulan ini</span>
+                    </div>
+                    {reportMonthlyTrend.length===0
+                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan bulan ini</div>
                       :(
-                        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                          {reportTopItems.map((row,idx)=>(
-                            <div key={row.name} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 12px"}}>
-                              <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:6}}>
-                                <div style={{fontSize:12.5,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{idx+1}. {row.name}</div>
-                                <div style={{fontSize:11.5,fontWeight:800,color:T.navActiveText,whiteSpace:"nowrap"}}>{row.total} unit</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                          {reportMonthlyTrend.filter(r=>{
+                            if(trendFilter==="up") return r.pctChange>0&&!r.isSpike;
+                            if(trendFilter==="down") return r.pctChange<0;
+                            if(trendFilter==="spike") return r.isSpike;
+                            return true;
+                          }).map(row=>{
+                            const pctAbs=Math.abs(row.pctChange);
+                            const pill=row.isSpike
+                              ?{bg:"#fee2e2",c:"#dc2626",sign:"⚡"}
+                              :row.pctChange>8
+                                ?{bg:"#fef3c7",c:"#d97706",sign:"▲"}
+                                :row.pctChange<0
+                                  ?{bg:"#d1fae5",c:"#059669",sign:"▼"}
+                                  :{bg:dark?"rgba(255,255,255,0.08)":"#f1f5f9",c:T.muted,sign:"→"};
+                            return (
+                              <div key={row.name} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"9px 12px"}}>
+                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
+                                  <div style={{fontSize:12,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{row.name}</div>
+                                  <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+                                    <span style={{fontSize:10.5,color:T.muted,fontWeight:600}}>{row.prev}→{row.cur}</span>
+                                    <span style={{background:pill.bg,color:pill.c,borderRadius:999,padding:"2px 8px",fontSize:10,fontWeight:800}}>{pill.sign} {row.pctChange===999?"baru":`${row.pctChange>0?"+":""}${row.pctChange}%`}</span>
+                                  </div>
+                                </div>
+                                <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                                  <div style={{height:6,borderRadius:6,overflow:"hidden",background:dark?"rgba(255,255,255,0.08)":"#e5e7eb"}}>
+                                    <div style={{height:"100%",width:`${row.prevPct}%`,background:dark?"rgba(255,255,255,0.22)":"#bbf7d0",borderRadius:6}}/>
+                                  </div>
+                                  <div style={{height:6,borderRadius:6,overflow:"hidden",background:dark?"rgba(255,255,255,0.08)":"#e5e7eb"}}>
+                                    <div style={{height:"100%",width:`${row.curPct}%`,background:row.isSpike?"#ef4444":"#10b981",borderRadius:6,transition:"width .35s ease"}}/>
+                                  </div>
+                                </div>
                               </div>
-                              <div style={{height:8,borderRadius:10,background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)",overflow:"hidden"}}>
-                                <div style={{height:"100%",width:`${row.pct}%`,background:`linear-gradient(90deg,${T.primary},${T.primaryLight})`,borderRadius:10,transition:"width .35s ease"}}/>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )
                     }
                   </div>
                 </div>
 
-                <div className="card" style={{padding:"16px 18px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:0}} className="report-botgrid">
+                  <div className="card" style={{padding:"16px 18px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
-                    <div className="dash-panel-title">Breakdown Pengambilan per Departemen</div>
+                    <div className="dash-panel-title">Breakdown per Departemen</div>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       {reportDeptCats.map(cat=>(
                         <span key={cat} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:10.5,fontWeight:700,color:T.muted,padding:"2px 8px",border:`1px solid ${T.border}`,borderRadius:999}}>
@@ -2709,26 +2800,36 @@ export default function App(){
                   }
                 </div>
 
-                <div className="card" style={{padding:"16px 18px",marginTop:16}}>
-                  <div className="dash-panel-title" style={{marginBottom:12}}>Project yang Paling Sering Dipakai</div>
-                  {reportProjectUsage.length===0
-                    ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan dengan project</div>
-                    :(
-                      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                        {reportProjectUsage.map((row,idx)=>(
-                          <div key={row.name} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 12px"}}>
-                            <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:6}}>
-                              <div style={{fontSize:12.5,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{idx+1}. {row.name}</div>
-                              <div style={{fontSize:11.5,fontWeight:800,color:T.navActiveText,whiteSpace:"nowrap"}}>{row.total} unit</div>
-                            </div>
-                            <div style={{height:8,borderRadius:10,background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)",overflow:"hidden"}}>
-                              <div style={{height:"100%",width:`${row.pct}%`,background:`linear-gradient(90deg,#f59e0b,#fbbf24)`,borderRadius:10,transition:"width .35s ease"}}/>
-                            </div>
-                          </div>
+                  <div className="card" style={{padding:"16px 18px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+                      <div className="dash-panel-title">Project Paling Sering Dipakai</div>
+                      <div style={{display:"flex",gap:4,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:3}}>
+                        {([["unit","Frekuensi"],["rp","Nilai (Rp)"]] as const).map(([id,label])=>(
+                          <button key={id} onClick={()=>setReportProjectMode(id)} style={{padding:"4px 10px",borderRadius:7,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10.5,fontWeight:700,cursor:"pointer",background:reportProjectMode===id?T.primary:"transparent",color:reportProjectMode===id?"white":T.muted,transition:"all .18s"}}>{label}</button>
                         ))}
                       </div>
-                    )
-                  }
+                    </div>
+                    {(reportProjectMode==="unit"?reportProjectUsage:reportProjectByRp).length===0
+                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan dengan project</div>
+                      :(
+                        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                          {(reportProjectMode==="unit"?reportProjectUsage:reportProjectByRp).map((row,idx)=>(
+                            <div key={row.name} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 12px"}}>
+                              <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:6}}>
+                                <div style={{fontSize:12.5,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{idx+1}. {row.name}</div>
+                                <div style={{fontSize:11.5,fontWeight:800,color:T.navActiveText,whiteSpace:"nowrap"}}>
+                                  {reportProjectMode==="unit"?`${row.total} unit`:fmtMoney(Math.round(row.total))}
+                                </div>
+                              </div>
+                              <div style={{height:8,borderRadius:10,background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)",overflow:"hidden"}}>
+                                <div style={{height:"100%",width:`${row.pct}%`,background:reportProjectMode==="unit"?`linear-gradient(90deg,#f59e0b,#fbbf24)`:`linear-gradient(90deg,${T.primary},${T.primaryLight})`,borderRadius:10,transition:"width .35s ease"}}/>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  </div>
                 </div>
               </div>
             )}
