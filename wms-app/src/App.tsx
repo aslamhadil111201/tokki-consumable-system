@@ -2702,7 +2702,7 @@ export default function App(){
                     {reportTxnMonthly.every(s=>s.out===0&&s.in===0)
                       ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada transaksi</div>
                       :(
-                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnMonthly.length}, minmax(0, 1fr))`,gap:6,alignItems:"end",height:"100%",minHeight:220}}>
+                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnMonthly.length}, minmax(0, 1fr))`,gap:6,alignItems:"stretch",height:"100%",minHeight:220}}>
                           {reportTxnMonthly.map(point=>(
                             <div key={point.key} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:0,height:"100%"}}>
                               <div style={{display:"flex",alignItems:"end",gap:2,flex:1,minHeight:0}}>
