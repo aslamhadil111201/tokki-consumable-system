@@ -578,6 +578,19 @@ export default function App(){
   })();
   const reportTxnMax=Math.max(1,...reportTxnSeries.map(s=>Math.max(s.out,s.in)));
 
+  // bar chart per bulan — selalu 12 bulan terakhir, tidak terpengaruh filter periode
+  const reportTxnMonthly=(()=>{
+    const now=new Date();
+    return Array.from({length:12}).map((_,i)=>{
+      const d=new Date(now.getFullYear(),now.getMonth()-11+i,1);
+      const prefix=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      const out=approvedOutTrx.reduce((a,t)=>a+(String(t.date||"").startsWith(prefix)?1:0),0);
+      const inn=receives.reduce((a,r)=>a+(String(r.date||"").startsWith(prefix)?1:0),0);
+      return {key:prefix,label:d.toLocaleDateString("id-ID",{month:"short",year:"2-digit"}),out,in:inn};
+    });
+  })();
+  const reportTxnMonthlyMax=Math.max(1,...reportTxnMonthly.map(s=>Math.max(s.out,s.in)));
+
   const reportTopItems=(()=>{
     const map={};
     reportOut.forEach(t=>toSafeRows(t.items).forEach(it=>{
@@ -2677,30 +2690,32 @@ export default function App(){
                 </div>
 
                 <div className="two-col" style={{marginBottom:16}}>
-                  <div className="card" style={{padding:"16px 18px"}}>
+                  <div className="card" style={{padding:"16px 18px",display:"flex",flexDirection:"column"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                      <div className="dash-panel-title">Bar Chart Transaksi per Hari</div>
+                      <div className="dash-panel-title">Bar Chart Transaksi per Bulan</div>
                       <div style={{display:"flex",gap:10,fontSize:11.5,color:T.muted,fontWeight:700}}>
                         <span style={{display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block"}}/>Keluar</span>
                         <span style={{display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:T.green,display:"inline-block"}}/>Masuk</span>
                       </div>
                     </div>
-                    {reportTxnSeries.length===0||reportTxnSeries.every(s=>s.out===0&&s.in===0)
-                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada transaksi pada periode ini</div>
+                    <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+                    {reportTxnMonthly.every(s=>s.out===0&&s.in===0)
+                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada transaksi</div>
                       :(
-                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnSeries.length}, minmax(20px, 1fr))`,gap:8,alignItems:"end",height:250}}>
-                          {reportTxnSeries.map(point=>(
+                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnMonthly.length}, minmax(0, 1fr))`,gap:6,alignItems:"end",height:"100%",minHeight:220}}>
+                          {reportTxnMonthly.map(point=>(
                             <div key={point.key} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",minWidth:0,height:"100%"}}>
-                              <div style={{display:"flex",alignItems:"end",gap:3,height:190}}>
-                                <div title={`Keluar: ${point.out}`} style={{width:9,height:`${Math.max(4,(point.out/reportTxnMax)*180)}px`,background:T.red,borderRadius:"6px 6px 0 0",opacity:0.92}}/>
-                                <div title={`Masuk: ${point.in}`} style={{width:9,height:`${Math.max(4,(point.in/reportTxnMax)*180)}px`,background:T.green,borderRadius:"6px 6px 0 0",opacity:0.92}}/>
+                              <div style={{display:"flex",alignItems:"end",gap:2,flex:1,justifyContent:"center",alignSelf:"flex-end"}}>
+                                <div title={`Keluar: ${point.out}`} style={{width:8,height:`${Math.max(point.out>0?6:2,(point.out/reportTxnMonthlyMax)*160)}px`,background:T.red,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
+                                <div title={`Masuk: ${point.in}`} style={{width:8,height:`${Math.max(point.in>0?6:2,(point.in/reportTxnMonthlyMax)*160)}px`,background:T.green,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
                               </div>
-                              <div style={{fontSize:9.5,color:T.muted,marginTop:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{point.label}</div>
+                              <div style={{fontSize:9,color:T.muted,marginTop:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%",textAlign:"center"}}>{point.label}</div>
                             </div>
                           ))}
                         </div>
                       )
                     }
+                    </div>
                   </div>
 
                   <div className="card" style={{padding:"16px 18px"}}>
