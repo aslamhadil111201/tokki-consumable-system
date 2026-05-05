@@ -3763,16 +3763,11 @@ export default function App(){
             </div>
             <div style={{fontSize:12,color:T.muted,marginBottom:14,wordBreak:"break-all"}}>{attachPreview.name}</div>
             {attachPreview.mimeType==="application/pdf"?(
-              <div style={{textAlign:"center",padding:"32px 0",background:T.surface,borderRadius:12,border:`1px solid ${T.border}`}}>
-                <div style={{fontSize:48,marginBottom:12}}>📄</div>
-                <div style={{fontSize:13,color:T.text,fontWeight:700,marginBottom:6}}>File PDF</div>
-                <div style={{fontSize:11.5,color:T.muted,marginBottom:20}}>Browser tidak dapat menampilkan PDF secara inline. Unduh untuk membuka.</div>
-                <a
-                  href={attachPreview.data}
-                  download={attachPreview.name}
-                  style={{display:"inline-flex",alignItems:"center",gap:8,background:T.primary,color:"#fff",borderRadius:10,padding:"10px 22px",fontSize:13,fontWeight:700,textDecoration:"none"}}
-                >⬇ Unduh PDF</a>
-              </div>
+              <iframe
+                src={attachPreview.data}
+                title={attachPreview.name}
+                style={{width:"100%",height:520,border:`1px solid ${T.border}`,borderRadius:12,display:"block"}}
+              />
             ):(
               <div style={{textAlign:"center",borderRadius:12,overflow:"hidden",border:`1px solid ${T.border}`,background:T.surface,maxHeight:520,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <img src={attachPreview.data} alt="Lampiran" style={{maxWidth:"100%",maxHeight:520,objectFit:"contain"}}/>
