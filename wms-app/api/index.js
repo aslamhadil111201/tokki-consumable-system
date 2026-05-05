@@ -13,6 +13,81 @@ const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 const AUDIT_RETENTION_DAYS = Math.max(1, Number(process.env.AUDIT_RETENTION_DAYS || 90));
 const AUDIT_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const APPROVAL_QTY_THRESHOLD = Math.max(1, Number(process.env.APPROVAL_QTY_THRESHOLD || 20));
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const ALERT_EMAIL = process.env.ALERT_EMAIL || "";
+
+// ── EMAIL ALERT ───────────────────────────────────────────────────
+const sendStockAlertEmail = async (lowItems) => {
+  if (!RESEND_API_KEY || !ALERT_EMAIL || !lowItems.length) return;
+  try {
+    const rows = lowItems.map(it => {
+      const status = Number(it.stock) === 0 ? "🔴 HABIS" : "🟡 MENIPIS";
+      return `<tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:10px 12px;font-weight:600;color:#111;">${it.name}</td>
+        <td style="padding:10px 12px;text-align:center;">${it.category || "-"}</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:700;color:${Number(it.stock)===0?"#dc2626":"#d97706"};">${it.stock} ${it.unit || "pcs"}</td>
+        <td style="padding:10px 12px;text-align:center;">${it.minStock} ${it.unit || "pcs"}</td>
+        <td style="padding:10px 12px;text-align:center;">${status}</td>
+      </tr>`;
+    }).join("");
+
+    const html = `
+    <div style="font-family:'Segoe UI',sans-serif;max-width:600px;margin:0 auto;background:#f9fafb;padding:24px;border-radius:12px;">
+      <div style="background:linear-gradient(135deg,#059669,#34d399);border-radius:10px;padding:20px 24px;margin-bottom:20px;">
+        <div style="font-size:22px;font-weight:800;color:#fff;">🏭 TOKKI WMS</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px;">Notifikasi Restock Barang</div>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:20px 24px;border:1px solid #e5e7eb;margin-bottom:16px;">
+        <p style="margin:0 0 12px;color:#374151;font-size:14px;">Halo Admin,</p>
+        <p style="margin:0 0 16px;color:#374151;font-size:14px;">Terdapat <strong>${lowItems.length} item</strong> yang memerlukan restock segera:</p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;color:#374151;">
+          <thead>
+            <tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">
+              <th style="padding:10px 12px;text-align:left;">Nama Item</th>
+              <th style="padding:10px 12px;text-align:center;">Kategori</th>
+              <th style="padding:10px 12px;text-align:center;">Stok Saat Ini</th>
+              <th style="padding:10px 12px;text-align:center;">Min Stok</th>
+              <th style="padding:10px 12px;text-align:center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+        <p style="margin:0;color:#065f46;font-size:13px;">⚡ Segera lakukan pemesanan ulang untuk menghindari kehabisan stok operasional.</p>
+      </div>
+      <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center;">TOKKI Engineering &amp; Fabrication · WMS Sistem Gudang · ${new Date().toLocaleString("id-ID",{dateStyle:"full",timeStyle:"short"})}</p>
+    </div>`;
+
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "onboarding@resend.dev",
+        to: [ALERT_EMAIL],
+        subject: `⚠️ Alert Restock: ${lowItems.length} Item Perlu Ditindak — TOKKI WMS`,
+        html,
+      }),
+    });
+  } catch (_) {
+    // silently fail — email is best-effort, don't break main flow
+  }
+};
+
+const checkAndAlertLowStock = async (db, changedItemIds = []) => {
+  if (!RESEND_API_KEY || !ALERT_EMAIL || !changedItemIds.length) return;
+  try {
+    const itemsCol = db.collection("items");
+    const lowItems = await itemsCol.find({
+      id: { $in: changedItemIds.map(Number) },
+      $expr: { $lte: ["$stock", "$minStock"] },
+    }).toArray();
+    if (lowItems.length) await sendStockAlertEmail(lowItems);
+  } catch (_) { /* best-effort */ }
+};
 
 const MASTER_MAP = {
   admins: "admins",
@@ -953,6 +1028,11 @@ export default async function handler(req, res) {
             approvalStatus: trx.approvalStatus,
           },
         });
+        // Kirim email alert jika transaksi auto-approved dan ada item yang stoknya turun
+        if (trx.approvalStatus === "approved") {
+          const changedIds = (trx.items || []).map(i => Number(i.itemId)).filter(Boolean);
+          checkAndAlertLowStock(db, changedIds).catch(() => {});
+        }
         return sendJson(res, trx.approvalStatus === "pending" ? 202 : 201, trx);
       }
 
@@ -1034,6 +1114,12 @@ export default async function handler(req, res) {
             note,
           },
         });
+
+        // Kirim email alert jika di-approve dan ada item yang stoknya di bawah minimum
+        if (action === "approve") {
+          const changedIds = (updated.items || []).map(i => Number(i.itemId)).filter(Boolean);
+          checkAndAlertLowStock(db, changedIds).catch(() => {});
+        }
 
         return sendJson(res, 200, updated);
       }
