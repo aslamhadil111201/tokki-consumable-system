@@ -2705,11 +2705,11 @@ export default function App(){
                         <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnMonthly.length}, minmax(0, 1fr))`,gap:6,alignItems:"stretch",height:"100%",minHeight:220}}>
                           {reportTxnMonthly.map(point=>(
                             <div key={point.key} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:0,height:"100%"}}>
-                              <div style={{display:"flex",alignItems:"end",gap:2,flex:1,minHeight:0}}>
+                              <div style={{display:"flex",alignItems:"end",gap:2,height:"calc(100% - 20px)",minHeight:0}}>
                                 <div title={`Keluar: ${point.out}`} style={{width:8,height:`${Math.max(point.out>0?3:1,(point.out/reportTxnMonthlyMax)*100)}%`,background:T.red,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
                                 <div title={`Masuk: ${point.in}`} style={{width:8,height:`${Math.max(point.in>0?3:1,(point.in/reportTxnMonthlyMax)*100)}%`,background:T.green,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
                               </div>
-                              <div style={{fontSize:9,color:T.muted,marginTop:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%",textAlign:"center",flexShrink:0}}>{point.label}</div>
+                              <div style={{fontSize:9,color:T.muted,height:14,marginTop:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%",textAlign:"center",flexShrink:0}}>{point.label}</div>
                             </div>
                           ))}
                         </div>
