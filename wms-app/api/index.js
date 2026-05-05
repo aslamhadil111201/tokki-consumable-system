@@ -20,20 +20,25 @@ const ALERT_EMAIL = process.env.ALERT_EMAIL || "";
 const sendStockAlertEmail = async (lowItems) => {
   if (!RESEND_API_KEY || !ALERT_EMAIL || !lowItems.length) return;
   try {
-    const rows = lowItems.map(it => {
+    const cards = lowItems.map(it => {
       const s = Number(it.stock);
       const ms = Number(it.minStock);
-      let status, statusBg, statusColor, stockColor;
-      if (s === 0) { status = "HABIS"; statusBg = "#fee2e2"; statusColor = "#dc2626"; stockColor = "#dc2626"; }
-      else if (s <= ms) { status = "MENIPIS"; statusBg = "#fef9c3"; statusColor = "#92400e"; stockColor = "#d97706"; }
-      else { status = "MENDEKATI"; statusBg = "#ffedd5"; statusColor = "#9a3412"; stockColor = "#ea580c"; }
-      return `<tr style="border-bottom:1px solid #e5e7eb;">
-        <td style="padding:8px 8px;font-weight:600;color:#111;word-break:break-word;max-width:120px;">${it.name}</td>
-        <td style="padding:8px 6px;text-align:center;color:#6b7280;font-size:12px;">${it.category || "-"}</td>
-        <td style="padding:8px 6px;text-align:center;font-weight:700;color:${stockColor};white-space:nowrap;">${it.stock} ${it.unit || "pcs"}</td>
-        <td style="padding:8px 6px;text-align:center;white-space:nowrap;">${it.minStock} ${it.unit || "pcs"}</td>
-        <td style="padding:8px 6px;text-align:center;"><span style="background:${statusBg};color:${statusColor};border-radius:4px;padding:3px 7px;font-size:11px;font-weight:700;white-space:nowrap;">${status}</span></td>
-      </tr>`;
+      let status, statusBg, statusColor, stockColor, borderColor;
+      if (s === 0) { status = "🔴 HABIS"; statusBg = "#fee2e2"; statusColor = "#dc2626"; stockColor = "#dc2626"; borderColor = "#fca5a5"; }
+      else if (s <= ms) { status = "🟡 MENIPIS"; statusBg = "#fef9c3"; statusColor = "#92400e"; stockColor = "#d97706"; borderColor = "#fde68a"; }
+      else { status = "🟠 MENDEKATI"; statusBg = "#ffedd5"; statusColor = "#9a3412"; stockColor = "#ea580c"; borderColor = "#fdba74"; }
+      const unit = it.unit || "pcs";
+      return `<div style="border:1.5px solid ${borderColor};border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <span style="font-weight:700;color:#111;font-size:13px;flex:1;word-break:break-word;">${it.name}</span>
+          <span style="background:${statusBg};color:${statusColor};border-radius:4px;padding:3px 8px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;">${status}</span>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:#6b7280;">${it.category || "-"}</div>
+        <div style="margin-top:6px;display:flex;gap:16px;font-size:12px;">
+          <span>Stok: <strong style="color:${stockColor};">${it.stock} ${unit}</strong></span>
+          <span style="color:#6b7280;">Min: ${it.minStock} ${unit}</span>
+        </div>
+      </div>`;
     }).join("");
 
     const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"></head><body style="margin:0;padding:0;background:#f3f4f6;">
@@ -42,26 +47,10 @@ const sendStockAlertEmail = async (lowItems) => {
         <div style="font-size:20px;font-weight:800;color:#fff;">🏭 TOKKI - WHS</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:4px;">Notifikasi Restock Barang</div>
       </div>
-      <div style="background:#fff;border-radius:10px;padding:16px;border:1px solid #e5e7eb;margin-bottom:12px;">
-        <p style="margin:0 0 8px;color:#374151;font-size:14px;">Halo Admin,</p>
-        <p style="margin:0 0 14px;color:#374151;font-size:14px;">Terdapat <strong>${lowItems.length} item</strong> yang memerlukan restock segera:</p>
-        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-          <table style="width:100%;min-width:480px;border-collapse:collapse;font-size:12px;color:#374151;table-layout:fixed;">
-            <colgroup>
-              <col style="width:30%"><col style="width:20%"><col style="width:18%"><col style="width:16%"><col style="width:16%">
-            </colgroup>
-            <thead>
-              <tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">
-                <th style="padding:8px 8px;text-align:left;font-size:11px;">Nama Item</th>
-                <th style="padding:8px 6px;text-align:center;font-size:11px;">Kategori</th>
-                <th style="padding:8px 6px;text-align:center;font-size:11px;">Stok</th>
-                <th style="padding:8px 6px;text-align:center;font-size:11px;">Min</th>
-                <th style="padding:8px 6px;text-align:center;font-size:11px;">Status</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
+      <div style="background:#f9fafb;border-radius:10px;padding:4px 0;margin-bottom:12px;">
+        <p style="margin:0 0 8px;color:#374151;font-size:14px;padding:0 4px;">Halo Admin,</p>
+        <p style="margin:0 0 12px;color:#374151;font-size:14px;padding:0 4px;">Terdapat <strong>${lowItems.length} item</strong> yang memerlukan restock segera:</p>
+        ${cards}
       </div>
       <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
         <p style="margin:0;color:#065f46;font-size:13px;">⚡ Segera lakukan pemesanan ulang untuk menghindari kehabisan stok operasional.</p>
