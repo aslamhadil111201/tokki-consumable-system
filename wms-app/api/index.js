@@ -21,11 +21,16 @@ const sendStockAlertEmail = async (lowItems) => {
   if (!RESEND_API_KEY || !ALERT_EMAIL || !lowItems.length) return;
   try {
     const rows = lowItems.map(it => {
-      const status = Number(it.stock) === 0 ? "🔴 HABIS" : "🟡 MENIPIS";
+      const s = Number(it.stock);
+      const ms = Number(it.minStock);
+      let status, stockColor;
+      if (s === 0) { status = "🔴 HABIS"; stockColor = "#dc2626"; }
+      else if (s <= ms) { status = "🟡 MENIPIS"; stockColor = "#d97706"; }
+      else { status = "🟠 MENDEKATI"; stockColor = "#ea580c"; }
       return `<tr style="border-bottom:1px solid #e5e7eb;">
         <td style="padding:10px 12px;font-weight:600;color:#111;">${it.name}</td>
         <td style="padding:10px 12px;text-align:center;">${it.category || "-"}</td>
-        <td style="padding:10px 12px;text-align:center;font-weight:700;color:${Number(it.stock)===0?"#dc2626":"#d97706"};">${it.stock} ${it.unit || "pcs"}</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:700;color:${stockColor};">${it.stock} ${it.unit || "pcs"}</td>
         <td style="padding:10px 12px;text-align:center;">${it.minStock} ${it.unit || "pcs"}</td>
         <td style="padding:10px 12px;text-align:center;">${status}</td>
       </tr>`;
@@ -83,7 +88,7 @@ const checkAndAlertLowStock = async (db, changedItemIds = []) => {
     const itemsCol = db.collection("items");
     const lowItems = await itemsCol.find({
       id: { $in: changedItemIds.map(Number) },
-      $expr: { $lte: ["$stock", "$minStock"] },
+      $expr: { $lte: ["$stock", { $multiply: ["$minStock", 1.5] }] },
     }).toArray();
     if (lowItems.length) await sendStockAlertEmail(lowItems);
   } catch (_) { /* best-effort */ }
