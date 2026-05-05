@@ -23,10 +23,10 @@ const sendStockAlertEmail = async (lowItems) => {
     const cards = lowItems.map(it => {
       const s = Number(it.stock);
       const ms = Number(it.minStock);
-      let statusLabel, statusBg, statusColor, stockColor, cardBorder;
-      if (s === 0) { statusLabel = "HABIS"; statusBg = "#fee2e2"; statusColor = "#dc2626"; stockColor = "#dc2626"; cardBorder = "#fca5a5"; }
-      else if (s <= ms) { statusLabel = "MENIPIS"; statusBg = "#fef9c3"; statusColor = "#92400e"; stockColor = "#e67e22"; cardBorder = "#fde68a"; }
-      else { statusLabel = "MENDEKATI"; statusBg = "#ffedd5"; statusColor = "#9a3412"; stockColor = "#ea580c"; cardBorder = "#fdba74"; }
+      let statusLabel, statusBg, statusColor, stockColor, cardBorder, dotColor;
+      if (s === 0) { statusLabel = "HABIS"; statusBg = "#fee2e2"; statusColor = "#dc2626"; stockColor = "#dc2626"; cardBorder = "#fca5a5"; dotColor = "#dc2626"; }
+      else if (s <= ms) { statusLabel = "MENIPIS"; statusBg = "#fef9c3"; statusColor = "#92400e"; stockColor = "#e67e22"; cardBorder = "#fde68a"; dotColor = "#facc15"; }
+      else { statusLabel = "MENDEKATI"; statusBg = "#ffedd5"; statusColor = "#9a3412"; stockColor = "#ea580c"; cardBorder = "#fdba74"; dotColor = "#fb923c"; }
       const unit = it.unit || "pcs";
       const rowStyle = "display:table;width:100%;margin-top:5px;";
       const labelStyle = "display:table-cell;font-size:12px;color:#9ca3af;width:50%;";
@@ -35,7 +35,9 @@ const sendStockAlertEmail = async (lowItems) => {
         <div style="display:table;width:100%;margin-bottom:4px;">
           <span style="display:table-cell;font-weight:700;color:#111;font-size:13px;word-break:break-word;vertical-align:middle;">${it.name}</span>
           <span style="display:table-cell;text-align:right;vertical-align:middle;white-space:nowrap;">
-            <span style="background:${statusBg};color:${statusColor};border-radius:4px;padding:3px 9px;font-size:11px;font-weight:700;">${statusLabel}</span>
+            <span style="background:${statusBg};color:${statusColor};border-radius:4px;padding:3px 9px;font-size:11px;font-weight:700;display:inline-block;">
+              <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotColor};margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,0.12);"></span>${statusLabel}
+            </span>
           </span>
         </div>
         <div style="${rowStyle}">
