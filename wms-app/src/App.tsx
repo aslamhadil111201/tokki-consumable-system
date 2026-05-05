@@ -577,19 +577,27 @@ export default function App(){
     }).filter(row=>row.key<=todayStr());
   })();
   const reportTxnMax=Math.max(1,...reportTxnSeries.map(s=>Math.max(s.out,s.in)));
+  const reportTxnTitle=reportPeriod==="year"?"Bar Chart Transaksi per Bulan":"Bar Chart Transaksi per Hari";
+  const reportTrendTitle="Tren Penggunaan per Item";
+  const reportTrendCurrentLabel=reportPeriod==="year"?"Tahun ini":"Periode ini";
+  const reportTrendPrevLabel=reportPeriod==="year"?"Tahun lalu":"Periode lalu";
 
-  // bar chart per bulan — selalu 12 bulan terakhir, tidak terpengaruh filter periode
-  const reportTxnMonthly=(()=>{
-    const now=new Date();
-    return Array.from({length:12}).map((_,i)=>{
-      const d=new Date(now.getFullYear(),now.getMonth()-11+i,1);
-      const prefix=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-      const out=approvedOutTrx.reduce((a,t)=>a+(String(t.date||"").startsWith(prefix)?1:0),0);
-      const inn=receives.reduce((a,r)=>a+(String(r.date||"").startsWith(prefix)?1:0),0);
-      return {key:prefix,label:d.toLocaleDateString("id-ID",{month:"short",year:"2-digit"}),out,in:inn};
-    });
+  const reportRangeDays=(()=>{
+    const start=new Date(reportRange.start);
+    const end=new Date(reportRange.end);
+    return Math.max(1,Math.floor((end.getTime()-start.getTime())/86400000)+1);
   })();
-  const reportTxnMonthlyMax=Math.max(1,...reportTxnMonthly.map(s=>Math.max(s.out,s.in)));
+  const reportPrevRange=(()=>{
+    const start=new Date(reportRange.start);
+    const prevEnd=new Date(start);
+    prevEnd.setDate(prevEnd.getDate()-1);
+    const prevStart=new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate()-(reportRangeDays-1));
+    return {start:isoDate(prevStart),end:isoDate(prevEnd)};
+  })();
+  const inPrevReportRange=(d)=>Boolean(d)&&d>=reportPrevRange.start&&d<=reportPrevRange.end;
+  const reportOutPrev=approvedOutTrx.filter(t=>inPrevReportRange(t.date));
+  const reportTrendSubtitle=`${reportTrendCurrentLabel} vs ${reportTrendPrevLabel}`;
 
   const reportTopItems=(()=>{
     const map={};
@@ -669,23 +677,20 @@ export default function App(){
     return rows.map(r=>({...r,pct:Math.round((r.total/max)*100)}));
   })();
 
-  // tren bulanan: bulan ini vs bulan lalu
+  // tren per item: periode ini vs periode sebelumnya (durasi sama)
   const reportMonthlyTrend=(()=>{
-    const now=new Date();
-    const curYear=now.getFullYear();
-    const curMonth=now.getMonth();
-    const prevYear=curMonth===0?curYear-1:curYear;
-    const prevMonth=curMonth===0?11:curMonth-1;
-    const curPrefix=`${curYear}-${String(curMonth+1).padStart(2,"0")}`;
-    const prevPrefix=`${prevYear}-${String(prevMonth+1).padStart(2,"0")}`;
     const curMap:Record<string,number>={};
     const prevMap:Record<string,number>={};
-    approvedOutTrx.forEach(t=>{
-      if(!t.date) return;
+    reportOut.forEach(t=>{
       toSafeRows(t.items).forEach(it=>{
         const key=it.itemName||`Item ${it.itemId||""}`;
-        if(String(t.date).startsWith(curPrefix)) curMap[key]=(curMap[key]||0)+Number(it.qty||0);
-        if(String(t.date).startsWith(prevPrefix)) prevMap[key]=(prevMap[key]||0)+Number(it.qty||0);
+        curMap[key]=(curMap[key]||0)+Number(it.qty||0);
+      });
+    });
+    reportOutPrev.forEach(t=>{
+      toSafeRows(t.items).forEach(it=>{
+        const key=it.itemName||`Item ${it.itemId||""}`;
+        prevMap[key]=(prevMap[key]||0)+Number(it.qty||0);
       });
     });
     const allKeys=new Set([...Object.keys(curMap),...Object.keys(prevMap)]);
@@ -696,7 +701,7 @@ export default function App(){
       return {name,cur,prev,pctChange};
     }).filter(r=>r.cur>0||r.prev>0).sort((a,b)=>b.cur-a.cur).slice(0,8);
     const maxBar=Math.max(1,...rows.map(r=>Math.max(r.cur,r.prev)));
-    return rows.map(r=>({...r,curPct:Math.round(r.cur/maxBar*100),prevPct:Math.round(r.prev/maxBar*100),isSpike:r.pctChange>=50}));
+    return rows.map(r=>({...r,curPct:Math.round(r.cur/maxBar*100),prevPct:Math.round(r.prev/maxBar*100),isSpike:r.pctChange>=50&&r.cur>0}));
   })();
 
   const trendSpikeCount=reportMonthlyTrend.filter(r=>r.isSpike).length;
@@ -2692,22 +2697,22 @@ export default function App(){
                 <div className="two-col" style={{marginBottom:16}}>
                   <div className="card" style={{padding:"16px 18px",display:"flex",flexDirection:"column"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                      <div className="dash-panel-title">Bar Chart Transaksi per Bulan</div>
+                      <div className="dash-panel-title">{reportTxnTitle}</div>
                       <div style={{display:"flex",gap:10,fontSize:11.5,color:T.muted,fontWeight:700}}>
                         <span style={{display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:T.red,display:"inline-block"}}/>Keluar</span>
                         <span style={{display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:8,height:8,borderRadius:"50%",background:T.green,display:"inline-block"}}/>Masuk</span>
                       </div>
                     </div>
                     <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end",minHeight:220}}>
-                    {reportTxnMonthly.every(s=>s.out===0&&s.in===0)
+                    {reportTxnSeries.length===0||reportTxnSeries.every(s=>s.out===0&&s.in===0)
                       ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada transaksi</div>
                       :(
-                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnMonthly.length}, minmax(0, 1fr))`,gap:6,alignItems:"stretch",height:"100%",minHeight:220}}>
-                          {reportTxnMonthly.map(point=>(
+                        <div style={{display:"grid",gridTemplateColumns:`repeat(${reportTxnSeries.length}, minmax(0, 1fr))`,gap:6,alignItems:"stretch",height:"100%",minHeight:220}}>
+                          {reportTxnSeries.map(point=>(
                             <div key={point.key} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:0,height:"100%"}}>
                               <div style={{display:"flex",alignItems:"end",gap:2,height:"calc(100% - 20px)",minHeight:0}}>
-                                <div title={`Keluar: ${point.out}`} style={{width:8,height:`${Math.max(point.out>0?1.6:0.6,(point.out/reportTxnMonthlyMax)*55)}%`,background:T.red,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
-                                <div title={`Masuk: ${point.in}`} style={{width:8,height:`${Math.max(point.in>0?1.6:0.6,(point.in/reportTxnMonthlyMax)*55)}%`,background:T.green,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
+                                <div title={`Keluar: ${point.out}`} style={{width:8,height:`${Math.max(point.out>0?1.6:0.6,(point.out/reportTxnMax)*55)}%`,background:T.red,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
+                                <div title={`Masuk: ${point.in}`} style={{width:8,height:`${Math.max(point.in>0?1.6:0.6,(point.in/reportTxnMax)*55)}%`,background:T.green,borderRadius:"5px 5px 0 0",opacity:0.92}}/>
                               </div>
                               <div style={{fontSize:9,color:T.muted,height:14,marginTop:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%",textAlign:"center",flexShrink:0}}>{point.label}</div>
                             </div>
@@ -2721,8 +2726,8 @@ export default function App(){
                   <div className="card" style={{padding:"16px 18px",display:"flex",flexDirection:"column"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:10,flexWrap:"wrap",flexShrink:0}}>
                       <div>
-                        <div className="dash-panel-title" style={{marginBottom:4}}>Tren Penggunaan Bulanan</div>
-                        <div style={{fontSize:11,color:T.muted}}>Bulan ini vs bulan lalu{trendSpikeCount>0&&<span style={{marginLeft:8,background:"#fee2e2",color:"#dc2626",borderRadius:999,padding:"2px 8px",fontWeight:800,fontSize:10.5}}>⚡ {trendSpikeCount} lonjakan</span>}</div>
+                        <div className="dash-panel-title" style={{marginBottom:4}}>{reportTrendTitle}</div>
+                        <div style={{fontSize:11,color:T.muted}}>{reportTrendSubtitle}{trendSpikeCount>0&&<span style={{marginLeft:8,background:"#fee2e2",color:"#dc2626",borderRadius:999,padding:"2px 8px",fontWeight:800,fontSize:10.5}}>⚡ {trendSpikeCount} lonjakan</span>}</div>
                       </div>
                       <div style={{display:"flex",gap:4,flexShrink:0}}>
                         {([["all","Semua"],["up","Naik"],["down","Turun"],["spike","Lonjakan!"]] as const).map(([id,label])=>(
@@ -2731,11 +2736,11 @@ export default function App(){
                       </div>
                     </div>
                     <div style={{display:"flex",gap:8,fontSize:10.5,marginBottom:10,flexWrap:"wrap"}}>
-                      <button onClick={()=>setTrendFilter(trendFilter==="prev"?"all":"prev")} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:8,border:`1px solid ${trendFilter==="prev"?"#10b981":T.border}`,background:trendFilter==="prev"?(dark?"rgba(16,185,129,0.15)":"#d1fae5"):"transparent",color:trendFilter==="prev"?"#059669":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:700,cursor:"pointer",transition:"all .18s"}}><span style={{width:10,height:10,borderRadius:3,background:dark?"rgba(255,255,255,0.22)":"#bbf7d0",display:"inline-block",flexShrink:0}}/>Bulan lalu</button>
-                      <button onClick={()=>setTrendFilter(trendFilter==="cur"?"all":"cur")} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:8,border:`1px solid ${trendFilter==="cur"?"#10b981":T.border}`,background:trendFilter==="cur"?(dark?"rgba(16,185,129,0.25)":"#d1fae5"):"transparent",color:trendFilter==="cur"?"#059669":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:700,cursor:"pointer",transition:"all .18s"}}><span style={{width:10,height:10,borderRadius:3,background:"#10b981",display:"inline-block",flexShrink:0}}/>Bulan ini</button>
+                      <button onClick={()=>setTrendFilter(trendFilter==="prev"?"all":"prev")} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:8,border:`1px solid ${trendFilter==="prev"?"#10b981":T.border}`,background:trendFilter==="prev"?(dark?"rgba(16,185,129,0.15)":"#d1fae5"):"transparent",color:trendFilter==="prev"?"#059669":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:700,cursor:"pointer",transition:"all .18s"}}><span style={{width:10,height:10,borderRadius:3,background:dark?"rgba(255,255,255,0.22)":"#bbf7d0",display:"inline-block",flexShrink:0}}/>{reportTrendPrevLabel}</button>
+                      <button onClick={()=>setTrendFilter(trendFilter==="cur"?"all":"cur")} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:8,border:`1px solid ${trendFilter==="cur"?"#10b981":T.border}`,background:trendFilter==="cur"?(dark?"rgba(16,185,129,0.25)":"#d1fae5"):"transparent",color:trendFilter==="cur"?"#059669":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:700,cursor:"pointer",transition:"all .18s"}}><span style={{width:10,height:10,borderRadius:3,background:"#10b981",display:"inline-block",flexShrink:0}}/>{reportTrendCurrentLabel}</button>
                     </div>
                     {reportMonthlyTrend.length===0
-                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan bulan ini</div>
+                      ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan pada periode ini</div>
                       :(
                         <div style={{flex:1,overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
                           {reportMonthlyTrend.filter(r=>{
@@ -2783,7 +2788,7 @@ export default function App(){
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:0}} className="report-botgrid">
                   <div className="card" style={{padding:"16px 18px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
-                    <div className="dash-panel-title">Breakdown per Departemen</div>
+                    <div className="dash-panel-title">Breakdown per Departemen ({reportRange.label})</div>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       {reportDeptCats.map(cat=>(
                         <span key={cat} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:10.5,fontWeight:700,color:T.muted,padding:"2px 8px",border:`1px solid ${T.border}`,borderRadius:999}}>
@@ -2819,7 +2824,7 @@ export default function App(){
 
                   <div className="card" style={{padding:"16px 18px"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-                      <div className="dash-panel-title">Project Paling Sering Dipakai</div>
+                      <div className="dash-panel-title">Project Paling Sering Dipakai ({reportRange.label})</div>
                       <div style={{display:"flex",gap:4,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:3}}>
                         {([["unit","Frekuensi"],["rp","Nilai (Rp)"]] as const).map(([id,label])=>(
                           <button key={id} onClick={()=>setReportProjectMode(id)} style={{padding:"4px 10px",borderRadius:7,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:10.5,fontWeight:700,cursor:"pointer",background:reportProjectMode===id?T.primary:"transparent",color:reportProjectMode===id?"white":T.muted,transition:"all .18s"}}>{label}</button>
