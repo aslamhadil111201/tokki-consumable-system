@@ -2279,11 +2279,11 @@ export default function App(){
                   return(
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20}}>
                       {/* Donut ringkasan stok */}
-                      <div className="card">
+                      <div className="card" style={{display:"flex",flexDirection:"column"}}>
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Ringkasan Stok</div>
-                        <div style={{display:"flex",alignItems:"center",gap:16}}>
-                          <div style={{position:"relative",width:100,height:100,flexShrink:0}}>
-                            <svg width="100" height="100" viewBox="0 0 100 100">
+                        <div style={{display:"flex",alignItems:"center",gap:16,flex:1}}>
+                          <div style={{position:"relative",width:130,height:130,flexShrink:0}}>
+                            <svg width="130" height="130" viewBox="0 0 100 100">
                               <circle cx="50" cy="50" r={R} fill="none" stroke={T.border} strokeWidth="14"/>
                               {renderedSegs.map((s,i)=>(
                                 <circle key={i} cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth="14" strokeDasharray={s.da} strokeDashoffset={s.doff} transform="rotate(-90 50 50)"/>
@@ -2291,13 +2291,13 @@ export default function App(){
                             </svg>
                             <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",pointerEvents:"none"}}>
                               <div style={{fontSize:9,color:T.muted,lineHeight:1.3}}>Total</div>
-                              <div style={{fontSize:14,fontWeight:800,color:T.text,lineHeight:1.1}}>{dashTotalStokPcs.toLocaleString("id-ID")}</div>
+                              <div style={{fontSize:15,fontWeight:800,color:T.text,lineHeight:1.1}}>{dashTotalStokPcs.toLocaleString("id-ID")}</div>
                               <div style={{fontSize:9,color:T.muted}}>pcs</div>
                             </div>
                           </div>
                           <div style={{flex:1}}>
                             {[{label:"Aman",color:"#10b981",count:dashStockAman},{label:"Menipis",color:"#f59e0b",count:dashStockMenipis},{label:"Habis",color:"#ef4444",count:dashStockHabis}].map((l,i)=>(
-                              <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,fontSize:12,color:T.muted}}>
+                              <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,fontSize:12,color:T.muted}}>
                                 <div style={{width:10,height:10,borderRadius:"50%",background:l.color,flexShrink:0}}/>
                                 <div style={{flex:1}}>{l.label}</div>
                                 <div style={{fontWeight:700,color:T.text}}>{l.count}<span style={{fontSize:10,fontWeight:400,color:T.muted,marginLeft:3}}>item</span></div>
