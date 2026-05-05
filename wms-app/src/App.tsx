@@ -342,7 +342,7 @@ export default function App(){
   const [idleCountdown,setIdleCountdown]=useState(60);
   const [reportPeriod,setReportPeriod]=useState("month");
   const [reportProjectMode,setReportProjectMode]=useState<"unit"|"rp">("unit");
-  const [trendFilter,setTrendFilter]=useState<"all"|"up"|"down"|"spike">("all");
+  const [trendFilter,setTrendFilter]=useState<"all"|"up"|"down"|"spike"|"cur"|"prev">("all");
   const [returns,setReturns]=useState([]);
   const [showRetur,setShowRetur]=useState(false);
   const [returForm,setReturForm]=useState(emptyReturForm());
@@ -2715,9 +2715,9 @@ export default function App(){
                         ))}
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:10,fontSize:10.5,color:T.muted,marginBottom:10}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:dark?"rgba(255,255,255,0.18)":"#d1fae5",display:"inline-block"}}/>Bulan lalu</span>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#10b981",display:"inline-block"}}/>Bulan ini</span>
+                    <div style={{display:"flex",gap:8,fontSize:10.5,marginBottom:10,flexWrap:"wrap"}}>
+                      <button onClick={()=>setTrendFilter(trendFilter==="prev"?"all":"prev")} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:8,border:`1px solid ${trendFilter==="prev"?"#10b981":T.border}`,background:trendFilter==="prev"?(dark?"rgba(16,185,129,0.15)":"#d1fae5"):"transparent",color:trendFilter==="prev"?"#059669":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:700,cursor:"pointer",transition:"all .18s"}}><span style={{width:10,height:10,borderRadius:3,background:dark?"rgba(255,255,255,0.22)":"#bbf7d0",display:"inline-block",flexShrink:0}}/>Bulan lalu</button>
+                      <button onClick={()=>setTrendFilter(trendFilter==="cur"?"all":"cur")} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:8,border:`1px solid ${trendFilter==="cur"?"#10b981":T.border}`,background:trendFilter==="cur"?(dark?"rgba(16,185,129,0.25)":"#d1fae5"):"transparent",color:trendFilter==="cur"?"#059669":T.muted,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:700,cursor:"pointer",transition:"all .18s"}}><span style={{width:10,height:10,borderRadius:3,background:"#10b981",display:"inline-block",flexShrink:0}}/>Bulan ini</button>
                     </div>
                     {reportMonthlyTrend.length===0
                       ?<div style={{padding:"36px 0",textAlign:"center",color:T.muted}}>Belum ada data pengambilan bulan ini</div>
@@ -2727,6 +2727,8 @@ export default function App(){
                             if(trendFilter==="up") return r.pctChange>0;
                             if(trendFilter==="down") return r.pctChange<0;
                             if(trendFilter==="spike") return r.isSpike;
+                            if(trendFilter==="cur") return r.cur>0;
+                            if(trendFilter==="prev") return r.prev>0;
                             return true;
                           }).map(row=>{
                             const pctAbs=Math.abs(row.pctChange);
