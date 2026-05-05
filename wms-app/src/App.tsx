@@ -328,6 +328,9 @@ export default function App(){
   const [pendingApprovalCount,setPendingApprovalCount]=useState(0);
   const [approvalBusyKey,setApprovalBusyKey]=useState("");
   const [slaTick,setSlaTick]=useState(0);
+  const [autoRejectHours,setAutoRejectHours]=useState(24);
+  const [autoRejectInput,setAutoRejectInput]=useState("24");
+  const [autoRejectSaving,setAutoRejectSaving]=useState(false);
   const [notifHistory,setNotifHistory]=useState<any[]>(()=>{try{return JSON.parse(localStorage.getItem("wms_notif_history")||"[]");}catch{return [];}});
   const [notifTab,setNotifTab]=useState("notif");
   const prevPendingCountRef=useRef(-1);
@@ -434,7 +437,7 @@ export default function App(){
   // ── FETCH SEMUA DATA ─────────────────────────────────────────────
   const fetchAll=async()=>withLoading(async()=>{
     try{
-      const [it,tr,adm,dep,emp,wo,rcv,allMovements,ret]=await Promise.all([
+      const [it,tr,adm,dep,emp,wo,rcv,allMovements,ret,cfg]=await Promise.all([
         apiFetch("/items").then(r=>r.json()),
         apiFetch("/transactions").then(r=>r.json()),
         apiFetch("/admins").then(r=>r.json()),
@@ -444,8 +447,12 @@ export default function App(){
         apiFetch("/receives").then(r=>r.json()),
         apiFetch("/transactions?scope=all").then(r=>r.json()),
         apiFetch("/returns").then(r=>r.json()),
+        apiFetch("/settings").then(r=>r.json()).catch(()=>({autoRejectHours:24})),
       ]);
       setItems(it); setTrx(tr); setAdmins(adm); setDepartments(dep); setEmployees(emp); setWorkOrders(wo); setReceives(rcv); setAllHistory(allMovements); setReturns(Array.isArray(ret)?ret:[]);
+      const arh=Math.max(1,Number(cfg?.autoRejectHours)||24);
+      setAutoRejectHours(arh);
+      setAutoRejectInput(String(arh));
     }catch(e){toast$(e?.message||"Gagal terhubung ke server","err");}
   },"Sedang memuat data");
 
@@ -1179,7 +1186,7 @@ export default function App(){
   const getSlaInfo=(t:any,_tick:number)=>{
     // t.id is a unix timestamp in ms (used as primary key)
     const createdMs=t.createdAt?new Date(t.createdAt).getTime():Number(t.id)||0;
-    if(!createdMs||createdMs>Date.now()+60000) return{label:"",urgency:"normal" as const,ageMin:0};
+    if(!createdMs||createdMs>Date.now()+60000) return{label:"",urgency:"normal" as const,ageMin:0,remainingMin:null as number|null,remainingLabel:""};
     const ageMs=Date.now()-createdMs;
     const ageMin=Math.floor(ageMs/60000);
     let label="";
@@ -1187,7 +1194,29 @@ export default function App(){
     else if(ageMin<60) label=`${ageMin} mnt`;
     else{const h=Math.floor(ageMin/60);const m=ageMin%60;label=m>0?`${h}j ${m}m`:`${h} jam`;}
     const urgency=ageMin>=30?"critical":ageMin>=15?"warning":"normal";
-    return{label,urgency,ageMin};
+    const totalMin=autoRejectHours*60;
+    const remainingMin=Math.max(0,totalMin-ageMin);
+    let remainingLabel="";
+    if(remainingMin<=0) remainingLabel="segera di-reject";
+    else if(remainingMin<60) remainingLabel=`${remainingMin} mnt lagi`;
+    else{const rh=Math.floor(remainingMin/60);const rm=remainingMin%60;remainingLabel=rm>0?`${rh}j ${rm}m lagi`:`${rh} jam lagi`;}
+    return{label,urgency,ageMin,remainingMin,remainingLabel};
+  };
+
+  // ── Save auto-reject setting ──────────────────────────────────────
+  const saveAutoRejectSetting=async()=>{
+    const h=parseInt(autoRejectInput,10);
+    if(!Number.isFinite(h)||h<1||h>720){toast$("Masukkan jam antara 1–720","err");return;}
+    setAutoRejectSaving(true);
+    try{
+      const r=await apiFetch("/settings",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({autoRejectHours:h})});
+      if(!r.ok){const e=await r.json().catch(()=>({}));toast$(e?.error||"Gagal simpan setting","err");return;}
+      const d=await r.json();
+      const arh=Math.max(1,Number(d?.autoRejectHours)||h);
+      setAutoRejectHours(arh);setAutoRejectInput(String(arh));
+      toast$(`Auto-reject diset ke ${arh} jam`,"ok");
+    }catch(e:any){toast$(e?.message||"Gagal simpan setting","err");}
+    finally{setAutoRejectSaving(false);}
   };
 
   const exportTransactionsExcel=()=>{
@@ -2180,6 +2209,27 @@ export default function App(){
                   );
                 })()}
 
+                {isAdmin&&(
+                  <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"14px 18px",marginBottom:20,display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:T.text,flexShrink:0}}>⚙️ Auto-reject pending</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <input
+                        type="number" min={1} max={720} value={autoRejectInput}
+                        onChange={e=>setAutoRejectInput(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter")saveAutoRejectSetting();}}
+                        style={{width:72,padding:"5px 9px",borderRadius:7,border:`1px solid ${T.border}`,background:T.card,color:T.text,fontSize:13,fontWeight:700,textAlign:"center"}}
+                      />
+                      <span style={{fontSize:12,color:T.muted,fontWeight:600}}>jam sejak dibuat</span>
+                      <button
+                        className="tb-btn" disabled={autoRejectSaving}
+                        onClick={saveAutoRejectSetting}
+                        style={{fontSize:11,padding:"5px 13px",opacity:autoRejectSaving?0.6:1}}
+                      >{autoRejectSaving?"Menyimpan...":"Simpan"}</button>
+                    </div>
+                    <div style={{fontSize:11,color:T.muted,marginLeft:"auto"}}>Sekarang: <b style={{color:T.primary}}>{autoRejectHours} jam</b></div>
+                  </div>
+                )}
+
                 <div className="two-col">
                   <div className="card">
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -2744,6 +2794,7 @@ export default function App(){
                               <div style={{width:48,height:48,borderRadius:"50%",background:sla.urgency==="critical"?T.redBg:T.amberBg,border:`2px solid ${slaColor}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,lineHeight:1}}>⏳</div>
                               <span style={{fontSize:9,fontWeight:900,letterSpacing:".07em",color:slaColor,textTransform:"uppercase"}}>PENDING</span>
                               {sla.label&&<span style={{fontSize:9,fontWeight:800,color:slaColor,textAlign:"center",lineHeight:1.2}}>{slaIcon} {sla.label}</span>}
+                              {sla.remainingLabel&&<span style={{fontSize:9,fontWeight:800,color:sla.remainingMin===0?T.red:T.muted,textAlign:"center",lineHeight:1.2}}>🕒 {sla.remainingLabel}</span>}
                             </div>
                             <div className="trx-row-inner">
                               <div className="trx-col-name">

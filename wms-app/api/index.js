@@ -48,6 +48,8 @@ if (!globalForMongo.__tokkiMongoClientPromise) {
 let seedDone = false;
 let defaultUsersEnsured = false;
 let lastAuditCleanupAt = 0;
+let lastAutoRejectAt = 0;
+const AUTO_REJECT_INTERVAL_MS = 30 * 60 * 1000;
 
 function sendJson(res, status, payload) {
   res.status(status).json(payload);
@@ -306,6 +308,34 @@ async function maybeCleanupAuditLogs(db) {
   await db.collection("auditLogs").deleteMany({ createdAt: { $lt: cutoffIso } });
 }
 
+async function runAutoRejectIfNeeded(db) {
+  if (Date.now() - lastAutoRejectAt < AUTO_REJECT_INTERVAL_MS) return;
+  lastAutoRejectAt = Date.now();
+  try {
+    const settingsCol = db.collection("settings");
+    const setting = await settingsCol.findOne({ key: "autoRejectHours" });
+    const hours = Math.max(1, toNumber(setting?.value, 24));
+    const cutoff = new Date(Date.now() - hours * 3600000).toISOString();
+    const transactionsCol = db.collection("transactions");
+    const pending = await transactionsCol.find({ approvalStatus: "pending", createdAt: { $lt: cutoff } }).toArray();
+    if (pending.length === 0) return;
+    const now = new Date().toISOString();
+    const note = `Auto-rejected: tidak ada tindakan dalam ${hours} jam`;
+    for (const trx of pending) {
+      await transactionsCol.updateOne(
+        { id: trx.id },
+        { $set: { approvalStatus: "rejected", approvalNote: note, approvedBy: "system", approvedAt: now } },
+      );
+      await writeAuditLog(db, {
+        actor: { id: 0, username: "system", role: "system" },
+        action: "transactions.auto_reject",
+        target: "transactions",
+        meta: { id: trx.id, hours },
+      });
+    }
+  } catch { /* auto-reject errors must not break main flow */ }
+}
+
 function maybeConfigureCloudinary() {
   if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     return false;
@@ -458,6 +488,8 @@ export default async function handler(req, res) {
     const db = await getDb();
     await seedDatabaseIfNeeded(db);
     await ensureDefaultUsersPresent(db);
+    maybeCleanupAuditLogs(db).catch(() => {});
+    runAutoRejectIfNeeded(db).catch(() => {});
 
     if (method === "POST" && parts[0] === "login") {
       const { username, password } = body;
@@ -497,6 +529,33 @@ export default async function handler(req, res) {
 
     const auth = verifyAuth(req);
     if (!auth.ok) return sendJson(res, 401, { error: auth.error });
+
+    if (parts[0] === "settings") {
+      if (method === "GET") {
+        const setting = await db.collection("settings").findOne({ key: "autoRejectHours" });
+        return sendJson(res, 200, { autoRejectHours: Math.max(1, toNumber(setting?.value, 24)) });
+      }
+      if (method === "PATCH") {
+        if (!ensureAdmin(auth.payload, res)) return;
+        const hours = Number(body?.autoRejectHours);
+        if (!Number.isFinite(hours) || hours < 1 || hours > 720) {
+          return sendJson(res, 400, { error: "autoRejectHours harus antara 1 dan 720" });
+        }
+        const rounded = Math.round(hours);
+        await db.collection("settings").updateOne(
+          { key: "autoRejectHours" },
+          { $set: { key: "autoRejectHours", value: rounded } },
+          { upsert: true },
+        );
+        await writeAuditLog(db, {
+          actor: auth.payload,
+          action: "settings.update",
+          target: "settings",
+          meta: { autoRejectHours: rounded },
+        });
+        return sendJson(res, 200, { autoRejectHours: rounded });
+      }
+    }
 
     if (parts[0] === "audit-logs" && method === "GET") {
       if (!ensureAdmin(auth.payload, res)) return;
