@@ -341,6 +341,7 @@ export default function App(){
   const [idleWarning,setIdleWarning]=useState(false);
   const [idleCountdown,setIdleCountdown]=useState(60);
   const [reportPeriod,setReportPeriod]=useState("month");
+  const [dashTrendPointIdx,setDashTrendPointIdx]=useState(-1);
   const [reportProjectMode,setReportProjectMode]=useState<"unit"|"rp">("unit");
   const [trendFilter,setTrendFilter]=useState<"all"|"up"|"down"|"spike"|"cur"|"prev">("all");
   const [returns,setReturns]=useState([]);
@@ -2288,7 +2289,7 @@ export default function App(){
 
                 {/* Charts 3-col */}
                 {(()=>{
-                  const R=40,C2=2*Math.PI*R;
+                  const R=42,C2=2*Math.PI*R;
                   const dTotal=dashStockAman+dashStockMenipis+dashStockHabis||1;
                   const donutSegs=[{count:dashStockAman,color:"#10b981"},{count:dashStockMenipis,color:"#f59e0b"},{count:dashStockHabis,color:"#ef4444"}];
                   let cumLen=0;
@@ -2299,27 +2300,34 @@ export default function App(){
                     cumLen+=len;
                     return {color:s.color,da,doff};
                   });
-                  const svgW=220,svgH=90;
+                  const svgW=220,svgH=72;
                   const maxQty=Math.max(...dashLast7OutQty,1);
                   const linePoints=dashLast7OutQty.map((v,i)=>`${(i/6)*svgW},${svgH-(v/maxQty)*svgH*0.85}`).join(" ");
                   const areaPoints=`0,${svgH} ${linePoints} ${svgW},${svgH}`;
+                  const activeTrendPoint=dashTrendPointIdx>=0?{
+                    idx:dashTrendPointIdx,
+                    label:dashLast7Days[dashTrendPointIdx],
+                    value:dashLast7OutQty[dashTrendPointIdx],
+                    x:(dashTrendPointIdx/6)*svgW,
+                    y:svgH-(dashLast7OutQty[dashTrendPointIdx]/maxQty)*svgH*0.85,
+                  }:null;
                   return(
                     <div className="dash-charts-g">
                       {/* Donut ringkasan stok */}
                       <div className="card" style={{display:"flex",flexDirection:"column"}}>
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Ringkasan Stok</div>
-                        <div style={{display:"flex",alignItems:"center",gap:16,flex:1}}>
-                          <div style={{position:"relative",width:130,height:130,flexShrink:0}}>
-                            <svg width="130" height="130" viewBox="0 0 100 100">
-                              <circle cx="50" cy="50" r={R} fill="none" stroke={T.border} strokeWidth="14"/>
+                        <div style={{display:"flex",alignItems:"center",gap:18,flex:1}}>
+                          <div style={{position:"relative",width:150,height:150,flexShrink:0}}>
+                            <svg width="150" height="150" viewBox="0 0 100 100">
+                              <circle cx="50" cy="50" r={R} fill="none" stroke={T.border} strokeWidth="13"/>
                               {renderedSegs.map((s,i)=>(
-                                <circle key={i} cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth="14" strokeDasharray={s.da} strokeDashoffset={s.doff} transform="rotate(-90 50 50)"/>
+                                <circle key={i} cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth="13" strokeDasharray={s.da} strokeDashoffset={s.doff} transform="rotate(-90 50 50)"/>
                               ))}
                             </svg>
                             <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",pointerEvents:"none"}}>
-                              <div style={{fontSize:9,color:T.muted,lineHeight:1.3}}>Total</div>
-                              <div style={{fontSize:15,fontWeight:800,color:T.text,lineHeight:1.1}}>{dashTotalStokPcs.toLocaleString("id-ID")}</div>
-                              <div style={{fontSize:9,color:T.muted}}>pcs</div>
+                              <div style={{fontSize:10,color:T.muted,lineHeight:1.3}}>Total</div>
+                              <div style={{fontSize:17,fontWeight:800,color:T.text,lineHeight:1.1}}>{dashTotalStokPcs.toLocaleString("id-ID")}</div>
+                              <div style={{fontSize:10,color:T.muted}}>pcs</div>
                             </div>
                           </div>
                           <div style={{flex:1}}>
@@ -2342,19 +2350,35 @@ export default function App(){
                             <span style={{width:20,height:2,background:T.primary,display:"inline-block",borderRadius:2}}/>Unit Keluar
                           </span>
                         </div>
-                        <svg width="100%" viewBox={`0 0 ${svgW} ${svgH+18}`} style={{overflow:"visible",display:"block"}}>
-                          {[0,1,2].map(i=>(
-                            <line key={i} x1="0" y1={(svgH*0.85/2)*i} x2={svgW} y2={(svgH*0.85/2)*i} stroke={T.border} strokeWidth="0.5" strokeDasharray="4 4"/>
-                          ))}
-                          <polygon points={areaPoints} fill={dark?"rgba(16,185,129,0.08)":T.greenBg}/>
-                          <polyline points={linePoints} fill="none" stroke={T.primary} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                          {dashLast7OutQty.map((v,i)=>(
-                            <circle key={i} cx={(i/6)*svgW} cy={svgH-(v/maxQty)*svgH*0.85} r="3" fill={T.primary}/>
-                          ))}
-                          {dashLast7Days.map((d,i)=>(
-                            <text key={i} x={(i/6)*svgW} y={svgH+14} textAnchor="middle" fontSize="8" fill={T.muted}>{d.slice(5).replace("-","/")}</text>
-                          ))}
-                        </svg>
+                        <div style={{position:"relative"}} onMouseLeave={()=>setDashTrendPointIdx(-1)}>
+                          {activeTrendPoint&&(
+                            <div style={{position:"absolute",left:`${Math.min(Math.max((activeTrendPoint.x/svgW)*100,12),88)}%`,top:0,transform:"translate(-50%,-110%)",background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"7px 10px",boxShadow:T.shadowSm,zIndex:2,pointerEvents:"none",minWidth:96,textAlign:"center"}}>
+                              <div style={{fontSize:10,color:T.muted,fontWeight:700}}>{activeTrendPoint.label?.slice(5).replace("-","/")}</div>
+                              <div style={{fontSize:13,fontWeight:800,color:T.primary,marginTop:2}}>{activeTrendPoint.value} unit</div>
+                            </div>
+                          )}
+                          <svg width="100%" viewBox={`0 0 ${svgW} ${svgH+22}`} style={{overflow:"visible",display:"block"}}>
+                            {[0,1,2].map(i=>(
+                              <line key={i} x1="0" y1={(svgH*0.85/2)*i} x2={svgW} y2={(svgH*0.85/2)*i} stroke={T.border} strokeWidth="0.5" strokeDasharray="4 4"/>
+                            ))}
+                            <polygon points={areaPoints} fill={dark?"rgba(16,185,129,0.08)":T.greenBg}/>
+                            <polyline points={linePoints} fill="none" stroke={T.primary} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                            {dashLast7OutQty.map((v,i)=>{
+                              const pointX=(i/6)*svgW;
+                              const pointY=svgH-(v/maxQty)*svgH*0.85;
+                              const isActive=i===dashTrendPointIdx;
+                              return (
+                                <g key={i} onMouseEnter={()=>setDashTrendPointIdx(i)} onClick={()=>setDashTrendPointIdx(dashTrendPointIdx===i?-1:i)} style={{cursor:"pointer"}}>
+                                  <circle cx={pointX} cy={pointY} r="9" fill="transparent"/>
+                                  <circle cx={pointX} cy={pointY} r={isActive?5:4} fill={T.primary} stroke={T.card} strokeWidth="2"/>
+                                </g>
+                              );
+                            })}
+                            {dashLast7Days.map((d,i)=>(
+                              <text key={i} x={(i/6)*svgW} y={svgH+18} textAnchor="middle" fontSize="8" fill={T.muted}>{d.slice(5).replace("-","/")}</text>
+                            ))}
+                          </svg>
+                        </div>
                         <div style={{fontSize:11,color:T.primary,marginTop:4,cursor:"pointer"}} onClick={()=>setTab("report")}>Lihat laporan lengkap →</div>
                       </div>
                       {/* Status stok */}
