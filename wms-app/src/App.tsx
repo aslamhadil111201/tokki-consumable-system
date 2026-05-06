@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Boxes, CheckCircle2, CircleX, Clock3, Funnel, PackagePlus, Plus, RotateCcw, Search, ShieldCheck, TriangleAlert } from "lucide-react";
 
 const API = (
   import.meta.env.VITE_API_URL ||
@@ -163,6 +162,22 @@ const tabToPath = (tab = "") => ({
   report: "/Laporan",
 }[tab] || "/Dasboard");
 
+const UIIcon=({name,size=14,color="currentColor"})=>{
+  const p={width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round",style:{display:"block"}};
+  if(name==="search") return <svg {...p}><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+  if(name==="plus") return <svg {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+  if(name==="receive") return <svg {...p}><path d="M3 7h18"/><path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M12 10v7"/><path d="M9 14l3 3 3-3"/></svg>;
+  if(name==="filter") return <svg {...p}><polygon points="22 3 2 3 10 12 10 19 14 21 14 12 22 3"/></svg>;
+  if(name==="check") return <svg {...p}><path d="M20 6 9 17l-5-5"/></svg>;
+  if(name==="shield") return <svg {...p}><path d="M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>;
+  if(name==="clock") return <svg {...p}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>;
+  if(name==="alert") return <svg {...p}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+  if(name==="x") return <svg {...p}><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
+  if(name==="boxes") return <svg {...p}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/><polyline points="12 22.08 12 16.8 7.5 14.6"/><polyline points="12 16.8 16.5 14.6"/></svg>;
+  if(name==="rotate") return <svg {...p}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-9"/></svg>;
+  return null;
+};
+
 const stockStatusKey=it=>{
   const stock=Number(it?.stock||0);
   const minStock=Number(it?.minStock||0);
@@ -172,11 +187,11 @@ const stockStatusKey=it=>{
   return "aman";
 };
 const stockStatusIcon=(key,size=14)=>(
-  key==="habis"?<CircleX size={size} strokeWidth={2}/>
-    :key==="menipis"?<TriangleAlert size={size} strokeWidth={2}/>
-    :key==="mendekati"?<Clock3 size={size} strokeWidth={2}/>
-    :key==="aman"?<ShieldCheck size={size} strokeWidth={2}/>
-    :<CheckCircle2 size={size} strokeWidth={2}/>
+  key==="habis"?<UIIcon name="x" size={size}/>
+    :key==="menipis"?<UIIcon name="alert" size={size}/>
+    :key==="mendekati"?<UIIcon name="clock" size={size}/>
+    :key==="aman"?<UIIcon name="shield" size={size}/>
+    :<UIIcon name="check" size={size}/>
 );
 const stockStatus=it=>{
   const key=stockStatusKey(it);
@@ -2816,17 +2831,17 @@ export default function App(){
                 <div style={{display:"grid",gap:12,marginBottom:16,padding:"14px",border:`1px solid ${T.border}`,borderRadius:16,background:dark?"linear-gradient(120deg, rgba(3,20,14,0.92), rgba(2,25,18,0.86))":T.surfaceSolid,boxShadow:dark?"0 0 0 1px rgba(16,185,129,0.08), 0 10px 30px rgba(0,0,0,0.35)":T.shadowSm}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
                     <div style={{position:"relative",flex:"1 1 460px",maxWidth:620,minWidth:260}}>
-                      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.muted,pointerEvents:"none",display:"inline-flex",alignItems:"center"}}><Search size={15} strokeWidth={2}/></span>
+                      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.muted,pointerEvents:"none",display:"inline-flex",alignItems:"center"}}><UIIcon name="search" size={15}/></span>
                       <input className="ifield" placeholder="Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:"100%",paddingLeft:34}}/>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginLeft:"auto"}}>
-                      {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontSize:13,padding:"8px 16px"}}><Plus size={14} strokeWidth={2}/> Add New Item</BtnG>}
-                      {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{fontSize:13,padding:"8px 16px",fontWeight:500}}><PackagePlus size={14} strokeWidth={2}/> Receive New</BtnP>}
+                      {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontSize:13,padding:"8px 16px"}}><UIIcon name="plus" size={14}/> Add New Item</BtnG>}
+                      {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{fontSize:13,padding:"8px 16px",fontWeight:500}}><UIIcon name="receive" size={14}/> Receive New</BtnP>}
                     </div>
                   </div>
 
                   <div style={{display:"grid",gap:10,padding:"12px",border:`1px solid ${T.border}`,borderRadius:14,background:dark?"linear-gradient(120deg, rgba(1,26,19,0.88), rgba(1,16,12,0.7))":T.surface}}>
-                    <div style={{fontSize:13,fontWeight:700,color:T.primaryLight,display:"flex",alignItems:"center",gap:8}}><Funnel size={14} strokeWidth={2}/> Filter Barang</div>
+                    <div style={{fontSize:13,fontWeight:700,color:T.primaryLight,display:"flex",alignItems:"center",gap:8}}><UIIcon name="filter" size={14}/> Filter Barang</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <div style={{fontSize:12,fontWeight:600,color:T.muted,minWidth:60}}>Kategori</div>
                       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -2834,7 +2849,7 @@ export default function App(){
                           const active=catF===c;
                           return(
                             <button key={c} onClick={()=>setCatF(c)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?T.primary:T.border}`,background:active?T.primary:T.surfaceSolid,color:active?"#eafdf5":T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:6}}>
-                              {active&&<CheckCircle2 size={13} strokeWidth={2}/>}{c}
+                              {active&&<UIIcon name="check" size={13}/>}{c}
                             </button>
                           );
                         })}
@@ -2865,7 +2880,7 @@ export default function App(){
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",padding:"12px",border:`1px solid ${T.border}`,borderRadius:14,background:dark?"linear-gradient(120deg, rgba(1,22,16,0.88), rgba(1,12,9,0.72))":T.surface}}>
                     <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{fontSize:20,color:T.primaryLight,display:"inline-flex",alignItems:"center"}}><Boxes size={20} strokeWidth={2}/></div>
+                        <div style={{fontSize:20,color:T.primaryLight,display:"inline-flex",alignItems:"center"}}><UIIcon name="boxes" size={20}/></div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:T.primaryLight}}>{filtItems.length} Item</div>
                           <div style={{fontSize:11,color:T.muted}}>Total ditemukan</div>
@@ -2873,7 +2888,7 @@ export default function App(){
                       </div>
                       <div style={{width:1,height:34,background:T.border}}/>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{fontSize:20,color:"#f59e0b",display:"inline-flex",alignItems:"center"}}><TriangleAlert size={20} strokeWidth={2}/></div>
+                        <div style={{fontSize:20,color:"#f59e0b",display:"inline-flex",alignItems:"center"}}><UIIcon name="alert" size={20}/></div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:"#f59e0b"}}>{filtMenipisCount} Menipis</div>
                           <div style={{fontSize:11,color:T.muted}}>Stok menipis</div>
@@ -2881,18 +2896,18 @@ export default function App(){
                       </div>
                       <div style={{width:1,height:34,background:T.border}}/>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{fontSize:20,color:"#ef4444",display:"inline-flex",alignItems:"center"}}><CircleX size={20} strokeWidth={2}/></div>
+                        <div style={{fontSize:20,color:"#ef4444",display:"inline-flex",alignItems:"center"}}><UIIcon name="x" size={20}/></div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:"#ef4444"}}>{filtHabisCount} Habis</div>
                           <div style={{fontSize:11,color:T.muted}}>Stok habis</div>
                         </div>
                       </div>
                     </div>
-                    <button onClick={resetStockFilters} style={{fontSize:12,padding:"7px 12px",borderRadius:999,border:`1px solid ${T.border}`,background:"transparent",color:T.primaryLight,cursor:"pointer",display:"flex",alignItems:"center",gap:6,opacity:hasActiveStockFilters?1:0.72}}><RotateCcw size={14} strokeWidth={2}/> Reset Filter</button>
+                    <button onClick={resetStockFilters} style={{fontSize:12,padding:"7px 12px",borderRadius:999,border:`1px solid ${T.border}`,background:"transparent",color:T.primaryLight,cursor:"pointer",display:"flex",alignItems:"center",gap:6,opacity:hasActiveStockFilters?1:0.72}}><UIIcon name="rotate" size={14}/> Reset Filter</button>
                   </div>
                 </div>
                 <div className="stock-g">
-                  {filtItems.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><Search size={34} strokeWidth={1.8}/></div>Tidak ada barang ditemukan</div>}
+                  {filtItems.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><UIIcon name="search" size={34}/></div>Tidak ada barang ditemukan</div>}
                   {filtItems.map(it=>{
                     const s=stockStatus(it); const cc=catColor(it.category); const pct=it.minStock?Math.min(100,it.stock/it.minStock*100):100;
                     const cardBorder=s.label==="Aman"?cc.dot:s.dot;
