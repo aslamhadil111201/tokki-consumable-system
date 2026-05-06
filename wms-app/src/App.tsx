@@ -2805,7 +2805,7 @@ export default function App(){
                 {/* ── Filter bar (with action buttons) ── */}
                 <div style={{display:"grid",gap:10,marginBottom:16,padding:"16px 20px",border:`1px solid ${T.border}`,borderRadius:14,background:T.surfaceSolid}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-                    <div style={{position:"relative",flex:"0 0 300px",maxWidth:"100%"}}>
+                    <div style={{position:"relative",flex:"1 1 460px",maxWidth:560,minWidth:260}}>
                       <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.muted,pointerEvents:"none"}}>🔍</span>
                       <input className="ifield" placeholder="Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:"100%",paddingLeft:34}}/>
                     </div>
