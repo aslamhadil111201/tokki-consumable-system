@@ -1715,13 +1715,68 @@ export default function App(){
   };
 
   const exportReportPdf=()=>{
-    downloadPdfTable({
-      fileName:`laporan-analitik-${todayStr()}.pdf`,
-      title:`Laporan & Analitik - ${todayFmt()}`,
-      subtitle:`Periode: ${reportRange.label} (${fmtDate(reportRange.start)} - ${fmtDate(reportRange.end)}) | Keluar: ${reportTotalOutUnits} | Masuk: ${reportTotalInUnits} | Item kritis: ${lowStock.length}`,
-      headers:["Label","Keluar","Masuk"],
-      rows:reportTxnSeries.map(s=>[s.label,s.out,s.in]),
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(`Laporan & Analitik - ${todayFmt()}`, 40, 32);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Periode: ${reportRange.label} (${fmtDate(reportRange.start)} - ${fmtDate(reportRange.end)})`, 40, 50);
+
+    // KPI Table
+    autoTable(doc, {
+      startY: 62,
+      head: [["KPI", "Nilai"]],
+      body: [
+        ["Total Keluar (Unit)", String(reportTotalOutUnits)],
+        ["Total Masuk (Unit)", String(reportTotalInUnits)],
+        ["Nilai Estimasi (Rp)", fmtMoney(Math.round(reportEstimatedValue))],
+        ["Item Kritis", String(lowStock.length)],
+      ],
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+      margin: { left: 40, right: 40 },
+      theme: "grid",
     });
+
+    // Transaksi Per Hari/Bulan
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 16,
+      head: [["Label", "Keluar", "Masuk"]],
+      body: reportTxnSeries.map(s => [s.label, s.out, s.in]),
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+      margin: { left: 40, right: 40 },
+      theme: "grid",
+    });
+
+    // Top 5 Item Paling Sering Diambil
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 16,
+      head: [["Item", "Unit Keluar"]],
+      body: reportTopItems.map(r => [r.name, r.total]),
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+      margin: { left: 40, right: 40 },
+      theme: "grid",
+    });
+
+    // Breakdown Pengambilan per Departemen
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 16,
+      head: [["Departemen", "Total Unit", ...reportDeptCats]],
+      body: reportDeptStack.map(row => [
+        row.dept,
+        row.total,
+        ...reportDeptCats.map(cat => Number(row.cats?.[cat] || 0)),
+      ]),
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+      margin: { left: 40, right: 40 },
+      theme: "grid",
+    });
+
+    doc.save(`laporan-analitik-${todayStr()}.pdf`);
     toast$("Export PDF laporan berhasil");
   };
 
