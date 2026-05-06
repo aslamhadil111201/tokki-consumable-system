@@ -2803,57 +2803,70 @@ export default function App(){
             {tab==="stock"&&(
               <div>
                 {/* ── Filter bar (with action buttons) ── */}
-                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:16}}>
-                  <input className="ifield" placeholder="🔍 Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:200,flexShrink:0}}/>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {CATS.map(c=><button key={c} className={`cat-btn${catF===c?" on":""}`} onClick={()=>setCatF(c)} style={{fontWeight:600,fontSize:12.5,padding:"7px 13px",borderRadius:8}}>{c}</button>)}
+                <div style={{display:"grid",gap:10,marginBottom:16}}>
+                  <div style={{maxWidth:360}}>
+                    <input className="ifield" placeholder="🔍 Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:"100%"}}/>
                   </div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {["Semua","Aman","Mendekati","Menipis","Habis"].map(s=>{
-                      const active=stockStatusF===s;
-                      return(
-                        <button
-                          key={s}
-                          onClick={()=>setStockStatusF(s)}
-                          style={{
-                            border:`1px solid ${active?T.primary:T.border}`,
-                            background:active?T.navActive:T.surface,
-                            color:active?T.navActiveText:T.muted,
-                            borderRadius:999,
-                            padding:"6px 12px",
-                            fontSize:11.5,
-                            fontWeight:700,
-                            cursor:"pointer",
-                            lineHeight:1.1,
-                          }}
-                        >
-                          {s}
-                        </button>
-                      );
-                    })}
+
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <div style={{fontSize:12,fontWeight:800,color:T.muted,minWidth:66}}>Kategori:</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {CATS.map(c=><button key={c} className={`cat-btn${catF===c?" on":""}`} onClick={()=>setCatF(c)} style={{fontWeight:600,fontSize:12.5,padding:"7px 13px",borderRadius:8}}>{c}</button>)}
+                    </div>
                   </div>
-                  <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>{filtItems.length} item</span>
-                  {hasActiveStockFilters&&(
-                    <button
-                      onClick={resetStockFilters}
-                      style={{
-                        border:`1px solid ${T.border}`,
-                        background:T.surface,
-                        color:T.muted,
-                        borderRadius:999,
-                        padding:"6px 11px",
-                        fontSize:11,
-                        fontWeight:700,
-                        cursor:"pointer",
-                        lineHeight:1.1,
-                      }}
-                    >
-                      Reset Filter
-                    </button>
-                  )}
-                  <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
+
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <div style={{fontSize:12,fontWeight:800,color:T.muted,minWidth:66}}>Status:</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {["Semua","Aman","Mendekati","Menipis","Habis"].map(s=>{
+                        const active=stockStatusF===s;
+                        return(
+                          <button
+                            key={s}
+                            onClick={()=>setStockStatusF(s)}
+                            style={{
+                              border:`1px solid ${active?T.primary:T.border}`,
+                              background:active?T.navActive:T.surface,
+                              color:active?T.navActiveText:T.muted,
+                              borderRadius:999,
+                              padding:"6px 12px",
+                              fontSize:11.5,
+                              fontWeight:700,
+                              cursor:"pointer",
+                              lineHeight:1.1,
+                            }}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>{filtItems.length} item</span>
+                    {hasActiveStockFilters&&(
+                      <button
+                        onClick={resetStockFilters}
+                        style={{
+                          border:`1px solid ${T.border}`,
+                          background:T.surface,
+                          color:T.muted,
+                          borderRadius:999,
+                          padding:"6px 11px",
+                          fontSize:11,
+                          fontWeight:700,
+                          cursor:"pointer",
+                          lineHeight:1.1,
+                        }}
+                      >
+                        Reset Filter
+                      </button>
+                    )}
+                    <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
                     {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800,padding:"9px 15px",fontSize:12.5}}>＋ Add New Item</BtnG>}
                     {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"9px 15px",fontSize:12.5}}>📥 Receive New</BtnP>}
+                    </div>
                   </div>
                 </div>
                 <div className="stock-g">
