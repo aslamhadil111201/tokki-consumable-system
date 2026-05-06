@@ -2306,6 +2306,7 @@ export default function App(){
                     return {...s,color:s.color,da,doff};
                   });
                   const svgW=220,svgH=72;
+                  const chartDateFontSize=(typeof window!=="undefined"&&window.innerWidth>=1500)?5.2:6.1;
                   const maxQty=Math.max(...dashLast7OutQty,1);
                   const linePoints=dashLast7OutQty.map((v,i)=>`${(i/6)*svgW},${svgH-(v/maxQty)*svgH*0.85}`).join(" ");
                   const areaPoints=`0,${svgH} ${linePoints} ${svgW},${svgH}`;
@@ -2410,7 +2411,7 @@ export default function App(){
                               );
                             })}
                             {dashLast7Days.map((d,i)=>(
-                              <text key={i} x={(i/6)*svgW} y={svgH+18} textAnchor="middle" fontSize="6.8" fill={T.muted}>{d.slice(5).replace("-","/")}</text>
+                              <text key={i} x={(i/6)*svgW} y={svgH+18} textAnchor="middle" fontSize={chartDateFontSize} fill={T.muted}>{d.slice(5).replace("-","/")}</text>
                             ))}
                           </svg>
                         </div>
