@@ -162,12 +162,19 @@ const tabToPath = (tab = "") => ({
   report: "/Laporan",
 }[tab] || "/Dasboard");
 
-const stockStatus=it=>{
+const stockStatusKey=it=>{
   const stock=Number(it?.stock||0);
   const minStock=Number(it?.minStock||0);
-  if(stock===0) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:"⊗"};
-  if(stock<=minStock) return{bg:T.amberBg,text:T.amberText,border:T.amberBorder,dot:T.amber,label:"Menipis",icon:"⚠"};
-  if(minStock>0&&stock<=minStock*1.5) return{bg:"#ffedd5",text:"#9a3412",border:"#fdba74",dot:"#f97316",label:"Mendekati",icon:"•"};
+  if(stock===0) return "habis";
+  if(stock<=minStock) return "menipis";
+  if(minStock>0&&stock<=minStock*1.5) return "mendekati";
+  return "aman";
+};
+const stockStatus=it=>{
+  const key=stockStatusKey(it);
+  if(key==="habis") return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:"⊗"};
+  if(key==="menipis") return{bg:T.amberBg,text:T.amberText,border:T.amberBorder,dot:T.amber,label:"Menipis",icon:"⚠"};
+  if(key==="mendekati") return{bg:"#ffedd5",text:"#9a3412",border:"#fdba74",dot:"#f97316",label:"Mendekati",icon:"•"};
   return{bg:T.greenBg,text:T.greenText,border:T.greenBorder,dot:T.green,label:"Aman",icon:"🛡"};
 };
 const catColor=cat=>({
@@ -283,6 +290,7 @@ export default function App(){
   const [loadingCount,setLoadingCount]=useState(0);
   const [loadingText,setLoadingText]=useState("Sedang memproses data");
   const [catF,setCatF]=useState("Semua");
+  const [stockStatusF,setStockStatusF]=useState("Semua");
   const [searchQ,setSearchQ]=useState("");
   const [trxDate,setTrxDate]=useState("");
   const [showModal,setShowModal]=useState(false);
@@ -472,6 +480,11 @@ export default function App(){
     if(!visibleTabs.some(t=>t.id===tab)) setTab("dashboard");
   },[tab,visibleTabs]);
 
+  const openStockWithFilter=(status="Semua")=>{
+    setStockStatusF(status);
+    setTab("stock");
+  };
+
   const lowStock=items.filter(i=>i.stock<=i.minStock);
   const approvedOutTrx=trx.filter(isApprovedOutTrx);
   const pendingApprovalTrx=trx.filter(t=>trxApprovalStatus(t)==="pending");
@@ -495,7 +508,10 @@ export default function App(){
   const dashTopItemName=dashTopEntry?.[0]||"-";
   const dashTopItemQty=dashTopEntry?.[1]||0;
   const dashRecentReceives=[...receives].sort((a,b)=>Number(b.id)-Number(a.id)).slice(0,4);
-  const filtItems=items.filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()));
+  const statusFilterKey={Aman:"aman",Mendekati:"mendekati",Menipis:"menipis",Habis:"habis"}[stockStatusF]||"";
+  const filtItems=items
+    .filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()))
+    .filter(i=>!statusFilterKey||stockStatusKey(i)===statusFilterKey);
   const filtTrx=[...trx].reverse().filter(t=>!trxDate||t.date===trxDate);
   const dateMatch=(d)=>{
     if(!d) return true;
@@ -2273,9 +2289,9 @@ export default function App(){
                 {/* Insight cards */}
                 <div className="dash-insight-g">
                   {[
-                    {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang Menipis",val:`${dashStockMenipis} Item`,sub:"Stok menipis, belum habis",color:T.amber,onClick:()=>setTab("stock")},
+                    {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang Menipis",val:`${dashStockMenipis} Item`,sub:"Stok menipis, belum habis",color:T.amber,onClick:()=>openStockWithFilter("Menipis")},
                     {icon:"📈",bg:T.greenBg,label:"Barang Paling Sering Keluar",val:dashTopItemName,sub:`${dashTopItemQty} pcs dalam 7 hari terakhir`,color:T.primaryLight,onClick:null},
-                    {icon:"🚨",bg:dark?"rgba(239,68,68,0.14)":"#fee2e2",label:"Stok Habis",val:`${dashStockHabis} Item`,sub:"Perlu restock segera",color:T.red,onClick:()=>setTab("stock")},
+                    {icon:"🚨",bg:dark?"rgba(239,68,68,0.14)":"#fee2e2",label:"Stok Habis",val:`${dashStockHabis} Item`,sub:"Perlu restock segera",color:T.red,onClick:()=>openStockWithFilter("Habis")},
                     {icon:"🕐",bg:dark?"rgba(167,139,250,0.12)":"#ede9fe",label:"Total Item",val:`${items.length} Item`,sub:"Semua item dalam inventaris",color:"#a78bfa",onClick:null},
                   ].map((c,i)=>(
                     <div key={i} className="stat-card" style={{display:"flex",alignItems:"flex-start",gap:12,cursor:c.onClick?"pointer":"default"}} onClick={c.onClick||undefined}>
@@ -2377,7 +2393,7 @@ export default function App(){
                             <div style={{fontSize:10.5,color:T.muted,marginTop:2,minHeight:16}}>{activeDonutSeg?activeDonutSeg.sub:"Tap warna chart untuk detail"}</div>
                           </div>
                         </div>
-                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua stok →</div>
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>openStockWithFilter("Semua")}>Lihat semua stok →</div>
                       </div>
                       {/* Line chart 7 hari */}
                       <div className="card">
@@ -2412,10 +2428,10 @@ export default function App(){
                                   onTouchStart={()=>setDashTrendPointIdx(i)}
                                   onClick={()=>setDashTrendPointIdx(i)}
                                   style={{cursor:"pointer"}}
-                                >
-                                  <circle cx={pointX} cy={pointY} r="14" fill="transparent" style={{pointerEvents:"all"}}/>
-                                  <circle cx={pointX} cy={pointY} r={isActive?5:4} fill={T.primary} stroke={T.card} strokeWidth="2"/>
-                                </g>
+                                [
+                                  {dot:"#10b981",name:"Aman",sub:"> Min Stok",count:dashStockAman,color:T.primaryLight,filter:"Aman"},
+                                  {dot:"#f59e0b",name:"Menipis",sub:"≤ Min Stok",count:dashStockMenipis,color:"#f59e0b",filter:"Menipis"},
+                                  {dot:"#ef4444",name:"Habis",sub:"Stok = 0",count:dashStockHabis,color:"#ef4444",filter:"Habis"},
                               );
                             })}
                             {dashLast7Days.map((d,i)=>(
@@ -2443,11 +2459,11 @@ export default function App(){
                             </div>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
                               <div style={{fontSize:14,fontWeight:700,color:row.color}}>{row.count} Item</div>
-                              <div style={{color:T.primary,fontSize:16,cursor:"pointer",lineHeight:1}} onClick={()=>setTab("stock")}>›</div>
+                              <div style={{color:T.primary,fontSize:16,cursor:"pointer",lineHeight:1}} onClick={()=>openStockWithFilter(row.filter)}>›</div>
                             </div>
                           </div>
                         ))}
-                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua item →</div>
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>openStockWithFilter("Semua")}>Lihat semua item →</div>
                       </div>
                     </div>
                   );
@@ -2559,7 +2575,7 @@ export default function App(){
                             <span className="dash-col-satuan">{it.unit}</span>
                           </div>
                         );})}
-                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua barang yang perlu restock →</div>
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>openStockWithFilter("Menipis")}>Lihat semua barang yang perlu restock →</div>
                       </>)
                     }
                   </div>
@@ -2785,6 +2801,30 @@ export default function App(){
                   <input className="ifield" placeholder="🔍 Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:200,flexShrink:0}}/>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {CATS.map(c=><button key={c} className={`cat-btn${catF===c?" on":""}`} onClick={()=>setCatF(c)} style={{fontWeight:600,fontSize:12.5,padding:"7px 13px",borderRadius:8}}>{c}</button>)}
+                  </div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {["Semua","Aman","Mendekati","Menipis","Habis"].map(s=>{
+                      const active=stockStatusF===s;
+                      return(
+                        <button
+                          key={s}
+                          onClick={()=>setStockStatusF(s)}
+                          style={{
+                            border:`1px solid ${active?T.primary:T.border}`,
+                            background:active?T.navActive:T.surface,
+                            color:active?T.navActiveText:T.muted,
+                            borderRadius:999,
+                            padding:"6px 12px",
+                            fontSize:11.5,
+                            fontWeight:700,
+                            cursor:"pointer",
+                            lineHeight:1.1,
+                          }}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
                   </div>
                   <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>{filtItems.length} item</span>
                   <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
