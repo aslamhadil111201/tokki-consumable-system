@@ -2839,11 +2839,11 @@ export default function App(){
                         {["Semua","Aman","Mendekati","Menipis","Habis"].map(s=>{
                           const active=stockStatusF===s;
                           const activeStyle=s==="Mendekati"?{bg:"#BA7517",text:"#FAEEDA",border:"#BA7517",icon:"◷"}
-                            :s==="Menipis"?{bg:"#D85A30",text:"#FAECE7",border:"#D85A30",icon:"↓"}
+                            :s==="Menipis"?{bg:"#D85A30",text:"#FAECE7",border:"#D85A30",icon:"⚠"}
                             :s==="Habis"?{bg:"#A32D2D",text:"#FCEBEB",border:"#A32D2D",icon:"⊗"}
                             :s==="Aman"?{bg:T.primary,text:"#E1F5EE",border:T.primary,icon:"🛡"}
                             :{bg:T.primary,text:"#E1F5EE",border:T.primary,icon:"✓"};
-                          const idleIcon=s==="Mendekati"?"◷":s==="Menipis"?"↓":s==="Habis"?"⊗":s==="Aman"?"🛡":"○";
+                          const idleIcon=s==="Mendekati"?"◷":s==="Menipis"?"⚠":s==="Habis"?"⊗":s==="Aman"?"🛡":"○";
                           return(
                             <button key={s} onClick={()=>setStockStatusF(s)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?activeStyle.border:T.border}`,background:active?activeStyle.bg:T.surfaceSolid,color:active?activeStyle.text:T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap"}}>
                               {(active?activeStyle.icon:idleIcon)+" "}{s}
