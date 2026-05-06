@@ -163,10 +163,10 @@ const tabToPath = (tab = "") => ({
 }[tab] || "/Dasboard");
 
 const stockStatus=it=>{
-  const pct=it.minStock?it.stock/it.minStock*100:100;
-  if(it.stock===0) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:"⊗"};
-  if(pct<50&&it.stock<=it.minStock) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Kritis",icon:"⊗"};
-  if(it.stock<=it.minStock) return{bg:T.amberBg,text:T.amberText,border:T.amberBorder,dot:T.amber,label:"Perhatian",icon:"⚠"};
+  const stock=Number(it?.stock||0);
+  const minStock=Number(it?.minStock||0);
+  if(stock===0) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:"⊗"};
+  if(stock<=minStock) return{bg:T.amberBg,text:T.amberText,border:T.amberBorder,dot:T.amber,label:"Menipis",icon:"⚠"};
   return{bg:T.greenBg,text:T.greenText,border:T.greenBorder,dot:T.green,label:"Aman",icon:"🛡"};
 };
 const catColor=cat=>({
@@ -193,8 +193,8 @@ const ProgBlocks=({pct,color})=>{
     </div>
   );
 };
-const Badge=({children,bg,color,border})=>(
-  <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:20,background:bg||T.surface,color:color||T.muted,border:`1px solid ${border||T.border}`,fontSize:10,fontWeight:700,whiteSpace:"nowrap",letterSpacing:".05em"}}>{children}</span>
+const Badge=({children,bg,color,border,style})=>(
+  <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:20,background:bg||T.surface,color:color||T.muted,border:`1px solid ${border||T.border}`,fontSize:10,fontWeight:700,whiteSpace:"nowrap",letterSpacing:".05em",...style}}>{children}</span>
 );
 const FL=({children})=>(
   <div style={{fontSize:10,fontWeight:800,color:T.muted,letterSpacing:".12em",textTransform:"uppercase",marginBottom:6}}>{children}</div>
