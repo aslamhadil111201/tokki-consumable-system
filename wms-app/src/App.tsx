@@ -2270,7 +2270,7 @@ export default function App(){
                 {/* Insight cards */}
                 <div className="dash-insight-g">
                   {[
-                    {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang yang Perlu Restock",val:`${dashStockMenipis} Item`,sub:"Stok di bawah batas minimum",color:T.amber,onClick:()=>setTab("stock")},
+                    {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang yang Perlu Restock",val:`${lowStock.length} Item`,sub:"Stok di bawah batas minimum",color:T.amber,onClick:()=>setTab("stock")},
                     {icon:"📈",bg:T.greenBg,label:"Barang Paling Sering Keluar",val:dashTopItemName,sub:`${dashTopItemQty} pcs dalam 7 hari terakhir`,color:T.primaryLight,onClick:null},
                     {icon:"📦",bg:dark?"rgba(96,165,250,0.12)":"#dbeafe",label:"Disarankan Restock",val:`${dashStockHabis} Item`,sub:"Stok habis, perlu restock",color:"#60a5fa",onClick:()=>setTab("stock")},
                     {icon:"🕐",bg:dark?"rgba(167,139,250,0.12)":"#ede9fe",label:"Total Item",val:`${items.length} Item`,sub:"Semua item dalam inventaris",color:"#a78bfa",onClick:null},
