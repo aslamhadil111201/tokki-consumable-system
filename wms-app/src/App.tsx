@@ -2434,10 +2434,10 @@ export default function App(){
                                   onTouchStart={()=>setDashTrendPointIdx(i)}
                                   onClick={()=>setDashTrendPointIdx(i)}
                                   style={{cursor:"pointer"}}
-                                [
-                                  {dot:"#10b981",name:"Aman",sub:"> Min Stok",count:dashStockAman,color:T.primaryLight,filter:"Aman"},
-                                  {dot:"#f59e0b",name:"Menipis",sub:"≤ Min Stok",count:dashStockMenipis,color:"#f59e0b",filter:"Menipis"},
-                                  {dot:"#ef4444",name:"Habis",sub:"Stok = 0",count:dashStockHabis,color:"#ef4444",filter:"Habis"},
+                                >
+                                  <circle cx={pointX} cy={pointY} r="14" fill="transparent" style={{pointerEvents:"all"}}/>
+                                  <circle cx={pointX} cy={pointY} r={isActive?5:4} fill={T.primary} stroke={T.card} strokeWidth="2"/>
+                                </g>
                               );
                             })}
                             {dashLast7Days.map((d,i)=>(
@@ -2451,9 +2451,9 @@ export default function App(){
                       <div className="card">
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Status Stok</div>
                         {[
-                          {dot:"#10b981",name:"Aman",sub:"> Min Stok",count:dashStockAman,color:T.primaryLight},
-                          {dot:"#f59e0b",name:"Menipis",sub:"≤ Min Stok",count:dashStockMenipis,color:"#f59e0b"},
-                          {dot:"#ef4444",name:"Habis",sub:"Stok = 0",count:dashStockHabis,color:"#ef4444"},
+                          {dot:"#10b981",name:"Aman",sub:"> Min Stok",count:dashStockAman,color:T.primaryLight,filter:"Aman"},
+                          {dot:"#f59e0b",name:"Menipis",sub:"≤ Min Stok",count:dashStockMenipis,color:"#f59e0b",filter:"Menipis"},
+                          {dot:"#ef4444",name:"Habis",sub:"Stok = 0",count:dashStockHabis,color:"#ef4444",filter:"Habis"},
                         ].map((row,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:i<2?`1px solid ${T.border}`:"none"}}>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
