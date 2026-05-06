@@ -2353,9 +2353,9 @@ export default function App(){
                               })}
                             </svg>
                             <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",pointerEvents:"none"}}>
-                              <div style={{fontSize:10,color:activeDonutSeg?.color||T.muted,lineHeight:1.3,fontWeight:700}}>{activeDonutSeg?.label||"Total Stok Saat Ini"}</div>
+                              <div style={{fontSize:9.5,color:activeDonutSeg?.color||T.muted,lineHeight:1.15,fontWeight:800,letterSpacing:0.1,marginBottom:2}}>{activeDonutSeg?.label||"Total Stok"}</div>
                               <div style={{fontSize:17,fontWeight:800,color:T.text,lineHeight:1.1}}>{activeDonutSeg?activeDonutSeg.count.toLocaleString("id-ID"):dashTotalStokPcs.toLocaleString("id-ID")}</div>
-                              <div style={{fontSize:10,color:T.muted}}>{activeDonutSeg?"item":'pcs'}</div>
+                              <div style={{fontSize:10,color:T.muted,lineHeight:1.15}}>{activeDonutSeg?"item":'pcs'}</div>
                             </div>
                           </div>
                           <div style={{flex:1}}>
