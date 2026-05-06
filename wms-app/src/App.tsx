@@ -167,6 +167,7 @@ const stockStatus=it=>{
   const minStock=Number(it?.minStock||0);
   if(stock===0) return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:"⊗"};
   if(stock<=minStock) return{bg:T.amberBg,text:T.amberText,border:T.amberBorder,dot:T.amber,label:"Menipis",icon:"⚠"};
+  if(minStock>0&&stock<=minStock*1.5) return{bg:"#ffedd5",text:"#9a3412",border:"#fdba74",dot:"#f97316",label:"Mendekati",icon:"•"};
   return{bg:T.greenBg,text:T.greenText,border:T.greenBorder,dot:T.green,label:"Aman",icon:"🛡"};
 };
 const catColor=cat=>({
@@ -2795,7 +2796,7 @@ export default function App(){
                   {filtItems.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🔍</div>Tidak ada barang ditemukan</div>}
                   {filtItems.map(it=>{
                     const s=stockStatus(it); const cc=catColor(it.category); const pct=it.minStock?Math.min(100,it.stock/it.minStock*100):100;
-                    const cardBorder=s.dot===T.red?T.red:cc.dot;
+                    const cardBorder=s.label==="Aman"?cc.dot:s.dot;
                     return(
                       <div key={it.id} className="stk-card" style={{border:`2px solid ${cardBorder}`,gap:0}}>
                         {/* Menu button */}
