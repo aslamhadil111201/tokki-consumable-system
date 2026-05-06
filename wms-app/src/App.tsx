@@ -518,6 +518,8 @@ export default function App(){
   const filtItems=items
     .filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()))
     .filter(i=>!statusFilterKey||stockStatusKey(i)===statusFilterKey);
+  const filtMenipisCount=filtItems.filter(i=>stockStatusKey(i)==="menipis").length;
+  const filtHabisCount=filtItems.filter(i=>stockStatusKey(i)==="habis").length;
   const filtTrx=[...trx].reverse().filter(t=>!trxDate||t.date===trxDate);
   const dateMatch=(d)=>{
     if(!d) return true;
@@ -2803,9 +2805,9 @@ export default function App(){
             {tab==="stock"&&(
               <div>
                 {/* ── Filter bar (with action buttons) ── */}
-                <div style={{display:"grid",gap:10,marginBottom:16,padding:"16px 20px",border:`1px solid ${T.border}`,borderRadius:14,background:T.surfaceSolid}}>
+                <div style={{display:"grid",gap:12,marginBottom:16,padding:"14px",border:`1px solid ${T.border}`,borderRadius:16,background:dark?"linear-gradient(120deg, rgba(3,20,14,0.92), rgba(2,25,18,0.86))":T.surfaceSolid,boxShadow:dark?"0 0 0 1px rgba(16,185,129,0.08), 0 10px 30px rgba(0,0,0,0.35)":T.shadowSm}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-                    <div style={{position:"relative",flex:"1 1 460px",maxWidth:560,minWidth:260}}>
+                    <div style={{position:"relative",flex:"1 1 460px",maxWidth:620,minWidth:260}}>
                       <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.muted,pointerEvents:"none"}}>🔍</span>
                       <input className="ifield" placeholder="Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:"100%",paddingLeft:34}}/>
                     </div>
@@ -2815,92 +2817,70 @@ export default function App(){
                     </div>
                   </div>
 
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <div style={{fontSize:12,fontWeight:600,color:T.muted,minWidth:60}}>Kategori</div>
-                    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                      {CATS.map(c=>{
-                        const active=catF===c;
-                        return(
-                          <button
-                            key={c}
-                            onClick={()=>setCatF(c)}
-                            style={{
-                              padding:"6px 13px",
-                              borderRadius:999,
-                              border:`1px solid ${active?T.primary:T.border}`,
-                              background:active?T.primary:T.surfaceSolid,
-                              color:active?"#eafdf5":T.muted,
-                              fontSize:12,
-                              fontWeight:active?700:600,
-                              cursor:"pointer",
-                              lineHeight:1.35,
-                              whiteSpace:"nowrap",
-                            }}
-                          >
-                            {c}
-                          </button>
-                        );
-                      })}
+                  <div style={{display:"grid",gap:10,padding:"12px",border:`1px solid ${T.border}`,borderRadius:14,background:dark?"linear-gradient(120deg, rgba(1,26,19,0.88), rgba(1,16,12,0.7))":T.surface}}>
+                    <div style={{fontSize:13,fontWeight:700,color:T.primaryLight,display:"flex",alignItems:"center",gap:8}}>⎇ Filter Barang</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <div style={{fontSize:12,fontWeight:600,color:T.muted,minWidth:60}}>Kategori</div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                        {CATS.map(c=>{
+                          const active=catF===c;
+                          return(
+                            <button key={c} onClick={()=>setCatF(c)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?T.primary:T.border}`,background:active?T.primary:T.surfaceSolid,color:active?"#eafdf5":T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap"}}>
+                              {active?"✓ ":""}{c}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div style={{height:1,background:T.border,opacity:0.7}}/>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <div style={{fontSize:12,fontWeight:600,color:T.muted,minWidth:60}}>Status</div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                        {["Semua","Aman","Mendekati","Menipis","Habis"].map(s=>{
+                          const active=stockStatusF===s;
+                          const activeStyle=s==="Mendekati"?{bg:"#BA7517",text:"#FAEEDA",border:"#BA7517",icon:"⚠"}
+                            :s==="Menipis"?{bg:"#D85A30",text:"#FAECE7",border:"#D85A30",icon:"↓"}
+                            :s==="Habis"?{bg:"#A32D2D",text:"#FCEBEB",border:"#A32D2D",icon:"⊗"}
+                            :s==="Aman"?{bg:T.primary,text:"#E1F5EE",border:T.primary,icon:"🛡"}
+                            :{bg:T.primary,text:"#E1F5EE",border:T.primary,icon:"✓"};
+                          const idleIcon=s==="Mendekati"?"⚠":s==="Menipis"?"↓":s==="Habis"?"⊗":s==="Aman"?"🛡":"○";
+                          return(
+                            <button key={s} onClick={()=>setStockStatusF(s)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?activeStyle.border:T.border}`,background:active?activeStyle.bg:T.surfaceSolid,color:active?activeStyle.text:T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap"}}>
+                              {(active?activeStyle.icon:idleIcon)+" "}{s}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <div style={{fontSize:12,fontWeight:600,color:T.muted,minWidth:60}}>Status</div>
-                    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                      {["Semua","Aman","Mendekati","Menipis","Habis"].map(s=>{
-                        const active=stockStatusF===s;
-                        const activeStyle=s==="Mendekati"?{bg:"#BA7517",text:"#FAEEDA",border:"#BA7517"}
-                          :s==="Menipis"?{bg:"#D85A30",text:"#FAECE7",border:"#D85A30"}
-                          :s==="Habis"?{bg:"#A32D2D",text:"#FCEBEB",border:"#A32D2D"}
-                          :{bg:T.primary,text:"#E1F5EE",border:T.primary};
-                        return(
-                          <button
-                            key={s}
-                            onClick={()=>setStockStatusF(s)}
-                            style={{
-                              padding:"6px 13px",
-                              borderRadius:999,
-                              border:`1px solid ${active?activeStyle.border:T.border}`,
-                              background:active?activeStyle.bg:T.surfaceSolid,
-                              color:active?activeStyle.text:T.muted,
-                              fontSize:12,
-                              fontWeight:active?700:600,
-                              cursor:"pointer",
-                              lineHeight:1.35,
-                              whiteSpace:"nowrap",
-                            }}
-                          >
-                            {s}
-                          </button>
-                        );
-                      })}
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",padding:"12px",border:`1px solid ${T.border}`,borderRadius:14,background:dark?"linear-gradient(120deg, rgba(1,22,16,0.88), rgba(1,12,9,0.72))":T.surface}}>
+                    <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{fontSize:20,color:T.primaryLight}}>◻</div>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:T.primaryLight}}>{filtItems.length} Item</div>
+                          <div style={{fontSize:11,color:T.muted}}>Total ditemukan</div>
+                        </div>
+                      </div>
+                      <div style={{width:1,height:34,background:T.border}}/>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{fontSize:20,color:"#f59e0b"}}>⚠</div>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:"#f59e0b"}}>{filtMenipisCount} Menipis</div>
+                          <div style={{fontSize:11,color:T.muted}}>Stok menipis</div>
+                        </div>
+                      </div>
+                      <div style={{width:1,height:34,background:T.border}}/>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{fontSize:20,color:"#ef4444"}}>⊗</div>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:"#ef4444"}}>{filtHabisCount} Habis</div>
+                          <div style={{fontSize:11,color:T.muted}}>Stok habis</div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div style={{height:1,background:T.border,margin:"2px 0"}}/>
-
-                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                      <div style={{fontSize:13,color:T.muted}}><span style={{color:T.text,fontWeight:600}}>{filtItems.length}</span> item ditemukan</div>
-                      <button
-                        onClick={resetStockFilters}
-                        style={{
-                          fontSize:12,
-                          padding:"5px 11px",
-                          borderRadius:999,
-                          border:`1px solid ${T.border}`,
-                          background:"transparent",
-                          color:T.muted,
-                          cursor:"pointer",
-                          display:"flex",
-                          alignItems:"center",
-                          gap:4,
-                          opacity:hasActiveStockFilters?1:0.7,
-                        }}
-                      >
-                        × Reset Filter
-                      </button>
-                    </div>
+                    <button onClick={resetStockFilters} style={{fontSize:12,padding:"7px 12px",borderRadius:999,border:`1px solid ${T.border}`,background:"transparent",color:T.primaryLight,cursor:"pointer",display:"flex",alignItems:"center",gap:6,opacity:hasActiveStockFilters?1:0.72}}>↻ Reset Filter</button>
                   </div>
                 </div>
                 <div className="stock-g">
