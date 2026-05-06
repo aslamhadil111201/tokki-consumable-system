@@ -2272,7 +2272,7 @@ export default function App(){
                   {[
                     {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang Menipis",val:`${dashStockMenipis} Item`,sub:"Stok menipis, belum habis",color:T.amber,onClick:()=>setTab("stock")},
                     {icon:"📈",bg:T.greenBg,label:"Barang Paling Sering Keluar",val:dashTopItemName,sub:`${dashTopItemQty} pcs dalam 7 hari terakhir`,color:T.primaryLight,onClick:null},
-                    {icon:"📦",bg:dark?"rgba(96,165,250,0.12)":"#dbeafe",label:"Stok Habis",val:`${dashStockHabis} Item`,sub:"Perlu restock segera",color:"#60a5fa",onClick:()=>setTab("stock")},
+                    {icon:"🚨",bg:dark?"rgba(239,68,68,0.14)":"#fee2e2",label:"Stok Habis",val:`${dashStockHabis} Item`,sub:"Perlu restock segera",color:T.red,onClick:()=>setTab("stock")},
                     {icon:"🕐",bg:dark?"rgba(167,139,250,0.12)":"#ede9fe",label:"Total Item",val:`${items.length} Item`,sub:"Semua item dalam inventaris",color:"#a78bfa",onClick:null},
                   ].map((c,i)=>(
                     <div key={i} className="stat-card" style={{display:"flex",alignItems:"flex-start",gap:12,cursor:c.onClick?"pointer":"default"}} onClick={c.onClick||undefined}>
