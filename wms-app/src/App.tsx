@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Boxes, CheckCircle2, CircleX, Clock3, Funnel, PackagePlus, Plus, RotateCcw, Search, ShieldCheck, TriangleAlert } from "lucide-react";
 
 const API = (
   import.meta.env.VITE_API_URL ||
@@ -170,12 +171,19 @@ const stockStatusKey=it=>{
   if(minStock>0&&stock<=minStock*1.5) return "mendekati";
   return "aman";
 };
+const stockStatusIcon=(key,size=14)=>(
+  key==="habis"?<CircleX size={size} strokeWidth={2}/>
+    :key==="menipis"?<TriangleAlert size={size} strokeWidth={2}/>
+    :key==="mendekati"?<Clock3 size={size} strokeWidth={2}/>
+    :key==="aman"?<ShieldCheck size={size} strokeWidth={2}/>
+    :<CheckCircle2 size={size} strokeWidth={2}/>
+);
 const stockStatus=it=>{
   const key=stockStatusKey(it);
-  if(key==="habis") return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:"⊗"};
-  if(key==="menipis") return{bg:T.amberBg,text:T.amberText,border:T.amberBorder,dot:T.amber,label:"Menipis",icon:"⚠"};
-  if(key==="mendekati") return{bg:"#ffedd5",text:"#9a3412",border:"#fdba74",dot:"#f97316",label:"Mendekati",icon:"⏱"};
-  return{bg:T.greenBg,text:T.greenText,border:T.greenBorder,dot:T.green,label:"Aman",icon:"🛡"};
+  if(key==="habis") return{bg:T.redBg,text:T.redText,border:T.redBorder,dot:T.red,label:"Habis",icon:stockStatusIcon("habis",12)};
+  if(key==="menipis") return{bg:T.amberBg,text:T.amberText,border:T.amberBorder,dot:T.amber,label:"Menipis",icon:stockStatusIcon("menipis",12)};
+  if(key==="mendekati") return{bg:"#ffedd5",text:"#9a3412",border:"#fdba74",dot:"#f97316",label:"Mendekati",icon:stockStatusIcon("mendekati",12)};
+  return{bg:T.greenBg,text:T.greenText,border:T.greenBorder,dot:T.green,label:"Aman",icon:stockStatusIcon("aman",12)};
 };
 const catColor=cat=>({
   APD:{dot:"#10b981",bg:"rgba(16,185,129,0.1)",text:"#6ee7b7",border:"rgba(16,185,129,0.25)"},
@@ -2808,25 +2816,25 @@ export default function App(){
                 <div style={{display:"grid",gap:12,marginBottom:16,padding:"14px",border:`1px solid ${T.border}`,borderRadius:16,background:dark?"linear-gradient(120deg, rgba(3,20,14,0.92), rgba(2,25,18,0.86))":T.surfaceSolid,boxShadow:dark?"0 0 0 1px rgba(16,185,129,0.08), 0 10px 30px rgba(0,0,0,0.35)":T.shadowSm}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
                     <div style={{position:"relative",flex:"1 1 460px",maxWidth:620,minWidth:260}}>
-                      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.muted,pointerEvents:"none"}}>🔍</span>
+                      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.muted,pointerEvents:"none",display:"inline-flex",alignItems:"center"}}><Search size={15} strokeWidth={2}/></span>
                       <input className="ifield" placeholder="Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:"100%",paddingLeft:34}}/>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginLeft:"auto"}}>
-                      {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontSize:13,padding:"8px 16px"}}>＋ Add New Item</BtnG>}
-                      {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{fontSize:13,padding:"8px 16px",fontWeight:500}}>📥 Receive New</BtnP>}
+                      {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontSize:13,padding:"8px 16px"}}><Plus size={14} strokeWidth={2}/> Add New Item</BtnG>}
+                      {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{fontSize:13,padding:"8px 16px",fontWeight:500}}><PackagePlus size={14} strokeWidth={2}/> Receive New</BtnP>}
                     </div>
                   </div>
 
                   <div style={{display:"grid",gap:10,padding:"12px",border:`1px solid ${T.border}`,borderRadius:14,background:dark?"linear-gradient(120deg, rgba(1,26,19,0.88), rgba(1,16,12,0.7))":T.surface}}>
-                    <div style={{fontSize:13,fontWeight:700,color:T.primaryLight,display:"flex",alignItems:"center",gap:8}}>⎇ Filter Barang</div>
+                    <div style={{fontSize:13,fontWeight:700,color:T.primaryLight,display:"flex",alignItems:"center",gap:8}}><Funnel size={14} strokeWidth={2}/> Filter Barang</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <div style={{fontSize:12,fontWeight:600,color:T.muted,minWidth:60}}>Kategori</div>
                       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                         {CATS.map(c=>{
                           const active=catF===c;
                           return(
-                            <button key={c} onClick={()=>setCatF(c)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?T.primary:T.border}`,background:active?T.primary:T.surfaceSolid,color:active?"#eafdf5":T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap"}}>
-                              {active?"✓ ":""}{c}
+                            <button key={c} onClick={()=>setCatF(c)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?T.primary:T.border}`,background:active?T.primary:T.surfaceSolid,color:active?"#eafdf5":T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:6}}>
+                              {active&&<CheckCircle2 size={13} strokeWidth={2}/>}{c}
                             </button>
                           );
                         })}
@@ -2838,15 +2846,15 @@ export default function App(){
                       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                         {["Semua","Aman","Mendekati","Menipis","Habis"].map(s=>{
                           const active=stockStatusF===s;
-                          const activeStyle=s==="Mendekati"?{bg:"#BA7517",text:"#FAEEDA",border:"#BA7517",icon:"⏱"}
-                            :s==="Menipis"?{bg:"#D85A30",text:"#FAECE7",border:"#D85A30",icon:"⚠"}
-                            :s==="Habis"?{bg:"#A32D2D",text:"#FCEBEB",border:"#A32D2D",icon:"⊗"}
-                            :s==="Aman"?{bg:T.primary,text:"#E1F5EE",border:T.primary,icon:"🛡"}
-                            :{bg:T.primary,text:"#E1F5EE",border:T.primary,icon:"✓"};
-                          const idleIcon=s==="Mendekati"?"⏱":s==="Menipis"?"⚠":s==="Habis"?"⊗":s==="Aman"?"🛡":"○";
+                          const statusKey=s==="Aman"?"aman":s==="Mendekati"?"mendekati":s==="Menipis"?"menipis":s==="Habis"?"habis":"semua";
+                          const activeStyle=s==="Mendekati"?{bg:"#BA7517",text:"#FAEEDA",border:"#BA7517"}
+                            :s==="Menipis"?{bg:"#D85A30",text:"#FAECE7",border:"#D85A30"}
+                            :s==="Habis"?{bg:"#A32D2D",text:"#FCEBEB",border:"#A32D2D"}
+                            :{bg:T.primary,text:"#E1F5EE",border:T.primary};
                           return(
-                            <button key={s} onClick={()=>setStockStatusF(s)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?activeStyle.border:T.border}`,background:active?activeStyle.bg:T.surfaceSolid,color:active?activeStyle.text:T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap"}}>
-                              {(active?activeStyle.icon:idleIcon)+" "}{s}
+                            <button key={s} onClick={()=>setStockStatusF(s)} style={{padding:"7px 14px",borderRadius:12,border:`1px solid ${active?activeStyle.border:T.border}`,background:active?activeStyle.bg:T.surfaceSolid,color:active?activeStyle.text:T.text,fontSize:12,fontWeight:600,cursor:"pointer",lineHeight:1.35,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:6}}>
+                              {stockStatusIcon(statusKey,14)}
+                              {s}
                             </button>
                           );
                         })}
@@ -2857,7 +2865,7 @@ export default function App(){
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",padding:"12px",border:`1px solid ${T.border}`,borderRadius:14,background:dark?"linear-gradient(120deg, rgba(1,22,16,0.88), rgba(1,12,9,0.72))":T.surface}}>
                     <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{fontSize:20,color:T.primaryLight}}>◻</div>
+                        <div style={{fontSize:20,color:T.primaryLight,display:"inline-flex",alignItems:"center"}}><Boxes size={20} strokeWidth={2}/></div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:T.primaryLight}}>{filtItems.length} Item</div>
                           <div style={{fontSize:11,color:T.muted}}>Total ditemukan</div>
@@ -2865,7 +2873,7 @@ export default function App(){
                       </div>
                       <div style={{width:1,height:34,background:T.border}}/>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{fontSize:20,color:"#f59e0b"}}>⚠</div>
+                        <div style={{fontSize:20,color:"#f59e0b",display:"inline-flex",alignItems:"center"}}><TriangleAlert size={20} strokeWidth={2}/></div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:"#f59e0b"}}>{filtMenipisCount} Menipis</div>
                           <div style={{fontSize:11,color:T.muted}}>Stok menipis</div>
@@ -2873,18 +2881,18 @@ export default function App(){
                       </div>
                       <div style={{width:1,height:34,background:T.border}}/>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{fontSize:20,color:"#ef4444"}}>⊗</div>
+                        <div style={{fontSize:20,color:"#ef4444",display:"inline-flex",alignItems:"center"}}><CircleX size={20} strokeWidth={2}/></div>
                         <div>
                           <div style={{fontSize:13,fontWeight:700,color:"#ef4444"}}>{filtHabisCount} Habis</div>
                           <div style={{fontSize:11,color:T.muted}}>Stok habis</div>
                         </div>
                       </div>
                     </div>
-                    <button onClick={resetStockFilters} style={{fontSize:12,padding:"7px 12px",borderRadius:999,border:`1px solid ${T.border}`,background:"transparent",color:T.primaryLight,cursor:"pointer",display:"flex",alignItems:"center",gap:6,opacity:hasActiveStockFilters?1:0.72}}>↻ Reset Filter</button>
+                    <button onClick={resetStockFilters} style={{fontSize:12,padding:"7px 12px",borderRadius:999,border:`1px solid ${T.border}`,background:"transparent",color:T.primaryLight,cursor:"pointer",display:"flex",alignItems:"center",gap:6,opacity:hasActiveStockFilters?1:0.72}}><RotateCcw size={14} strokeWidth={2}/> Reset Filter</button>
                   </div>
                 </div>
                 <div className="stock-g">
-                  {filtItems.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12}}>🔍</div>Tidak ada barang ditemukan</div>}
+                  {filtItems.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:T.muted}}><div style={{fontSize:36,marginBottom:12,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><Search size={34} strokeWidth={1.8}/></div>Tidak ada barang ditemukan</div>}
                   {filtItems.map(it=>{
                     const s=stockStatus(it); const cc=catColor(it.category); const pct=it.minStock?Math.min(100,it.stock/it.minStock*100):100;
                     const cardBorder=s.label==="Aman"?cc.dot:s.dot;
