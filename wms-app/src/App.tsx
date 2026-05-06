@@ -1701,6 +1701,14 @@ export default function App(){
       ["Item","Unit Keluar"],
       ...reportTopItems.map(r=>[r.name,r.total]),
       [],
+      ["Project Paling Sering Dipakai (Frekuensi)"],
+      ["Project","Unit Keluar"],
+      ...reportProjectUsage.map(r=>[r.name,r.total]),
+      [],
+      ["Project Paling Sering Dipakai (Nilai Rp)"],
+      ["Project","Nilai (Rp)"],
+      ...reportProjectByRp.map(r=>[r.name,Math.round(r.total)]),
+      [],
       ["Breakdown Pengambilan per Departemen"],
       ["Departemen","Total Unit",...reportDeptCats],
       ...reportDeptStack.map(row=>[
@@ -1750,11 +1758,34 @@ export default function App(){
       theme: "grid",
     });
 
+
     // Top 5 Item Paling Sering Diambil
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 16,
       head: [["Item", "Unit Keluar"]],
       body: reportTopItems.map(r => [r.name, r.total]),
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+      margin: { left: 40, right: 40 },
+      theme: "grid",
+    });
+
+    // Project Paling Sering Dipakai (Frekuensi)
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 16,
+      head: [["Project", "Unit Keluar"]],
+      body: reportProjectUsage.map(r => [r.name, r.total]),
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+      margin: { left: 40, right: 40 },
+      theme: "grid",
+    });
+
+    // Project Paling Sering Dipakai (Nilai Rp)
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 16,
+      head: [["Project", "Nilai (Rp)"]],
+      body: reportProjectByRp.map(r => [r.name, fmtMoney(Math.round(r.total))]),
       styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
       headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
       margin: { left: 40, right: 40 },
