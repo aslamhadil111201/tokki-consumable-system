@@ -2270,7 +2270,7 @@ export default function App(){
                 {/* Insight cards */}
                 <div className="dash-insight-g">
                   {[
-                    {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang Hampir Habis",val:`${dashStockMenipis} Item`,sub:"Stok di bawah batas minimum",color:T.amber,onClick:()=>setTab("stock")},
+                    {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang yang Perlu Restock",val:`${dashStockMenipis} Item`,sub:"Stok di bawah batas minimum",color:T.amber,onClick:()=>setTab("stock")},
                     {icon:"📈",bg:T.greenBg,label:"Barang Paling Sering Keluar",val:dashTopItemName,sub:`${dashTopItemQty} pcs dalam 7 hari terakhir`,color:T.primaryLight,onClick:null},
                     {icon:"📦",bg:dark?"rgba(96,165,250,0.12)":"#dbeafe",label:"Disarankan Restock",val:`${dashStockHabis} Item`,sub:"Stok habis, perlu restock",color:"#60a5fa",onClick:()=>setTab("stock")},
                     {icon:"🕐",bg:dark?"rgba(167,139,250,0.12)":"#ede9fe",label:"Total Item",val:`${items.length} Item`,sub:"Semua item dalam inventaris",color:"#a78bfa",onClick:null},
@@ -2468,7 +2468,7 @@ export default function App(){
                   {/* Barang Hampir Habis */}
                   <div className="card">
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                      <div style={{fontSize:14,fontWeight:700,color:T.text}}>Barang Hampir Habis</div>
+                      <div style={{fontSize:14,fontWeight:700,color:T.text}}>Barang yang Perlu Restock</div>
                       <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,background:T.amberBg,color:T.amber,border:`1px solid ${T.amberBorder}`}}>{lowStock.length} Item</span>
                     </div>
                     {lowStock.length===0
@@ -2491,7 +2491,7 @@ export default function App(){
                             <span className="dash-col-satuan">{it.unit}</span>
                           </div>
                         );})}
-                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua barang hampir habis →</div>
+                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua barang yang perlu restock →</div>
                       </>)
                     }
                   </div>
