@@ -3240,15 +3240,23 @@ export default function App(){
                 {/* Sub-tab toggle + actions */}
                 <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
                   <div style={{display:"flex",gap:4,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:4,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
-                    {[
-                      {id:"all",icon:"🧾",label:`Semua (${allHistory.length})`},
-                      {id:"out",icon:"📤",label:`Pengambilan (${trx.length})`},
-                      {id:"in",icon:"📋",label:`Penerimaan (${receives.length})`},
-                      ...(isAdmin?[{id:"approval",icon:"⏳",label:`Approval (${pendingApprovalCount})`}]:[]),
-                      ...(isAdmin?[{id:"audit",icon:"🛡",label:`Audit (${auditTotal})`}]:[]),
-                    ].map(tb=>(
-                      <button key={tb.id} onClick={()=>setHistoryTab(tb.id)} style={{padding:"8px 14px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab===tb.id?T.primary:"transparent",color:historyTab===tb.id?"white":T.muted,boxShadow:historyTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap",flexShrink:0}}>{tb.icon} {tb.label}</button>
-                    ))}
+                    {(() => {
+                      const detectiveIcon = (
+                        <span style={{fontSize:15,display:"inline-flex",alignItems:"center",justifyContent:"center",width:15,height:15,lineHeight:1,marginRight:2}}>
+                          🕵️‍♂️
+                        </span>
+                      );
+                      const subTabs = [
+                        {id:"all",icon:"🧾",label:`Semua (${allHistory.length})`},
+                        {id:"out",icon:"📤",label:`Pengambilan (${trx.length})`},
+                        {id:"in",icon:"📋",label:`Penerimaan (${receives.length})`},
+                        ...(isAdmin ? [{id:"approval",icon:"⏳",label:`Approval (${pendingApprovalCount})`}] : []),
+                        ...(isAdmin ? [{id:"audit",icon:detectiveIcon,label:`Audit (${auditTotal})`}] : []),
+                      ];
+                      return subTabs.map(tb => (
+                        <button key={tb.id} onClick={()=>setHistoryTab(tb.id)} style={{padding:"8px 14px",borderRadius:9,border:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .2s",background:historyTab===tb.id?T.primary:"transparent",color:historyTab===tb.id?"white":T.muted,boxShadow:historyTab===tb.id?`0 4px 12px ${T.primaryGlow}`:"none",whiteSpace:"nowrap",flexShrink:0,display:"flex",alignItems:"center",gap:6}}>{tb.icon} {tb.label}</button>
+                      ));
+                    })()}
                   </div>
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                     {isAdmin&&historyTab!=="audit"&&historyTab!=="approval"&&<BtnG onClick={historyTab==="in"?exportReceivesExcel:exportTransactionsExcel} style={{fontWeight:700,padding:"8px 14px",fontSize:12,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
