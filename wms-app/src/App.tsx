@@ -2804,10 +2804,14 @@ export default function App(){
               <div>
                 {/* ── Filter bar (with action buttons) ── */}
                 <div style={{display:"grid",gap:10,marginBottom:16,padding:"16px 20px",border:`1px solid ${T.border}`,borderRadius:14,background:T.surfaceSolid}}>
-                  <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
                     <div style={{position:"relative",flex:"0 0 300px",maxWidth:"100%"}}>
                       <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.muted,pointerEvents:"none"}}>🔍</span>
                       <input className="ifield" placeholder="Cari barang..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{width:"100%",paddingLeft:34}}/>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginLeft:"auto"}}>
+                      {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontSize:13,padding:"8px 16px"}}>＋ Add New Item</BtnG>}
+                      {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{fontSize:13,padding:"8px 16px",fontWeight:500}}>📥 Receive New</BtnP>}
                     </div>
                   </div>
 
@@ -2875,7 +2879,7 @@ export default function App(){
 
                   <div style={{height:1,background:T.border,margin:"2px 0"}}/>
 
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                       <div style={{fontSize:13,color:T.muted}}><span style={{color:T.text,fontWeight:600}}>{filtItems.length}</span> item ditemukan</div>
                       <button
@@ -2896,10 +2900,6 @@ export default function App(){
                       >
                         × Reset Filter
                       </button>
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontSize:13,padding:"8px 16px"}}>＋ Add New Item</BtnG>}
-                    {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{fontSize:13,padding:"8px 16px",fontWeight:500}}>📥 Receive New</BtnP>}
                     </div>
                   </div>
                 </div>
