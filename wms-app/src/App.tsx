@@ -2368,14 +2368,21 @@ export default function App(){
                               const pointY=svgH-(v/maxQty)*svgH*0.85;
                               const isActive=i===dashTrendPointIdx;
                               return (
-                                <g key={i} onMouseEnter={()=>setDashTrendPointIdx(i)} onClick={()=>setDashTrendPointIdx(dashTrendPointIdx===i?-1:i)} style={{cursor:"pointer"}}>
-                                  <circle cx={pointX} cy={pointY} r="9" fill="transparent"/>
+                                <g
+                                  key={i}
+                                  onMouseEnter={()=>setDashTrendPointIdx(i)}
+                                  onMouseDown={()=>setDashTrendPointIdx(i)}
+                                  onTouchStart={()=>setDashTrendPointIdx(i)}
+                                  onClick={()=>setDashTrendPointIdx(i)}
+                                  style={{cursor:"pointer"}}
+                                >
+                                  <circle cx={pointX} cy={pointY} r="14" fill="transparent" style={{pointerEvents:"all"}}/>
                                   <circle cx={pointX} cy={pointY} r={isActive?5:4} fill={T.primary} stroke={T.card} strokeWidth="2"/>
                                 </g>
                               );
                             })}
                             {dashLast7Days.map((d,i)=>(
-                              <text key={i} x={(i/6)*svgW} y={svgH+18} textAnchor="middle" fontSize="8" fill={T.muted}>{d.slice(5).replace("-","/")}</text>
+                              <text key={i} x={(i/6)*svgW} y={svgH+18} textAnchor="middle" fontSize="6.8" fill={T.muted}>{d.slice(5).replace("-","/")}</text>
                             ))}
                           </svg>
                         </div>
