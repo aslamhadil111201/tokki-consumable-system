@@ -224,8 +224,10 @@ const ProgBlocks=({pct,color})=>{
     </div>
   );
 };
-const Badge=({children,bg,color,border,style})=>(
-  <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:20,background:bg||T.surface,color:color||T.muted,border:`1px solid ${border||T.border}`,fontSize:10,fontWeight:700,whiteSpace:"nowrap",letterSpacing:".05em",...style}}>{children}</span>
+const Badge=({children,bg,color,border,style,alignRight})=>(
+  <div style={alignRight ? { width: "100%", display: "flex", justifyContent: "flex-end" } : {}}>
+    <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:20,background:bg||T.surface,color:color||T.muted,border:`1px solid ${border||T.border}`,fontSize:10,fontWeight:700,whiteSpace:"nowrap",letterSpacing:".05em",...style}}>{children}</span>
+  </div>
 );
 const FL=({children})=>(
   <div style={{fontSize:10,fontWeight:800,color:T.muted,letterSpacing:".12em",textTransform:"uppercase",marginBottom:6}}>{children}</div>
@@ -2429,7 +2431,7 @@ export default function App(){
                                 <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Sisa {it.stock} / min {it.minStock} {it.unit}</div>
                                 <Prog pct={it.minStock?it.stock/it.minStock*100:0} color={s.dot}/>
                               </div>
-                              <Badge bg={s.bg} color={s.text} border={s.border}>{s.label}</Badge>
+                              <Badge bg={s.bg} color={s.text} border={s.border} alignRight>{s.label}</Badge>
                             </div>
                           );})
                         }
