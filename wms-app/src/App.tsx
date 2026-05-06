@@ -484,6 +484,11 @@ export default function App(){
     setStockStatusF(status);
     setTab("stock");
   };
+  const resetStockFilters=()=>{
+    setCatF("Semua");
+    setStockStatusF("Semua");
+    setSearchQ("");
+  };
 
   const lowStock=items.filter(i=>i.stock<=i.minStock);
   const approvedOutTrx=trx.filter(isApprovedOutTrx);
@@ -509,6 +514,7 @@ export default function App(){
   const dashTopItemQty=dashTopEntry?.[1]||0;
   const dashRecentReceives=[...receives].sort((a,b)=>Number(b.id)-Number(a.id)).slice(0,4);
   const statusFilterKey={Aman:"aman",Mendekati:"mendekati",Menipis:"menipis",Habis:"habis"}[stockStatusF]||"";
+  const hasActiveStockFilters=catF!=="Semua"||stockStatusF!=="Semua"||searchQ.trim()!=="";
   const filtItems=items
     .filter(i=>(catF==="Semua"||i.category===catF)&&i.name.toLowerCase().includes(searchQ.toLowerCase()))
     .filter(i=>!statusFilterKey||stockStatusKey(i)===statusFilterKey);
@@ -2827,6 +2833,24 @@ export default function App(){
                     })}
                   </div>
                   <span style={{fontSize:11.5,color:T.muted,fontWeight:600}}>{filtItems.length} item</span>
+                  {hasActiveStockFilters&&(
+                    <button
+                      onClick={resetStockFilters}
+                      style={{
+                        border:`1px solid ${T.border}`,
+                        background:T.surface,
+                        color:T.muted,
+                        borderRadius:999,
+                        padding:"6px 11px",
+                        fontSize:11,
+                        fontWeight:700,
+                        cursor:"pointer",
+                        lineHeight:1.1,
+                      }}
+                    >
+                      Reset Filter
+                    </button>
+                  )}
                   <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
                     {canManage&&<BtnG onClick={()=>setShowNewItem(true)} style={{fontWeight:800,padding:"9px 15px",fontSize:12.5}}>＋ Add New Item</BtnG>}
                     {canManage&&<BtnP onClick={()=>setShowAdd(true)} style={{padding:"9px 15px",fontSize:12.5}}>📥 Receive New</BtnP>}
