@@ -341,6 +341,7 @@ export default function App(){
   const [idleWarning,setIdleWarning]=useState(false);
   const [idleCountdown,setIdleCountdown]=useState(60);
   const [reportPeriod,setReportPeriod]=useState("month");
+  const [dashDonutSegIdx,setDashDonutSegIdx]=useState(-1);
   const [dashTrendPointIdx,setDashTrendPointIdx]=useState(-1);
   const [reportProjectMode,setReportProjectMode]=useState<"unit"|"rp">("unit");
   const [trendFilter,setTrendFilter]=useState<"all"|"up"|"down"|"spike"|"cur"|"prev">("all");
@@ -2291,14 +2292,18 @@ export default function App(){
                 {(()=>{
                   const R=42,C2=2*Math.PI*R;
                   const dTotal=dashStockAman+dashStockMenipis+dashStockHabis||1;
-                  const donutSegs=[{count:dashStockAman,color:"#10b981"},{count:dashStockMenipis,color:"#f59e0b"},{count:dashStockHabis,color:"#ef4444"}];
+                  const donutSegs=[
+                    {label:"Aman",count:dashStockAman,color:"#10b981",sub:"> Min Stok"},
+                    {label:"Menipis",count:dashStockMenipis,color:"#f59e0b",sub:"≤ Min Stok"},
+                    {label:"Habis",count:dashStockHabis,color:"#ef4444",sub:"Stok = 0"},
+                  ];
                   let cumLen=0;
                   const renderedSegs=donutSegs.map(s=>{
                     const len=(s.count/dTotal)*C2;
                     const da=`${len} ${C2-len}`;
                     const doff=-cumLen;
                     cumLen+=len;
-                    return {color:s.color,da,doff};
+                    return {...s,color:s.color,da,doff};
                   });
                   const svgW=220,svgH=72;
                   const maxQty=Math.max(...dashLast7OutQty,1);
@@ -2311,33 +2316,56 @@ export default function App(){
                     x:(dashTrendPointIdx/6)*svgW,
                     y:svgH-(dashLast7OutQty[dashTrendPointIdx]/maxQty)*svgH*0.85,
                   }:null;
+                  const activeDonutSeg=dashDonutSegIdx>=0?renderedSegs[dashDonutSegIdx]:null;
                   return(
                     <div className="dash-charts-g">
                       {/* Donut ringkasan stok */}
-                      <div className="card" style={{display:"flex",flexDirection:"column"}}>
+                      <div className="card" style={{display:"flex",flexDirection:"column"}} onMouseLeave={()=>setDashDonutSegIdx(-1)}>
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Ringkasan Stok</div>
                         <div style={{display:"flex",alignItems:"center",gap:18,flex:1}}>
                           <div style={{position:"relative",width:150,height:150,flexShrink:0}}>
                             <svg width="150" height="150" viewBox="0 0 100 100">
                               <circle cx="50" cy="50" r={R} fill="none" stroke={T.border} strokeWidth="13"/>
-                              {renderedSegs.map((s,i)=>(
-                                <circle key={i} cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth="13" strokeDasharray={s.da} strokeDashoffset={s.doff} transform="rotate(-90 50 50)"/>
-                              ))}
+                              {renderedSegs.map((s,i)=>{
+                                const isActive=i===dashDonutSegIdx;
+                                return (
+                                  <g key={i}>
+                                    <circle cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth={isActive?15:13} strokeDasharray={s.da} strokeDashoffset={s.doff} transform="rotate(-90 50 50)" style={{transition:"stroke-width .18s ease, opacity .18s ease",opacity:dashDonutSegIdx===-1||isActive?1:0.45}}/>
+                                    <circle
+                                      cx="50"
+                                      cy="50"
+                                      r={R}
+                                      fill="none"
+                                      stroke="transparent"
+                                      strokeWidth="24"
+                                      strokeDasharray={s.da}
+                                      strokeDashoffset={s.doff}
+                                      transform="rotate(-90 50 50)"
+                                      onMouseEnter={()=>setDashDonutSegIdx(i)}
+                                      onMouseDown={()=>setDashDonutSegIdx(i)}
+                                      onTouchStart={()=>setDashDonutSegIdx(i)}
+                                      onClick={()=>setDashDonutSegIdx(i)}
+                                      style={{cursor:"pointer"}}
+                                    />
+                                  </g>
+                                );
+                              })}
                             </svg>
                             <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",pointerEvents:"none"}}>
-                              <div style={{fontSize:10,color:T.muted,lineHeight:1.3}}>Total</div>
-                              <div style={{fontSize:17,fontWeight:800,color:T.text,lineHeight:1.1}}>{dashTotalStokPcs.toLocaleString("id-ID")}</div>
-                              <div style={{fontSize:10,color:T.muted}}>pcs</div>
+                              <div style={{fontSize:10,color:activeDonutSeg?.color||T.muted,lineHeight:1.3,fontWeight:700}}>{activeDonutSeg?.label||"Total"}</div>
+                              <div style={{fontSize:17,fontWeight:800,color:T.text,lineHeight:1.1}}>{activeDonutSeg?activeDonutSeg.count.toLocaleString("id-ID"):dashTotalStokPcs.toLocaleString("id-ID")}</div>
+                              <div style={{fontSize:10,color:T.muted}}>{activeDonutSeg?"item":'pcs'}</div>
                             </div>
                           </div>
                           <div style={{flex:1}}>
-                            {[{label:"Aman",color:"#10b981",count:dashStockAman},{label:"Menipis",color:"#f59e0b",count:dashStockMenipis},{label:"Habis",color:"#ef4444",count:dashStockHabis}].map((l,i)=>(
-                              <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,fontSize:12,color:T.muted}}>
-                                <div style={{width:10,height:10,borderRadius:"50%",background:l.color,flexShrink:0}}/>
+                            {renderedSegs.map((l,i)=>(
+                              <div key={i} onMouseEnter={()=>setDashDonutSegIdx(i)} onMouseDown={()=>setDashDonutSegIdx(i)} onTouchStart={()=>setDashDonutSegIdx(i)} onClick={()=>setDashDonutSegIdx(i)} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,fontSize:12,color:T.muted,cursor:"pointer",padding:"2px 0",borderRadius:8,opacity:dashDonutSegIdx===-1||dashDonutSegIdx===i?1:0.65,transition:"opacity .18s ease"}}>
+                                <div style={{width:10,height:10,borderRadius:"50%",background:l.color,flexShrink:0,boxShadow:dashDonutSegIdx===i?`0 0 0 4px ${l.color}22`:"none"}}/>
                                 <div style={{flex:1}}>{l.label}</div>
                                 <div style={{fontWeight:700,color:T.text}}>{l.count}<span style={{fontSize:10,fontWeight:400,color:T.muted,marginLeft:3}}>item</span></div>
                               </div>
                             ))}
+                            <div style={{fontSize:10.5,color:T.muted,marginTop:2,minHeight:16}}>{activeDonutSeg?activeDonutSeg.sub:"Tap warna chart untuk detail"}</div>
                           </div>
                         </div>
                         <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>setTab("stock")}>Lihat semua stok →</div>
