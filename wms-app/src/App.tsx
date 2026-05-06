@@ -1481,7 +1481,65 @@ export default function App(){
     toast$("Export PDF penerimaan berhasil");
   };
 
-  // ── EXPORT LAPORAN APPROVAL ────────────────────────────────────────
+  // ── EXPORT RETUR BARANG ───────────────────────────────────────────
+  const exportReturnsExcel = () => {
+    const source = returns;
+    const unitTotal = source.reduce((a, r) => a + Number(r.qty || 0), 0);
+    const rows = [
+      ["TOKKI Consumable System"],
+      ["Laporan Retur Barang"],
+      ["Dibuat", `${todayFmt()} ${nowTime()}`],
+      ["Total Data", source.length],
+      ["Total Unit", unitTotal],
+      [],
+      ["ID", "Tanggal", "Waktu", "Karyawan", "Item", "Qty", "Unit", "Alasan", "Catatan", "Status"],
+      ...toSafeRows(source).map(r => {
+        const it = itemMap[Number(r.itemId)];
+        return [
+          csvText(r.id),
+          fmtDateExcel(r.date),
+          r.time || "",
+          r.employee,
+          it?.name || r.itemName || `Item #${r.itemId}`,
+          r.qty,
+          it?.unit || "pcs",
+          r.reason,
+          r.note || "",
+          r.status || "Menunggu",
+        ];
+      }),
+    ];
+    const csv = "\uFEFF" + rows.map(r => r.map(v => typeof v === "string" && v.startsWith("=") ? v : csvEscape(v)).join(",")).join("\n");
+    triggerDownload(`retur-barang-${todayStr()}.csv`, csv, "text/csv;charset=utf-8;");
+    toast$("Export Excel (CSV) retur berhasil");
+  };
+
+  const exportReturnsPdf = () => {
+    const source = returns;
+    const unitTotal = source.reduce((a, r) => a + Number(r.qty || 0), 0);
+    const rows = toSafeRows(source).map(r => {
+      const it = itemMap[Number(r.itemId)];
+      return [
+        r.id,
+        r.date,
+        r.time || "",
+        r.employee,
+        it?.name || r.itemName || `Item #${r.itemId}`,
+        `${r.qty} ${it?.unit || "pcs"}`,
+        r.reason,
+        r.note || "",
+        r.status || "Menunggu",
+      ];
+    });
+    downloadPdfTable({
+      fileName: `retur-barang-${todayStr()}.pdf`,
+      title: `Retur Barang - ${todayFmt()}`,
+      subtitle: `Total data: ${source.length} | Total unit: ${unitTotal}`,
+      headers: ["ID", "Tanggal", "Waktu", "Karyawan", "Item", "Qty", "Alasan", "Catatan", "Status"],
+      rows,
+    });
+    toast$("Export PDF retur berhasil");
+  };
   const approvalReportSource=trx.filter((t:any)=>trxApprovalStatus(t)!=="approved"||true); // semua out trx (pending, approved, rejected)
   const fmtSlaDuration=(createdMs:number,resolvedMs:number)=>{
     if(!createdMs||!resolvedMs||resolvedMs<createdMs) return "-";
@@ -2698,8 +2756,16 @@ export default function App(){
                     </div>
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {isAdmin&&<BtnG onClick={exportTransactionsExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>}
-                    {isAdmin&&<BtnG onClick={exportTransactionsPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>}
+                    {isAdmin&&(
+                      returSubTab === "log"
+                        ? <BtnG onClick={exportTransactionsExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>
+                        : <BtnG onClick={exportReturnsExcel} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{EXCEL_ICON}Excel</BtnG>
+                    )}
+                    {isAdmin&&(
+                      returSubTab === "log"
+                        ? <BtnG onClick={exportTransactionsPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>
+                        : <BtnG onClick={exportReturnsPdf} style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>{PDF_ICON}PDF</BtnG>
+                    )}
                     <button onClick={()=>{setReturForm(emptyReturForm());setShowRetur(true);}} style={{padding:"12px 18px",borderRadius:14,fontWeight:800,fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",border:`1.5px solid ${T.amber}`,background:T.amberBg,color:T.amber,cursor:"pointer"}}>↩ Catat Retur</button>
                     <BtnP onClick={()=>setShowModal(true)} style={{flexShrink:0,padding:"12px 20px",borderRadius:14,fontWeight:800}}>＋ Catat Pengambilan</BtnP>
                   </div>
