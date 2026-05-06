@@ -2858,13 +2858,13 @@ export default function App(){
                             key={s}
                             onClick={()=>setStockStatusF(s)}
                             style={{
-                              padding:"5px 12px",
+                              padding:"6px 13px",
                               borderRadius:999,
                               border:`1px solid ${active?activeStyle.border:T.border}`,
                               background:active?activeStyle.bg:T.surfaceSolid,
                               color:active?activeStyle.text:T.muted,
                               fontSize:12,
-                              fontWeight:active?600:600,
+                              fontWeight:active?700:600,
                               cursor:"pointer",
                               lineHeight:1.35,
                               whiteSpace:"nowrap",
