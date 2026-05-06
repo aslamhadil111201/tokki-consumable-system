@@ -2353,9 +2353,11 @@ export default function App(){
                               })}
                             </svg>
                             <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",pointerEvents:"none"}}>
-                              <div style={{fontSize:9.5,color:activeDonutSeg?.color||T.muted,lineHeight:1.15,fontWeight:800,letterSpacing:0.1,marginBottom:2}}>{activeDonutSeg?.label||"Total Stok"}</div>
-                              <div style={{fontSize:17,fontWeight:800,color:T.text,lineHeight:1.1}}>{activeDonutSeg?activeDonutSeg.count.toLocaleString("id-ID"):dashTotalStokPcs.toLocaleString("id-ID")}</div>
-                              <div style={{fontSize:10,color:T.muted,lineHeight:1.15}}>{activeDonutSeg?"item":'pcs'}</div>
+                              {activeDonutSeg&&(
+                                <div style={{fontSize:9.5,color:activeDonutSeg.color,lineHeight:1.1,fontWeight:800,letterSpacing:0.1,marginBottom:3}}>{activeDonutSeg.label}</div>
+                              )}
+                              <div style={{fontSize:19,fontWeight:800,color:T.text,lineHeight:1}}>{activeDonutSeg?activeDonutSeg.count.toLocaleString("id-ID"):dashTotalStokPcs.toLocaleString("id-ID")}</div>
+                              <div style={{fontSize:10,color:T.muted,lineHeight:1.15,marginTop:2}}>{activeDonutSeg?"item":"pcs total"}</div>
                             </div>
                           </div>
                           <div style={{flex:1}}>
