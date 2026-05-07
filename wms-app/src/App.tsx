@@ -2473,36 +2473,6 @@ export default function App(){
                   </div>
                 </div>
 
-                {/* Insight cards with skeleton */}
-                <div className="dash-insight-g">
-                  {loadingDashboardData
-                    ? Array.from({length:4}).map((_,i)=>(
-                        <div key={i} className="stat-card" style={{display:"flex",alignItems:"flex-start",gap:12,opacity:0.7}}>
-                          <div style={{width:38,height:38,borderRadius:10,background:"#e5e7eb",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0,animation:"pulse 1.2s infinite alternate"}} />
-                          <div style={{minWidth:0,flex:1}}>
-                            <div style={{height:12,width:80,background:"#e5e7eb",borderRadius:6,marginBottom:6,animation:"pulse 1.2s infinite alternate"}} />
-                            <div style={{height:18,width:100,background:"#e5e7eb",borderRadius:6,marginBottom:6,animation:"pulse 1.2s infinite alternate"}} />
-                            <div style={{height:10,width:60,background:"#e5e7eb",borderRadius:6,animation:"pulse 1.2s infinite alternate"}} />
-                          </div>
-                        </div>
-                      ))
-                    : [
-                        {icon:"⚠️",bg:dark?"rgba(245,158,11,0.12)":T.amberBg,label:"Barang Menipis",val:`${dashStockMenipis} Item`,sub:"Stok menipis, belum habis",color:T.amber,onClick:()=>openStockWithFilter("Menipis")},
-                        {icon:"📈",bg:T.greenBg,label:"Barang Paling Sering Keluar",val:dashTopItemName,sub:`${dashTopItemQty} pcs dalam 7 hari terakhir`,color:T.primaryLight,onClick:null},
-                        {icon:"🚨",bg:dark?"rgba(239,68,68,0.14)":"#fee2e2",label:"Stok Habis",val:`${dashStockHabis} Item`,sub:"Perlu restock segera",color:T.red,onClick:()=>openStockWithFilter("Habis")},
-                        {icon:"🕐",bg:dark?"rgba(167,139,250,0.12)":"#ede9fe",label:"Total Item",val:`${items.length} Item`,sub:"Semua item dalam inventaris",color:"#a78bfa",onClick:null},
-                      ].map((c,i)=>(
-                        <div key={i} className="stat-card" style={{display:"flex",alignItems:"flex-start",gap:12,cursor:c.onClick?"pointer":"default"}} onClick={c.onClick||undefined}>
-                          <div style={{width:38,height:38,borderRadius:10,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{c.icon}</div>
-                          <div style={{minWidth:0,flex:1}}>
-                            <div style={{fontSize:11,color:T.muted,marginBottom:4,fontWeight:600}}>{c.label}</div>
-                            <div style={{fontSize:14,fontWeight:800,color:c.color,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",lineHeight:1.25,marginBottom:2}}>{c.val}</div>
-                            <div style={{fontSize:11,color:T.muted}}>{c.sub}</div>
-                          </div>
-                        </div>
-                      ))}
-                </div>
-
                 {/* Charts 3-col */}
                 {(()=>{
                   const R=42,C2=2*Math.PI*R;
@@ -2525,13 +2495,14 @@ export default function App(){
                   const maxQty=Math.max(...dashLast7OutQty,1);
                   const linePoints=dashLast7OutQty.map((v,i)=>`${(i/6)*svgW},${svgH-(v/maxQty)*svgH*0.85}`).join(" ");
                   const areaPoints=`0,${svgH} ${linePoints} ${svgW},${svgH}`;
-                  const activeTrendPoint=dashTrendPointIdx>=0?{
-                    idx:dashTrendPointIdx,
-                    label:dashLast7Days[dashTrendPointIdx],
-                    value:dashLast7OutQty[dashTrendPointIdx],
-                    x:(dashTrendPointIdx/6)*svgW,
-                    y:svgH-(dashLast7OutQty[dashTrendPointIdx]/maxQty)*svgH*0.85,
-                  }:null;
+                  // Deklarasi activeTrendPoint di scope luar agar bisa diakses di semua card
+                  const activeTrendPoint = dashLast7OutQty && dashLast7Days && dashTrendPointIdx >= 0 && dashLast7Days[dashTrendPointIdx] !== undefined ? {
+                    idx: dashTrendPointIdx,
+                    label: dashLast7Days[dashTrendPointIdx],
+                    value: dashLast7OutQty[dashTrendPointIdx],
+                    x: (dashTrendPointIdx / 6) * svgW,
+                    y: svgH - (dashLast7OutQty[dashTrendPointIdx] / maxQty) * svgH * 0.85,
+                  } : null;
                   const activeDonutSeg=dashDonutSegIdx>=0?renderedSegs[dashDonutSegIdx]:null;
                   return(
                     <div className="dash-charts-g">
@@ -2591,17 +2562,16 @@ export default function App(){
                             <div style={{fontSize:10.5,color:T.muted,marginTop:2,minHeight:16}}>{activeDonutSeg?activeDonutSeg.sub:"Tap warna chart untuk detail"}</div>
                           </div>
                         </div>
-                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>openStockWithFilter("Semua")}>Lihat semua stok →</div>
-                      </div>
-                      {/* Line chart 7 hari */}
-                      <div className="card">
+                      <div style={{fontSize:11,color:T.primary,marginTop:"auto",paddingTop:8,cursor:"pointer"}} onClick={()=>setTab("report")}>Lihat laporan lengkap →</div>                      </div>
+{/* Line chart 7 hari */}
+                      <div className="card" style={{display:"flex", flexDirection:"column"}}>
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:6}}>Trend Keluar (7 Hari Terakhir)</div>
                         <div style={{display:"flex",gap:12,marginBottom:8,fontSize:11,color:T.muted}}>
                           <span style={{display:"flex",alignItems:"center",gap:4}}>
                             <span style={{width:20,height:2,background:T.primary,display:"inline-block",borderRadius:2}}/>Unit Keluar
                           </span>
                         </div>
-                        <div style={{position:"relative"}} onMouseLeave={()=>setDashTrendPointIdx(-1)}>
+                        <div style={{position:"relative",flex:1}} onMouseLeave={()=>setDashTrendPointIdx(-1)}>
                           {activeTrendPoint&&(
                             <div style={{position:"absolute",left:`${Math.min(Math.max((activeTrendPoint.x/svgW)*100,12),88)}%`,top:0,transform:"translate(-50%,-110%)",background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"7px 10px",boxShadow:T.shadowSm,zIndex:2,pointerEvents:"none",minWidth:96,textAlign:"center"}}>
                               <div style={{fontSize:10,color:T.muted,fontWeight:700}}>{activeTrendPoint.label?.slice(5).replace("-","/")}</div>
@@ -2637,7 +2607,7 @@ export default function App(){
                             ))}
                           </svg>
                         </div>
-                        <div style={{fontSize:11,color:T.primary,marginTop:4,cursor:"pointer"}} onClick={()=>setTab("report")}>Lihat laporan lengkap →</div>
+                        <div style={{fontSize:11,color:T.primary,marginTop:"auto",paddingTop:8,cursor:"pointer"}} onClick={()=>setTab("report")}>Lihat laporan lengkap →</div>
                       </div>
                       {/* Status stok */}
                       <div className="card">
