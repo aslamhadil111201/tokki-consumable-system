@@ -961,34 +961,47 @@ export default function App(){
     return()=>window.clearInterval(iv);
   },[loggedIn]);
 
-  // ── OPERATOR NOTIFICATION: detect when own pending trx changes status ──
-  useEffect(()=>{
-    if(!loggedIn) return;
-    if(isFirstTrxFetchRef.current){
-      isFirstTrxFetchRef.current=false;
-      prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
-      return;
+// ── OPERATOR NOTIFICATION: detect when own pending trx changes status ──
+useEffect(()=>{
+  if(!loggedIn) return;
+  if(isFirstTrxFetchRef.current){
+    isFirstTrxFetchRef.current=false;
+    prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+    return;
+  }
+  const role=(userRef.current?.role||"").toLowerCase();
+  if(role==="operator"){
+    const prev=prevTrxStatusRef.current;
+    const toasts:any[]=[];
+    const newNotifs:any[]=[];
+    trx.forEach((t:any)=>{
+      const id=String(t.id);
+      const prevS=prev[id];
+      const currS=trxApprovalStatus(t);
+      if(prevS==="pending"&&currS==="approved"){
+        const m=`✅ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  telah di-approve`;
+        toasts.push({msg:m,type:"ok"});
+        newNotifs.push({id:Date.now()+Math.random(),msg:m,type:"ok",ts:new Date().toISOString(),read:false});
+      } else if(prevS==="pending"&&currS==="rejected"){
+        const m=`⛔ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  ditolak`;
+        toasts.push({msg:m,type:"err"});
+        newNotifs.push({id:Date.now()+Math.random(),msg:m,type:"err",ts:new Date().toISOString(),read:false});
+      }
+    });
+    if(toasts.length>0){
+      setToast({msg:toasts[0].msg,type:toasts[0].type});
+      setTimeout(()=>setToast(null),4000);
     }
-    const role=(userRef.current?.role||"").toLowerCase();
-    if(role==="operator"){
-      const prev=prevTrxStatusRef.current;
-      trx.forEach((t:any)=>{
-        const id=String(t.id);
-        const prevS=prev[id];
-        const currS=trxApprovalStatus(t);
-        if(prevS==="pending"&&currS==="approved"){
-          const m=`✅ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  telah di-approve`;
-          setToast({msg:m,type:"ok"});setTimeout(()=>setToast(null),4000);
-          setNotifHistory(prev=>{const next=[{id:Date.now(),msg:m,type:"ok",ts:new Date().toISOString(),read:false},...prev].slice(0,50);localStorage.setItem("wms_notif_history",JSON.stringify(next));return next;});
-        } else if(prevS==="pending"&&currS==="rejected"){
-          const m=`⛔ Permintaan ${t.taker||""}${t.dept?` (${t.dept})`:""}  ditolak`;
-          setToast({msg:m,type:"err"});setTimeout(()=>setToast(null),4000);
-          setNotifHistory(prev=>{const next=[{id:Date.now(),msg:m,type:"err",ts:new Date().toISOString(),read:false},...prev].slice(0,50);localStorage.setItem("wms_notif_history",JSON.stringify(next));return next;});
-        }
+    if(newNotifs.length>0){
+      setNotifHistory(prev=>{
+        const next=[...newNotifs,...prev].slice(0,50);
+        localStorage.setItem("wms_notif_history",JSON.stringify(next));
+        return next;
       });
-      prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
     }
-  },[trx]);
+  }
+  prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+},[trx]);
 
   const addToCart=()=>{
     if(!pickerItem||!pickerQty||+pickerQty<1){toast$("Pilih barang dan isi jumlah","err");return;}
@@ -1171,82 +1184,94 @@ export default function App(){
     },"Sedang menghapus transaksi");
   };
 
-    const processTransactionApproval=async(id,action)=>{
-      if(!isAdmin){toast$("Hanya admin yang boleh approval transaksi","err");return;}
-      const actionLabel=action==="approve"?"approve":"reject";
-      const busyKey=`${id}:${actionLabel}`;
-      if(approvalBusyKey) return;
-      const yes=window.confirm(actionLabel==="approve"?"Approve transaksi ini?":"Reject transaksi ini?");
-      if(!yes) return;
-      const note="";
-      setApprovalBusyKey(busyKey);
+const processTransactionApproval=async(id,action)=>{
+  if(!isAdmin){toast$("Hanya admin yang boleh approval transaksi","err");return;}
+  const actionLabel=action==="approve"?"approve":"reject";
+  const busyKey=`${id}:${actionLabel}`;
+  if(approvalBusyKey) return;
+  const yes=window.confirm(actionLabel==="approve"?"Approve transaksi ini?":"Reject transaksi ini?");
+  if(!yes) return;
+  const note="";
+  setApprovalBusyKey(busyKey);
+  try{
+    await withLoading(async()=>{
       try{
-        await withLoading(async()=>{
-          try{
-            const r=await apiFetch(`/transactions/${id}/approval`,{
-              method:"PATCH",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify({action:actionLabel,note:String(note||"").trim()}),
-            });
-            const data=await r.json().catch(()=>null);
-            if(!r.ok){
-              const rawMessage=String(data?.error||"");
-              const rawLower=rawMessage.toLowerCase();
-              let message=rawMessage||"Gagal memproses approval";
-              if(r.status===403) message="Akses ditolak: hanya admin yang boleh approval";
-              else if(r.status===404) message="Transaksi tidak ditemukan";
-              else if(r.status===409) message="Data transaksi berubah, silakan refresh lalu coba lagi";
-              else if(r.status===400){
-                if(rawLower.includes("bukan antrian")) message="Transaksi ini sudah diproses, silakan refresh data";
-                else if(rawLower.includes("stok")) message="Approval gagal: stok tidak cukup saat diproses";
-                else message=rawMessage||"Permintaan approval tidak valid";
-              }
-              throw new Error(message);
-            }
+        const r=await apiFetch(`/transactions/${id}/approval`,{
+          method:"PATCH",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({action:actionLabel,note:String(note||"").trim()}),
+        });
+        const data=await r.json().catch(()=>null);
+        if(!r.ok){
+          const rawMessage=String(data?.error||"");
+          const rawLower=rawMessage.toLowerCase();
+          let message=rawMessage||"Gagal memproses approval";
+          if(r.status===403) message="Akses ditolak: hanya admin yang boleh approval";
+          else if(r.status===404) message="Transaksi tidak ditemukan";
+          else if(r.status===409) message="Data transaksi berubah, silakan refresh lalu coba lagi";
+          else if(r.status===400){
+            if(rawLower.includes("bukan antrian")) message="Transaksi ini sudah diproses, silakan refresh data";
+            else if(rawLower.includes("stok")) message="Approval gagal: stok tidak cukup saat diproses";
+            else message=rawMessage||"Permintaan approval tidak valid";
+          }
+          throw new Error(message);
+        }
 
-            const prevTrx=trx.find(tx=>Number(tx?.id)===Number(id));
-            const wasPending=trxApprovalStatus(prevTrx)==="pending";
-            const fallbackUpdated={
-              approvalStatus: actionLabel==="approve"?"approved":"rejected",
-              approvalNote: note,
-              approvedBy: String(user?.username||prevTrx?.approvedBy||""),
-              approvedAt: new Date().toISOString(),
-            };
-            const updatedTrx=(data&&typeof data==="object")?data:fallbackUpdated;
+        const prevTrx=trx.find(tx=>Number(tx?.id)===Number(id));
+        const wasPending=trxApprovalStatus(prevTrx)==="pending";
+        const fallbackUpdated={
+          approvalStatus: actionLabel==="approve"?"approved":"rejected",
+          approvalNote: note,
+          approvedBy: String(user?.username||prevTrx?.approvedBy||""),
+          approvedAt: new Date().toISOString(),
+        };
+        const updatedTrx=(data&&typeof data==="object")?data:fallbackUpdated;
 
-            setTrx(prev=>prev.map(tx=>Number(tx?.id)===Number(id)?{...tx,...updatedTrx}:tx));
-            setAllHistory(prev=>prev.map(row=>(
-              String(row?.type||"out").toLowerCase()==="out"&&Number(row?.id)===Number(id)
-                ? {...row,...updatedTrx}
-                : row
-            )));
+        setTrx(prev=>prev.map(tx=>Number(tx?.id)===Number(id)?{...tx,...updatedTrx}:tx));
+        setAllHistory(prev=>prev.map(row=>(
+          String(row?.type||"out").toLowerCase()==="out"&&Number(row?.id)===Number(id)
+            ? {...row,...updatedTrx}
+            : row
+        )));
 
-            if(actionLabel==="approve"&&wasPending&&Array.isArray(prevTrx?.items)){
-              const qtyByItemId=(prevTrx.items||[]).reduce((acc,line)=>{
-                const itemId=Number(line?.itemId);
-                if(!Number.isInteger(itemId)||itemId<=0) return acc;
-                acc[itemId]=(acc[itemId]||0)+Number(line?.qty||0);
-                return acc;
-              },{} as Record<number,number>);
+        if(actionLabel==="approve"&&wasPending&&Array.isArray(prevTrx?.items)){
+          const qtyByItemId=(prevTrx.items||[]).reduce((acc,line)=>{
+            const itemId=Number(line?.itemId);
+            if(!Number.isInteger(itemId)||itemId<=0) return acc;
+            acc[itemId]=(acc[itemId]||0)+Number(line?.qty||0);
+            return acc;
+          },{} as Record<number,number>);
 
-              setItems(prev=>prev.map(it=>{
-                const dec=Number(qtyByItemId[Number(it?.id)]||0);
-                if(dec<=0) return it;
-                const nextStock=Math.max(0,Number(it?.stock||0)-dec);
-                const avg=Number(it?.averageCost??it?.lastPrice??0);
-                return {...it,stock:nextStock,totalValue:Math.round(nextStock*avg*100)/100};
-              }));
-            }
+          setItems(prev=>prev.map(it=>{
+            const dec=Number(qtyByItemId[Number(it?.id)]||0);
+            if(dec<=0) return it;
+            const nextStock=Math.max(0,Number(it?.stock||0)-dec);
+            const avg=Number(it?.averageCost??it?.lastPrice??0);
+            return {...it,stock:nextStock,totalValue:Math.round(nextStock*avg*100)/100};
+          }));
+        }
 
-            if(wasPending) setPendingApprovalCount(c=>Math.max(0,c-1));
-            toast$(actionLabel==="approve"?"Transaksi berhasil di-approve":"Transaksi ditolak");
-            fetchAll();
-          }catch(e){toast$(e?.message||"Gagal memproses approval","err");}
-        },actionLabel==="approve"?"Sedang meng-approve transaksi":"Sedang menolak transaksi");
-      }finally{
-        setApprovalBusyKey("");
-      }
-    };
+        if(wasPending) setPendingApprovalCount(c=>Math.max(0,c-1));
+        toast$(actionLabel==="approve"?"Transaksi berhasil di-approve":"Transaksi ditolak");
+        if(wasPending){
+          const taker=prevTrx?.taker||"";
+          const dept=prevTrx?.dept?" ("+prevTrx.dept+")":"";
+          const m=actionLabel==="approve"
+            ?`✅ Anda meng-approve permintaan ${taker}${dept}`
+            :`⛔ Anda menolak permintaan ${taker}${dept}`;
+          setNotifHistory(prev=>{
+            const next=[{id:Date.now(),msg:m,type:actionLabel==="approve"?"ok":"err",ts:new Date().toISOString(),read:false},...prev].slice(0,50);
+            localStorage.setItem("wms_notif_history",JSON.stringify(next));
+            return next;
+          });
+        }
+        fetchAll();
+      }catch(e){toast$(e?.message||"Gagal memproses approval","err");}
+    },actionLabel==="approve"?"Sedang meng-approve transaksi":"Sedang menolak transaksi");
+  }finally{
+    setApprovalBusyKey("");
+  }
+};
 
   const deleteReceive=async(id)=>{
     if(!isAdmin){toast$("Hanya admin yang boleh menghapus riwayat penerimaan","err");return;}
@@ -2420,18 +2445,32 @@ export default function App(){
                         }
                       </div>
                     )}
-                    {notifTab==="stok"&&(
-                      <div style={{maxHeight:280,overflowY:"auto"}}>
+                      {notifTab==="stok"&&(
+                      <div style={{maxHeight:280,overflowY:"auto",padding:"8px"}}>
                         {lowStock.length===0
                           ?<div style={{padding:"24px 16px",textAlign:"center",color:T.muted,fontSize:12}}><div style={{fontSize:28,marginBottom:8}}>✅</div>Semua stok aman</div>
-                          :lowStock.map(it=>{const s=stockStatus(it);return(
-                            <div key={it.id} style={{padding:"10px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10}}>
-                              <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.name}</div>
-                                <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>Sisa {it.stock} / min {it.minStock} {it.unit}</div>
-                                <Prog pct={it.minStock?it.stock/it.minStock*100:0} color={s.dot}/>
+                          :lowStock.map(it=>{const s=stockStatus(it);const pct=it.minStock?Math.min(it.stock/it.minStock*100,100):0;return(
+                            <div key={it.id} style={{marginBottom:8,borderRadius:10,border:`1px solid ${s.border||T.border}`,background:dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)",overflow:"hidden"}}>
+                              {/* Color bar top */}
+                              <div style={{height:3,background:s.dot,borderRadius:"10px 10px 0 0"}}/>
+                              <div style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
+                                {/* Icon */}
+                                <div style={{width:32,height:32,borderRadius:8,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                                  {stockStatusIcon(s.key,14)}
+                                </div>
+                                {/* Info */}
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:2}}>{it.name||it.nama||it.item_name||"—"}</div>
+                                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                    <div style={{flex:1,height:4,borderRadius:99,background:dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.08)"}}>
+                                      <div style={{height:"100%",borderRadius:99,background:s.dot,width:`${pct}%`,transition:"width .3s"}}/>
+                                    </div>
+                                    <span style={{fontSize:10,color:T.muted,whiteSpace:"nowrap",flexShrink:0}}>{it.stock}/{it.minStock} {it.unit}</span>
+                                  </div>
+                                </div>
+                                {/* Badge */}
+                                <div style={{flexShrink:0,padding:"3px 9px",borderRadius:99,background:s.bg,color:s.text,fontSize:10,fontWeight:800,border:`1px solid ${s.border||"transparent"}`}}>{s.label}</div>
                               </div>
-                              <Badge bg={s.bg} color={s.text} border={s.border} alignRight>{s.label}</Badge>
                             </div>
                           );})
                         }
