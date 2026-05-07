@@ -2563,7 +2563,7 @@ export default function App(){
                           </div>
                         </div>
                       <div style={{fontSize:11,color:T.primary,marginTop:"auto",paddingTop:8,cursor:"pointer"}} onClick={()=>setTab("report")}>Lihat laporan lengkap →</div>                      </div>
-{/* Line chart 7 hari */}
+                      {/* Line chart 7 hari */}
                       <div className="card" style={{display:"flex", flexDirection:"column"}}>
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:6}}>Trend Keluar (7 Hari Terakhir)</div>
                         <div style={{display:"flex",gap:12,marginBottom:8,fontSize:11,color:T.muted}}>
@@ -2610,7 +2610,7 @@ export default function App(){
                         <div style={{fontSize:11,color:T.primary,marginTop:"auto",paddingTop:8,cursor:"pointer"}} onClick={()=>setTab("report")}>Lihat laporan lengkap →</div>
                       </div>
                       {/* Status stok */}
-                      <div className="card">
+                      <div className="card" style={{display:"flex",flexDirection:"column"}}>
                         <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:14}}>Status Stok</div>
                         {[
                           {dot:"#10b981",name:"Aman",sub:"> Min Stok",count:dashStockAman,color:T.primaryLight,filter:"Aman"},
@@ -2631,7 +2631,7 @@ export default function App(){
                             </div>
                           </div>
                         ))}
-                        <div style={{fontSize:11,color:T.primary,marginTop:12,cursor:"pointer"}} onClick={()=>openStockWithFilter("Semua")}>Lihat semua item →</div>
+                        <div style={{fontSize:11,color:T.primary,marginTop:"auto",paddingTop:8,cursor:"pointer"}} onClick={()=>openStockWithFilter("Semua")}>Lihat semua item →</div>
                       </div>
                     </div>
                   );
