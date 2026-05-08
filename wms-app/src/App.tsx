@@ -367,9 +367,9 @@ export default function App(){
   const [autoRejectSaving,setAutoRejectSaving]=useState(false);
   const [notifHistory,setNotifHistory]=useState<any[]>(()=>{try{return JSON.parse(localStorage.getItem("wms_notif_history")||"[]");}catch{return [];}});
   const [notifTab,setNotifTab]=useState("notif");
-  const prevPendingCountRef=useRef(-1);
-  const prevTrxStatusRef=useRef<Record<string,string>>({});
-  const isFirstTrxFetchRef=useRef(true);
+  const prevPendingCountRef=useRef((()=>{try{const v=localStorage.getItem("wms_last_pending_count"); return v!==null?Number(v):0;}catch{return 0;}})());
+  const prevTrxStatusRef=useRef<Record<string,string>>((()=>{try{return JSON.parse(localStorage.getItem("wms_last_trx_status")||"{}");}catch{return {};}})());
+  const trxFetchedRef=useRef(false);
   const userRef=useRef(user);
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [idleWarning,setIdleWarning]=useState(false);
@@ -486,6 +486,7 @@ export default function App(){
       ]);
       setItems(it);
       setTrx(tr);
+      trxFetchedRef.current = true;
       const arh = Math.max(1, Number(cfg?.autoRejectHours) || 24);
       setAutoRejectHours(arh);
       setAutoRejectInput(String(arh));
@@ -834,6 +835,21 @@ export default function App(){
   },[isAdmin,pendingApprovalTrx.length]);
 
   useEffect(()=>{
+    if(!loggedIn) return;
+    const iv=window.setInterval(()=>{
+      apiFetch("/transactions")
+        .then(r=>r.json())
+        .then(tr=>{
+          if(Array.isArray(tr)) {
+            setTrx(tr);
+          }
+        })
+        .catch(()=>{});
+    }, 15000);
+    return ()=>window.clearInterval(iv);
+  },[loggedIn, authToken]);
+
+  useEffect(()=>{
     if(!loggedIn||!isAdmin) return;
     let canceled=false;
 
@@ -843,7 +859,7 @@ export default function App(){
         if(!r.ok) return;
         const data=await r.json();
         if(canceled) return;
-        const nextTotal=Number(data?.total);
+        const nextTotal=Array.isArray(data)?data.length:Number(data?.total||data?.rows?.length||0);
         if(Number.isFinite(nextTotal)){
           if(prevPendingCountRef.current>=0&&nextTotal>prevPendingCountRef.current){
             const diff=nextTotal-prevPendingCountRef.current;
@@ -856,15 +872,8 @@ export default function App(){
             });
           }
           prevPendingCountRef.current=nextTotal;
+          localStorage.setItem("wms_last_pending_count",String(nextTotal));
           setPendingApprovalCount(nextTotal);
-          return;
-        }
-        if(Array.isArray(data?.rows)){
-          setPendingApprovalCount(data.rows.length);
-          return;
-        }
-        if(Array.isArray(data)){
-          setPendingApprovalCount(data.length);
         }
       }catch{}
     };
@@ -964,11 +973,7 @@ export default function App(){
 // ── OPERATOR NOTIFICATION: detect when own pending trx changes status ──
 useEffect(()=>{
   if(!loggedIn) return;
-  if(isFirstTrxFetchRef.current){
-    isFirstTrxFetchRef.current=false;
-    prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
-    return;
-  }
+  if(!trxFetchedRef.current) return;
   const role=(userRef.current?.role||"").toLowerCase();
   if(role==="operator"){
     const prev=prevTrxStatusRef.current;
@@ -1000,7 +1005,9 @@ useEffect(()=>{
       });
     }
   }
-  prevTrxStatusRef.current=Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+  const nextPrev = Object.fromEntries(trx.map((t:any)=>[String(t.id),trxApprovalStatus(t)]));
+  prevTrxStatusRef.current = nextPrev;
+  localStorage.setItem("wms_last_trx_status", JSON.stringify(nextPrev));
 },[trx]);
 
   const addToCart=()=>{
