@@ -76,7 +76,7 @@ export const GlobalStyle = () => {
     /* MAIN */
     .main{flex:1;display:flex;flex-direction:column;min-width:0;width:100%;overflow-x:hidden;overflow-y:auto;height:100vh;height:100dvh}
     .topbar{height:64px;background:${T.topbarBg};border-bottom:1px solid ${T.border};padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-    .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;line-height:1.3;margin:0}
+    .page-title{font-size:22px;font-weight:900;color:${T.text};min-width:0;overflow:visible;white-space:nowrap;line-height:1.3;margin:0}
     .tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid ${T.border};border-radius:10px;background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(12px)}
     .tb-btn:hover{border-color:${T.borderHover};color:${T.text}}
     .tb-logout{display:none !important}
