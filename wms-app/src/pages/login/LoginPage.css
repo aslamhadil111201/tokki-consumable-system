@@ -1,0 +1,107 @@
+/* LoginPage.css — static layout/positioning values only */
+/* theme-dependent values (colors, backgrounds) remain in App.tsx CSS string */
+
+.login-bg {
+  position: fixed;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-card {
+  border-radius: 24px;
+  padding: 44px 40px;
+  width: 440px;
+  max-width: 100%;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn .4s ease;
+}
+
+.login-ifield-wrap {
+  position: relative;
+}
+
+.login-ifield-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.login-ifield-wrap .ifield {
+  padding-left: 42px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  letter-spacing: .02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: transform .15s, box-shadow .15s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.login-btn:hover { transform: translateY(-2px); }
+.login-btn:active { transform: translateY(0); }
+
+.login-mode-icon-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all .2s;
+}
+
+.login-mode-icon-btn:focus-visible {
+  outline: none;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+}
+
+@media (max-width: 480px) {
+  .login-card { padding: 36px 20px; border-radius: 18px; }
+  .login-wrap { padding: 12px; align-items: flex-start; padding-top: 28px; }
+}

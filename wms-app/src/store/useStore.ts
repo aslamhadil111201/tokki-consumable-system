@@ -1,0 +1,193 @@
+﻿// @ts-nocheck
+import { create } from 'zustand';
+import { API } from '../constants/index';
+import { updateT } from '../theme/tokens';
+
+interface User {
+  id: number;
+  username: string;
+  role: string;
+}
+
+interface StoreState {
+  // Auth
+  user: User | null;
+  loggedIn: boolean;
+  authToken: string;
+  login: (token: string, user: User) => void;
+  logout: (message?: string) => void;
+  setUser: (user: User | null) => void;
+
+  // Master Data
+  items: any[];
+  admins: any[];
+  departments: any[];
+  employees: any[];
+  workOrders: any[];
+  itemMap: Record<number, any>;
+  
+  // Transactions
+  trx: any[];
+  receives: any[];
+  returns: any[];
+  allHistory: any[];
+  auditRows: any[];
+
+  // UI State
+  loadingCount: number;
+  loadingText: string;
+  toastMessage: { msg: string; type: 'ok' | 'err' } | null;
+  setToast: (msg: string, type?: 'ok' | 'err') => void;
+  withLoading: <T>(task: () => Promise<T>, message?: string) => Promise<T>;
+  
+  // Theme
+  dark: boolean;
+  toggleTheme: () => void;
+
+  // Actions
+  fetchAll: () => Promise<void>;
+  apiFetch: (path: string, options?: RequestInit) => Promise<Response>;
+}
+
+export const useStore = create<StoreState>((set, get) => {
+  const getInitialDark = () => {
+    try {
+      return localStorage.getItem("wms_dark") === "false" ? false : true;
+    } catch {
+      return true;
+    }
+  };
+
+  const getInitialAuth = () => {
+    const token = localStorage.getItem("wms_token") || "";
+    let user = null;
+    try {
+      user = JSON.parse(localStorage.getItem("wms_user") || "null");
+    } catch {}
+    return { token, loggedIn: Boolean(token), user };
+  };
+
+  const initialAuth = getInitialAuth();
+  const initialDark = getInitialDark();
+  updateT(initialDark);
+
+  return {
+    // === Auth State ===
+    user: initialAuth.user,
+    loggedIn: initialAuth.loggedIn,
+    authToken: initialAuth.token,
+    login: (token, user) => {
+      localStorage.setItem("wms_token", token);
+      localStorage.setItem("wms_user", JSON.stringify(user));
+      set({ authToken: token, loggedIn: true, user });
+    },
+    setUser: (user) => set({ user }),
+    logout: (message = "") => {
+      localStorage.removeItem("wms_token");
+      localStorage.removeItem("wms_user");
+      set({
+        loggedIn: false,
+        authToken: "",
+        user: null,
+        items: [],
+        trx: [],
+        loadingCount: 0,
+        loadingText: "Sedang memproses data"
+      });
+      if (message) {
+        get().setToast(message, "err");
+      }
+    },
+
+    // === Master Data ===
+    items: [],
+    admins: [],
+    departments: [],
+    employees: [],
+    workOrders: [],
+    itemMap: {},
+
+    // === Transactions ===
+    trx: [],
+    receives: [],
+    returns: [],
+    allHistory: [],
+    auditRows: [],
+
+    // === UI State ===
+    loadingCount: 0,
+    loadingText: "Sedang memproses data",
+    toastMessage: null,
+    setToast: (msg, type = 'ok') => {
+      set({ toastMessage: { msg, type } });
+      setTimeout(() => set({ toastMessage: null }), 3200);
+    },
+    withLoading: async (task, message = "Sedang memproses data") => {
+      set((state) => ({
+        loadingText: message,
+        loadingCount: state.loadingCount + 1
+      }));
+      try {
+        return await task();
+      } finally {
+        set((state) => ({ loadingCount: Math.max(0, state.loadingCount - 1) }));
+      }
+    },
+
+    // === Theme ===
+    dark: initialDark,
+    toggleTheme: () => {
+      set((state) => {
+        const next = !state.dark;
+        try { localStorage.setItem("wms_dark", String(next)); } catch {}
+        updateT(next);
+        return { dark: next };
+      });
+    },
+
+    // === API Utilities ===
+    apiFetch: async (path, options = {}) => {
+      const { authToken, logout } = get();
+      const headers: any = { ...(options.headers || {}) };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+      
+      const response = await fetch(`${API}${path}`, { ...options, headers });
+      if (response.status === 401) {
+        logout("Sesi login berakhir, silakan login lagi");
+        throw new Error("Sesi login berakhir, silakan login lagi");
+      }
+      return response;
+    },
+
+    // === Fetch Data (Supabase) ===
+    fetchAll: async () => {
+      const { setToast } = get();
+      try {
+        const { supabase } = await import('../lib/supabase');
+
+        const [itemsRes, trxRes] = await Promise.all([
+          supabase.from('items').select('*'),
+          supabase.from('transactions').select('*').order('id', { ascending: false }),
+        ]);
+
+        const items = itemsRes.data || [];
+        const trx = trxRes.data || [];
+        const map: Record<number, any> = {};
+        items.forEach((i: any) => { map[Number(i.id)] = i; });
+        set({ items, trx, itemMap: map });
+
+        // Fetch others async
+        supabase.from('admins').select('*').then(({ data }) => set({ admins: data || [] }));
+        supabase.from('departments').select('*').then(({ data }) => set({ departments: data || [] }));
+        supabase.from('employees').select('*').then(({ data }) => set({ employees: data || [] }));
+        supabase.from('workOrders').select('*').then(({ data }) => set({ workOrders: data || [] }));
+        supabase.from('receives').select('*').order('id', { ascending: false }).then(({ data }) => set({ receives: data || [] }));
+        supabase.from('returns').select('*').order('id', { ascending: false }).then(({ data }) => set({ returns: data || [] }));
+        // allHistory = combined transactions + receives
+        supabase.from('transactions').select('*').order('id', { ascending: false }).then(({ data }) => set({ allHistory: data || [] }));
+      } catch (e: any) {
+        setToast(e?.message || "Gagal terhubung ke Supabase", "err");
+      }
+    }
+  };
+});

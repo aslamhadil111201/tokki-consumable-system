@@ -1,0 +1,464 @@
+/* ReportPage.css — static layout/positioning values only */
+/* theme-dependent values (colors, backgrounds) remain in App.tsx CSS string */
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+}
+
+.report-botgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1100px) {
+  .two-col { grid-template-columns: 1fr; }
+  .report-botgrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 660px) {
+  .two-col { grid-template-columns: 1fr; gap: 12px; }
+  .two-col > .card { margin-bottom: 0; }
+  .report-header { flex-direction: column; align-items: flex-start; }
+}
+
+/* NEW BEM CLASSES FROM INLINE STYLES */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.report-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-filter-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--t-muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.report-filter-date {
+  font-size: 11.5px;
+  color: var(--t-muted);
+}
+
+.report-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-kpi-card {
+  padding: 16px 18px;
+}
+
+.report-kpi-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.report-kpi-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--t-muted);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  margin-bottom: 7px;
+}
+
+.report-kpi-val {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--t-text);
+  line-height: 1.2;
+}
+
+.report-kpi-sub {
+  font-size: 11.5px;
+  color: var(--t-muted);
+  margin-top: 6px;
+}
+
+.report-kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  border: 1px solid var(--t-border);
+}
+
+.report-chart-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-chart-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.report-chart-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--t-muted);
+  font-weight: 700;
+}
+
+.report-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.report-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.report-chart-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 220px;
+}
+
+.report-chart-empty {
+  padding: 36px 0;
+  text-align: center;
+  color: var(--t-muted);
+}
+
+.report-bar-grid {
+  display: grid;
+  gap: 6px;
+  align-items: stretch;
+  height: 100%;
+  min-height: 220px;
+}
+
+.report-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+}
+
+.report-bar-bars {
+  display: flex;
+  align-items: end;
+  gap: 2px;
+  height: calc(100% - 20px);
+  min-height: 0;
+}
+
+.report-bar-lbl {
+  font-size: 9px;
+  color: var(--t-muted);
+  height: 14px;
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.report-trend-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.report-trend-sub {
+  font-size: 11px;
+  color: var(--t-muted);
+}
+
+.report-trend-spike {
+  margin-left: 8px;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-weight: 800;
+  font-size: 10.5px;
+}
+
+.report-trend-filters {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.report-trend-fbtn {
+  padding: 4px 9px;
+  border-radius: 8px;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s;
+}
+
+.report-trend-cmp {
+  display: flex;
+  gap: 8px;
+  font-size: 10.5px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.report-trend-cbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s;
+}
+
+.report-trend-list {
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  max-height: 390px;
+}
+
+.report-trend-item {
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+
+.report-ti-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.report-ti-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--t-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.report-ti-stats {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.report-ti-diff {
+  font-size: 10.5px;
+  color: var(--t-muted);
+  font-weight: 600;
+}
+
+.report-ti-badge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.report-ti-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.report-ti-bar {
+  height: 6px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.report-dept-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.report-dept-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-dept-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--t-muted);
+  padding: 2px 8px;
+  border: 1px solid var(--t-border);
+  border-radius: 999px;
+}
+
+.report-dept-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.report-dept-item {
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.report-di-hdr {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.report-di-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--t-text);
+}
+
+.report-di-val {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--t-muted);
+}
+
+.report-di-bar {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+}
+
+.report-proj-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.report-proj-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.report-proj-tab {
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s;
+}
+
+.report-proj-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.report-proj-item {
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.report-pi-hdr {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.report-pi-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--t-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-pi-val {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--t-nav-active-text);
+  white-space: nowrap;
+}
+
+.report-pi-bar-wrap {
+  height: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.report-pi-bar {
+  height: 100%;
+  border-radius: 10px;
+  transition: width .35s ease;
+}
