@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { create } from 'zustand';
 import { API } from '../constants/index';
 import { updateT } from '../theme/tokens';
@@ -32,6 +32,8 @@ interface StoreState {
   returns: any[];
   allHistory: any[];
   auditRows: any[];
+  deliveryNotes: any[];
+  shippingAddresses: any[];
 
   // UI State
   loadingCount: number;
@@ -47,6 +49,10 @@ interface StoreState {
   // Actions
   fetchAll: () => Promise<void>;
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>;
+  saveDeliveryNote: (note: any) => Promise<any>;
+  deleteDeliveryNote: (id: string | number) => Promise<any>;
+  saveShippingAddress: (address: any) => Promise<any>;
+  deleteShippingAddress: (id: string | number) => Promise<any>;
 }
 
 export const useStore = create<StoreState>((set, get) => {
@@ -113,6 +119,8 @@ export const useStore = create<StoreState>((set, get) => {
     returns: [],
     allHistory: [],
     auditRows: [],
+    deliveryNotes: [],
+    shippingAddresses: [],
 
     // === UI State ===
     loadingCount: 0,
@@ -183,10 +191,103 @@ export const useStore = create<StoreState>((set, get) => {
         supabase.from('workOrders').select('*').then(({ data }) => set({ workOrders: data || [] }));
         supabase.from('receives').select('*').order('id', { ascending: false }).then(({ data }) => set({ receives: data || [] }));
         supabase.from('returns').select('*').order('id', { ascending: false }).then(({ data }) => set({ returns: data || [] }));
+        supabase.from('delivery_notes').select('*').order('id', { ascending: false }).then(({ data }) => set({ deliveryNotes: data || [] }));
+        supabase.from('shipping_addresses').select('*').order('destination', { ascending: true }).then(({ data }) => set({ shippingAddresses: data || [] }));
         // allHistory = combined transactions + receives
         supabase.from('transactions').select('*').order('id', { ascending: false }).then(({ data }) => set({ allHistory: data || [] }));
       } catch (e: any) {
         setToast(e?.message || "Gagal terhubung ke Supabase", "err");
+      }
+    },
+
+    saveDeliveryNote: async (note: any) => {
+      const { fetchAll, setToast } = get();
+      try {
+        const { supabase } = await import('../lib/supabase');
+        let res;
+        const payload = {
+          batch: note.batch,
+          category: note.category,
+          date: note.date,
+          project_no: note.projectNo,
+          no_kendaraan: note.noKendaraan,
+          destination: note.destination,
+          attn: note.attn,
+          full_address: note.fullAddress,
+          items: note.items,
+        };
+
+        if (note.id && !note.isNew) {
+          res = await supabase.from('delivery_notes').update(payload).eq('id', note.id);
+        } else {
+          res = await supabase.from('delivery_notes').insert([payload]);
+        }
+
+        if (res.error) throw res.error;
+        setToast("Surat Jalan berhasil disimpan ✓", "ok");
+        await fetchAll();
+        return { ok: true };
+      } catch (e: any) {
+        setToast(e.message || "Gagal menyimpan surat jalan", "err");
+        return { ok: false, error: e };
+      }
+    },
+
+    deleteDeliveryNote: async (id: string | number) => {
+      const { fetchAll, setToast } = get();
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { error } = await supabase.from('delivery_notes').delete().eq('id', id);
+        if (error) throw error;
+        setToast("Surat Jalan berhasil dihapus ✓", "ok");
+        await fetchAll();
+        return { ok: true };
+      } catch (e: any) {
+        setToast(e.message || "Gagal menghapus surat jalan", "err");
+        return { ok: false, error: e };
+      }
+    },
+
+    saveShippingAddress: async (addr: any) => {
+      const { fetchAll, setToast } = get();
+      try {
+        const { supabase } = await import('../lib/supabase');
+        let res;
+        const payload = {
+          destination: addr.destination,
+          attn: addr.attn,
+          contact: addr.contact,
+          full_address: addr.fullAddress,
+        };
+
+        if (addr.id && !addr.isNew) {
+          res = await supabase.from('shipping_addresses').update(payload).eq('id', addr.id);
+        } else {
+          res = await supabase.from('shipping_addresses').insert([payload]);
+        }
+
+        if (res.error) throw res.error;
+        setToast("Alamat pengiriman berhasil disimpan ✓", "ok");
+        await fetchAll();
+        return { ok: true };
+      } catch (e: any) {
+        setToast(e.message || "Gagal menyimpan alamat pengiriman", "err");
+        return { ok: false, error: e };
+      }
+    },
+
+    deleteShippingAddress: async (id: string | number) => {
+      const { fetchAll, setToast } = get();
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { error } = await supabase.from('shipping_addresses').delete().eq('id', id);
+        if (error) throw error;
+        setToast("Alamat pengiriman berhasil dihapus ✓", "ok");
+        await fetchAll();
+        return { ok: true };
+      } catch (e: any) {
+        setToast(e.message || "Gagal menghapus alamat pengiriman", "err");
+        return { ok: false, error: e };
       }
     }
   };

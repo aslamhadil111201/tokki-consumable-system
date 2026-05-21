@@ -1,6 +1,6 @@
 // @ts-nocheck
 // ─── Constants ───────────────────────────────────────────────────
-import { FileSpreadsheet, FileText, LayoutDashboard, ArrowUpCircle, Package, History, BarChart3 } from "lucide-react";
+import { FileSpreadsheet, FileText, LayoutDashboard, ArrowUpCircle, Package, History, BarChart3, Truck } from "lucide-react";
 
 export const API = (
   import.meta.env.VITE_API_URL ||
@@ -34,6 +34,7 @@ export const NAV_ICONS = {
   dashboard: <LayoutDashboard size={18} />,
   transaction: <ArrowUpCircle size={18} />,
   stock: <Package size={18} />,
+  delivery: <Truck size={18} />,
   history: <History size={18} />,
   report: <BarChart3 size={18} />,
 };
@@ -42,6 +43,7 @@ export const TABS = [
   {id:"dashboard",label:"Dashboard",icon:NAV_ICONS.dashboard},
   {id:"transaction",label:"Pengambilan",icon:NAV_ICONS.transaction},
   {id:"stock",label:"Stok Barang",icon:NAV_ICONS.stock},
+  {id:"delivery",label:"Surat Jalan",icon:NAV_ICONS.delivery},
   {id:"history",label:"Riwayat",icon:NAV_ICONS.history},
   {id:"report",label:"Laporan",icon:NAV_ICONS.report},
 ];

@@ -1,0 +1,519 @@
+/* DeliveryPage.css — static layout and premium glassmorphism styling */
+
+.delivery-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.delivery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.delivery-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--t-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.delivery-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Stats Row */
+.delivery-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.delivery-stat-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid var(--t-border);
+  background: var(--t-card);
+  border-radius: 16px;
+  box-shadow: var(--t-shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.delivery-stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--t-muted);
+  opacity: 0.5;
+}
+
+.delivery-stat-card.active {
+  border-color: var(--t-primary);
+  box-shadow: var(--t-shadow-card);
+  transform: translateY(-2px);
+}
+
+.delivery-stat-card.active::after {
+  background: var(--t-primary);
+  opacity: 1;
+}
+
+.delivery-stat-card.cat-all::after { background: var(--t-primary); }
+.delivery-stat-card.cat-fng::after { background: var(--t-green); }
+.delivery-stat-card.cat-dlv::after { background: var(--t-amber); }
+.delivery-stat-card.cat-stw::after { background: var(--t-red); }
+.delivery-stat-card.cat-etc::after { background: var(--t-muted); }
+
+.delivery-stat-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--t-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.delivery-stat-val {
+  font-size: clamp(20px, 2.8vw, 28px);
+  font-weight: 900;
+  color: var(--t-text);
+  line-height: 1.1;
+}
+
+.delivery-stat-sub {
+  font-size: 11px;
+  color: var(--t-muted);
+}
+
+/* Filter and Search Bar */
+.delivery-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  backdrop-filter: blur(12px);
+}
+
+.delivery-search {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+}
+
+.delivery-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 38px;
+  border-radius: 10px;
+  border: 1px solid var(--t-border);
+  background: var(--t-input-bg);
+  color: var(--t-text);
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.delivery-search-input:focus {
+  border-color: var(--t-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--t-primary-glow);
+}
+
+.delivery-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--t-muted);
+  pointer-events: none;
+}
+
+.delivery-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.delivery-tab-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--t-muted);
+  transition: all 0.18s ease;
+}
+
+.delivery-tab-btn:hover {
+  background: var(--t-nav-active);
+  color: var(--t-nav-active-text);
+}
+
+.delivery-tab-btn.active {
+  background: var(--t-nav-active);
+  color: var(--t-nav-active-text);
+  border-color: var(--t-nav-active-border);
+}
+
+/* List Table Card */
+.delivery-card {
+  border-radius: 20px;
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  box-shadow: var(--t-shadow-card);
+  overflow: hidden;
+  padding: 16px 20px;
+}
+
+.delivery-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.delivery-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.delivery-table th {
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--t-muted);
+  border-bottom: 2px solid var(--t-border);
+  letter-spacing: 0.05em;
+}
+
+.delivery-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--t-border);
+  color: var(--t-text);
+  vertical-align: middle;
+}
+
+.delivery-table tbody tr:hover td {
+  background: var(--t-nav-active);
+}
+
+.delivery-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.delivery-badge.fng { background: var(--t-green-bg); color: var(--t-green-text); border: 1px solid var(--t-green-border); }
+.delivery-badge.dlv { background: var(--t-amber-bg); color: var(--t-amber-text); border: 1px solid var(--t-amber-border); }
+.delivery-badge.stw { background: var(--t-red-bg); color: var(--t-red-text); border: 1px solid var(--t-red-border); }
+.delivery-badge.etc { background: var(--t-border); color: var(--t-muted); }
+
+.delivery-cell-items {
+  font-size: 11px;
+  color: var(--t-muted);
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delivery-row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--t-border);
+  background: var(--t-surface);
+  color: var(--t-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--t-nav-active);
+  color: var(--t-nav-active-text);
+  border-color: var(--t-nav-active-border);
+}
+
+.icon-btn.btn-delete:hover {
+  background: var(--t-red-bg);
+  color: var(--t-red);
+  border-color: var(--t-red-border);
+}
+
+.icon-btn.btn-print:hover {
+  background: var(--t-green-bg);
+  color: var(--t-green);
+  border-color: var(--t-green-border);
+}
+
+/* Empty State */
+.delivery-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--t-muted);
+}
+
+.delivery-empty-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+/* FORM VIEW STYLE */
+.delivery-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.form-group.col-span-2 {
+  grid-column: span 2;
+}
+
+.form-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--t-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--t-border);
+  background: var(--t-input-bg);
+  color: var(--t-text);
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--t-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--t-primary-glow);
+}
+
+/* Autocomplete suggestions */
+.autocomplete-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 10px;
+  box-shadow: var(--t-shadow-card);
+  z-index: 50;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: 6px 0;
+}
+
+.autocomplete-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--t-text);
+  transition: background 0.15s ease;
+}
+
+.autocomplete-item:hover {
+  background: var(--t-nav-active);
+  color: var(--t-nav-active-text);
+}
+
+.autocomplete-title {
+  font-weight: 700;
+}
+
+.autocomplete-desc {
+  font-size: 10px;
+  color: var(--t-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* Dynamic Items Table in Form */
+.form-items-section {
+  margin-top: 24px;
+  border-top: 1px dashed var(--t-border);
+  padding-top: 20px;
+}
+
+.form-items-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--t-text);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.form-items-table th {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--t-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--t-border);
+  text-align: left;
+}
+
+.form-items-table td {
+  padding: 8px 6px;
+  vertical-align: middle;
+}
+
+.form-items-table input {
+  width: 100%;
+}
+
+.form-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  border-top: 1px solid var(--t-border);
+  padding-top: 18px;
+}
+
+/* Address Manager View */
+.address-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.address-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.address-card:hover {
+  border-color: var(--t-primary);
+}
+
+.address-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.address-card-title {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--t-text);
+}
+
+.address-card-meta {
+  font-size: 11px;
+  color: var(--t-muted);
+  line-height: 1.4;
+}
+
+.address-card-desc {
+  font-size: 12px;
+  color: var(--t-text);
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+/* =========================================
+   A4 Corporate Print Template Layout Styles
+   ========================================= */
+
+#tokki-print-container {
+  display: none;
+}
+
+/* Responsiveness on screen */
+@media (max-width: 768px) {
+  .delivery-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .delivery-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-group.col-span-2 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .delivery-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .delivery-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .delivery-search {
+    min-width: 0;
+  }
+}
