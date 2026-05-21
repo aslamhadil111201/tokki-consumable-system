@@ -659,6 +659,7 @@ export function DeliveryPage() {
                   className="form-input"
                   value={formDate}
                   onChange={e => setFormDate(e.target.value)}
+                  onClick={e => e.currentTarget.showPicker()}
                   required
                 />
               </div>

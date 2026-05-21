@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { T, gText } from "../../theme/tokens";
@@ -69,7 +69,7 @@ export const AddStockModal = ({
           <div className="mgrid">
             <div><FL>PO Number</FL><input className="ifield" placeholder="Nomor Purchase Order" value={addForm.poNumber} onChange={e => setAddForm({ ...addForm, poNumber: e.target.value })} /></div>
             <div><FL>Delivery Order Number</FL><input className="ifield" placeholder="Nomor Delivery Order" value={addForm.doNumber} onChange={e => setAddForm({ ...addForm, doNumber: e.target.value })} /></div>
-            <div><FL>Tanggal *</FL><input className="ifield" type="date" value={addForm.date} onChange={e => setAddForm({ ...addForm, date: e.target.value })} /></div>
+            <div><FL>Tanggal *</FL><input className="ifield" type="date" value={addForm.date} onChange={e => setAddForm({ ...addForm, date: e.target.value })} onClick={e => e.currentTarget.showPicker()} /></div>
             <div><FL>Admin Warehouse *</FL>
               <SearchSelect options={admins.map(a => ({ value: a.name, label: a.name }))} value={addForm.admin} onChange={v => setAddForm({ ...addForm, admin: v })} placeholder="— Cari/pilih admin —" />
             </div>

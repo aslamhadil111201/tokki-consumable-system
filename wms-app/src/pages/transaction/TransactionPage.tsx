@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./TransactionPage.css";
 
 import { Badge } from "../../components/ui/Badge";
@@ -13,17 +13,37 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { ReturModal } from "../../components/modals/ReturModal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getT } from "../../theme/tokens";
 
 export function TransactionPage() {
-  const { trx, returns, itemMap, user, apiFetch, withLoading, setToast, fetchAll } = useStore();
+  const { trx, returns, itemMap, user, apiFetch, withLoading, setToast, fetchAll, dark } = useStore();
+  const T = getT(dark);
   
   const [returSubTab, setReturSubTab] = useState("log");
   const [trxDate, setTrxDate] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showRetur, setShowRetur] = useState(false);
 
+  const [trxPage, setTrxPage] = useState(1);
+  const [trxPageSize, setTrxPageSize] = useState(8);
+
+  const [returPage, setReturPage] = useState(1);
+  const [returPageSize, setReturPageSize] = useState(8);
+
+  useEffect(() => {
+    setTrxPage(1);
+  }, [trxDate]);
+
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const filtTrx = [...trx].reverse().filter((t: any) => !trxDate || t.date === trxDate);
+
+  const totalPages = Math.ceil(filtTrx.length / Math.max(1, trxPageSize));
+  const currentTrxPage = trxPage > totalPages ? 1 : trxPage;
+  const pagedTrx = filtTrx.slice((currentTrxPage - 1) * trxPageSize, currentTrxPage * trxPageSize);
+
+  const totalReturPages = Math.ceil(returns.length / Math.max(1, returPageSize));
+  const currentReturPage = returPage > totalReturPages ? 1 : returPage;
+  const pagedReturns = [...returns].reverse().slice((currentReturPage - 1) * returPageSize, currentReturPage * returPageSize);
 
   const deleteTransaction = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus transaksi", "err"); return; }
@@ -170,13 +190,16 @@ export function TransactionPage() {
         <div>
           <div className="fbar">
             <span className="fbar-label">Filter tanggal:</span>
-            <input type="date" className="ifield trx-date-input" value={trxDate} onChange={e => setTrxDate(e.target.value)} />
+            <input type="date" className="ifield trx-date-input" value={trxDate} onChange={e => setTrxDate(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
             {trxDate && <BtnG style={{ fontSize: 11.5, padding: "7px 12px" }} onClick={() => setTrxDate("")}>✕ Reset</BtnG>}
+            <select className="ifield" style={{ width: 120, marginLeft: 8 }} value={trxPageSize} onChange={e => { setTrxPageSize(Number(e.target.value) || 8); setTrxPage(1); }}>
+              {[8, 12, 24, 48].map(n => <option key={n} value={n}>{n}/hal</option>)}
+            </select>
             <span className="fbar-count">{filtTrx.length} transaksi</span>
           </div>
           {filtTrx.length === 0
             ? <div className="trx-empty-state"><div className="trx-empty-icon">📂</div>Tidak ada transaksi ditemukan</div>
-            : filtTrx.map(t => (
+            : pagedTrx.map(t => (
               <div key={t.id} className="trx-card">
                 <div className="trx-head">
                   <div className="trx-avatar" style={{ background: avatarColor(t.taker), boxShadow: `0 4px 10px ${avatarColor(t.taker)}55` }}>
@@ -212,6 +235,33 @@ export function TransactionPage() {
                 </div>
               </div>
             ))}
+
+          {/* Pagination */}
+          {filtTrx.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>Menampilkan {(currentTrxPage - 1) * trxPageSize + 1}-{Math.min(currentTrxPage * trxPageSize, filtTrx.length)} dari {filtTrx.length} transaksi</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => setTrxPage(p => Math.max(1, p - 1))} disabled={currentTrxPage <= 1}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentTrxPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentTrxPage <= 1 ? "default" : "pointer", opacity: currentTrxPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
+                  ‹ Prev
+                </button>
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button key={i} onClick={() => setTrxPage(i + 1)}
+                    style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentTrxPage === i + 1 ? T.primary : T.border}`, background: currentTrxPage === i + 1 ? T.primary : T.surface, color: currentTrxPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
+                    {i + 1}
+                  </button>
+                ))}
+                <button onClick={() => setTrxPage(p => Math.min(totalPages, p + 1))} disabled={currentTrxPage >= totalPages}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentTrxPage >= totalPages ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentTrxPage >= totalPages ? "default" : "pointer", opacity: currentTrxPage >= totalPages ? 0.5 : 1, transition: "all .18s" }}>
+                  Next ›
+                </button>
+              </div>
+              <select value={trxPageSize} onChange={e => { setTrxPageSize(Number(e.target.value) || 8); setTrxPage(1); }}
+                style={{ padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", outline: "none" }}>
+                {[8, 12, 24, 48].map(n => <option key={n} value={n}>{n} / halaman</option>)}
+              </select>
+            </div>
+          )}
         </div>
       )}
 
@@ -247,7 +297,7 @@ export function TransactionPage() {
           {/* Retur list */}
           {returns.length === 0
             ? <div className="trx-empty-state"><div className="trx-empty-icon">↩</div>Belum ada retur tercatat</div>
-            : [...returns].reverse().map(r => {
+            : pagedReturns.map(r => {
               const it = itemMap[Number(r.itemId)];
               const isDiterima = r.status === "Diterima";
               return (
@@ -289,6 +339,33 @@ export function TransactionPage() {
               );
             })
           }
+
+          {/* Pagination Retur */}
+          {returns.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>Menampilkan {(currentReturPage - 1) * returPageSize + 1}-{Math.min(currentReturPage * returPageSize, returns.length)} dari {returns.length} data</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => setReturPage(p => Math.max(1, p - 1))} disabled={currentReturPage <= 1}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentReturPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentReturPage <= 1 ? "default" : "pointer", opacity: currentReturPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
+                  ‹ Prev
+                </button>
+                {Array.from({ length: totalReturPages }).map((_, i) => (
+                  <button key={i} onClick={() => setReturPage(i + 1)}
+                    style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentReturPage === i + 1 ? T.primary : T.border}`, background: currentReturPage === i + 1 ? T.primary : T.surface, color: currentReturPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
+                    {i + 1}
+                  </button>
+                ))}
+                <button onClick={() => setReturPage(p => Math.min(totalReturPages, p + 1))} disabled={currentReturPage >= totalReturPages}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentReturPage >= totalReturPages ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentReturPage >= totalReturPages ? "default" : "pointer", opacity: currentReturPage >= totalReturPages ? 0.5 : 1, transition: "all .18s" }}>
+                  Next ›
+                </button>
+              </div>
+              <select value={returPageSize} onChange={e => { setReturPageSize(Number(e.target.value) || 8); setReturPage(1); }}
+                style={{ padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", outline: "none" }}>
+                {[8, 12, 24, 48].map(n => <option key={n} value={n}>{n} / halaman</option>)}
+              </select>
+            </div>
+          )}
         </div>
       )}
 

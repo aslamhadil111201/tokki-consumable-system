@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import "./HistoryPage.css";
 import { getT } from "../../theme/tokens";
@@ -338,9 +338,9 @@ export function HistoryPage() {
             </select>
           )}
           <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700 }}>Dari</span>
-          <input type="date" className="ifield" style={{ width: 160 }} value={historyFrom} onChange={e => setHistoryFrom(e.target.value)} />
+          <input type="date" className="ifield" style={{ width: 160 }} value={historyFrom} onChange={e => setHistoryFrom(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
           <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700 }}>Sampai</span>
-          <input type="date" className="ifield" style={{ width: 160 }} value={historyTo} onChange={e => setHistoryTo(e.target.value)} />
+          <input type="date" className="ifield" style={{ width: 160 }} value={historyTo} onChange={e => setHistoryTo(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
           <select className="ifield" style={{ width: 120 }} value={historyPageSize} onChange={e => setHistoryPageSize(Number(e.target.value) || 6)}>
             {[6, 10, 15, 20].map(n => <option key={n} value={n}>{n}/hal</option>)}
           </select>
@@ -837,9 +837,9 @@ export function HistoryPage() {
               ].map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700, flexShrink: 0 }}>Dari</span>
-            <input type="date" className="ifield" style={{ width: 160 }} value={auditFrom} onChange={e => setAuditFrom(e.target.value)} />
+            <input type="date" className="ifield" style={{ width: 160 }} value={auditFrom} onChange={e => setAuditFrom(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
             <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700, flexShrink: 0 }}>Sampai</span>
-            <input type="date" className="ifield" style={{ width: 160 }} value={auditTo} onChange={e => setAuditTo(e.target.value)} />
+            <input type="date" className="ifield" style={{ width: 160 }} value={auditTo} onChange={e => setAuditTo(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
             <select className="ifield" style={{ width: 120 }} value={auditPageSize} onChange={e => setAuditPageSize(Number(e.target.value) || 8)}>
               {[8, 12, 20].map(n => <option key={n} value={n}>{n}/hal</option>)}
             </select>

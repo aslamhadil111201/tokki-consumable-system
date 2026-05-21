@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { T, gText } from "../../theme/tokens";
@@ -110,7 +110,7 @@ export const TransactionModal = ({
         <div className="sect-box">
           <div className="sect-lbl">👤 Data Pengambil</div>
           <div className="mgrid">
-            <div><FL>Tanggal *</FL><input className="ifield" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
+            <div><FL>Tanggal *</FL><input className="ifield" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} onClick={e => e.currentTarget.showPicker()} /></div>
             <div><FL>Nama Pengambil *</FL>
               <SearchSelect options={employees.map(e => ({ value: e.name, label: e.name }))} value={form.taker} onChange={v => setForm({ ...form, taker: v })} placeholder="— Cari/pilih karyawan —" />
             </div>
