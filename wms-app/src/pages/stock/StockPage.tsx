@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./StockPage.css";
 import { Badge } from "../../components/ui/Badge";
 import { BtnP } from "../../components/ui/BtnP";
@@ -14,14 +14,23 @@ import { NewItemModal } from "../../components/modals/NewItemModal";
 import { AddStockModal } from "../../components/modals/AddStockModal";
 import { EditItemModal } from "../../components/modals/EditItemModal";
 import { TransactionModal } from "../../components/modals/TransactionModal";
+import { getT } from "../../theme/tokens";
 
 export function StockPage() {
   const { items, user, dark } = useStore();
+  const T = getT(dark);
   
   const [catF, setCatF] = useState("Semua");
   const [stockStatusF, setStockStatusF] = useState("Semua");
   const [searchQ, setSearchQ] = useState("");
   
+  const [stockPage, setStockPage] = useState(1);
+  const [stockPageSize, setStockPageSize] = useState(12);
+
+  useEffect(() => {
+    setStockPage(1);
+  }, [catF, stockStatusF, searchQ]);
+
   const [showNewItem, setShowNewItem] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [quickInItem, setQuickInItem] = useState<any>(null);
@@ -42,6 +51,10 @@ export function StockPage() {
     .filter(i => (catF === "Semua" || i.category === catF) && i.name.toLowerCase().includes(searchQ.toLowerCase()))
     .filter(i => !statusFilterKey || stockStatusKey(i) === statusFilterKey);
     
+  const totalPages = Math.ceil(filtItems.length / Math.max(1, stockPageSize));
+  const currentPage = stockPage > totalPages ? 1 : stockPage;
+  const pagedItems = filtItems.slice((currentPage - 1) * stockPageSize, currentPage * stockPageSize);
+
   const filtMenipisCount = filtItems.filter(i => stockStatusKey(i) === "menipis").length;
   const filtHabisCount = filtItems.filter(i => stockStatusKey(i) === "habis").length;
 
@@ -146,7 +159,7 @@ export function StockPage() {
             Tidak ada barang ditemukan
           </div>
         )}
-        {filtItems.map(it => {
+        {pagedItems.map(it => {
           const s = stockStatus(it, dark); const cc = catColor(it.category, dark); const pct = it.minStock ? Math.min(100, it.stock / it.minStock * 100) : 100;
           const cardBorder = s.label === "Aman" ? cc.dot : s.dot;
           return (
@@ -214,6 +227,49 @@ export function StockPage() {
           );
         })}
       </div>
+
+      {/* Pagination & page size selection */}
+      {filtItems.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, gap: 12, flexWrap: "wrap", background: T.card, border: `1px solid ${T.border}`, padding: "12px 18px", borderRadius: 16, boxShadow: T.shadowSm }}>
+          <span style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>
+            Menampilkan {Math.min(filtItems.length, (currentPage - 1) * stockPageSize + 1)}-{Math.min(currentPage * stockPageSize, filtItems.length)} dari {filtItems.length} item
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              onClick={() => setStockPage(p => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentPage <= 1 ? "default" : "pointer", opacity: currentPage <= 1 ? 0.5 : 1, transition: "all .18s" }}
+            >
+              ‹ Prev
+            </button>
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setStockPage(i + 1)}
+                style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentPage === i + 1 ? T.primary : T.border}`, background: currentPage === i + 1 ? T.primary : T.surface, color: currentPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => setStockPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentPage >= totalPages ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentPage >= totalPages ? "default" : "pointer", opacity: currentPage >= totalPages ? 0.5 : 1, transition: "all .18s" }}
+            >
+              Next ›
+            </button>
+          </div>
+          <select
+            value={stockPageSize}
+            onChange={e => { setStockPageSize(Number(e.target.value) || 12); setStockPage(1); }}
+            style={{ padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", outline: "none" }}
+          >
+            {[8, 12, 24, 48].map(n => (
+              <option key={n} value={n}>{n} / halaman</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <NewItemModal open={showNewItem} onClose={() => setShowNewItem(false)} />
       <AddStockModal initialItem={quickInItem} open={showAdd} onClose={() => { setShowAdd(false); setQuickInItem(null); }} />
