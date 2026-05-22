@@ -52,11 +52,10 @@
 .dn-print-area { display: none; }
 
 @media print {
-  @page { margin: 0; }
   html, body, #root, .shell, .main { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; position: static !important; display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
   .sidebar, .topbar { display: none !important; }
   body * { visibility: hidden !important; }
-  .dn-print-area { display: block !important; visibility: visible !important; position: absolute; left: 0; top: 0; width: 100%; box-sizing: border-box; padding: 15mm 10mm; font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 9pt; background: white; z-index: 99999; }
+  .dn-print-area { display: block !important; visibility: visible !important; position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 9pt; background: white; z-index: 99999; }
   .dn-print-area * { visibility: visible !important; }
   
   .dn-print-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 10px; border-bottom: 2.5px solid #000; margin-bottom: 14px; }
