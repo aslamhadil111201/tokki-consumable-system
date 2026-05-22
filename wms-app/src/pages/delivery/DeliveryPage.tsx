@@ -451,10 +451,18 @@ export function DeliveryPage() {
             <div style={{ width: "57%" }}>
               <table><tbody>
                 <tr><td className="lbl" style={{ width: 80 }}>Project No.</td><td>: {(printData.project_no || "").split(":::PO:")[0] || "-"}</td></tr>
-                {printData.project_no?.includes(":::PO:") && (
-                  <tr><td className="lbl" style={{ width: 80 }}>P.O. No.</td><td>: {printData.project_no.split(":::PO:")[1]}</td></tr>
-                )}
-                <tr><td className="lbl" style={{ width: 80 }}>Attn.</td><td>: {printData.attn || "-"}</td></tr>
+                {(() => {
+                  const poNo = printData.project_no?.includes(":::PO:") ? printData.project_no.split(":::PO:")[1].trim() : "";
+                  return poNo && poNo !== "-" ? (
+                    <tr><td className="lbl" style={{ width: 80 }}>P.O. No.</td><td>: {poNo}</td></tr>
+                  ) : null;
+                })()}
+                {(() => {
+                  const attn = (printData.attn || "").trim();
+                  return attn && attn !== "-" ? (
+                    <tr><td className="lbl" style={{ width: 80 }}>Attn.</td><td>: {attn}</td></tr>
+                  ) : null;
+                })()}
               </tbody></table>
             </div>
             <div style={{ width: "43%", textAlign: "right" }}>
