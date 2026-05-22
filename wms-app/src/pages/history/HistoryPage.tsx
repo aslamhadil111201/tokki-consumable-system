@@ -574,8 +574,8 @@ export function HistoryPage() {
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card" style={{ display: "flex", flexDirection: "column", gap: 0, padding: "16px 14px" }}>
-                <div style={{ display: "flex", alignItems: "center", justify: "space-between", marginBottom: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justify: "center", fontSize: 16, fontWeight: 400, background: dark ? "rgba(16,185,129,0.13)" : "rgba(16,185,129,0.09)", border: `1px solid ${T.navActiveBorder}`, flexShrink: 0, color: s.dot }}>{s.icon}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400, background: dark ? "rgba(16,185,129,0.13)" : "rgba(16,185,129,0.09)", border: `1px solid ${T.navActiveBorder}`, flexShrink: 0, color: s.dot }}>{s.icon}</div>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
                 </div>
                 <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 4, lineHeight: 1.3 }}>{s.label}</div>
@@ -705,8 +705,8 @@ export function HistoryPage() {
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card" style={{ display: "flex", flexDirection: "column", padding: "16px 14px" }}>
-                <div style={{ display: "flex", alignItems: "center", justify: "space-between", marginBottom: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justify: "center", fontSize: 16, fontWeight: 400, background: dark ? "rgba(16,185,129,0.13)" : "rgba(16,185,129,0.09)", border: `1px solid ${T.navActiveBorder}`, flexShrink: 0, color: s.dot }}>{s.icon}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400, background: dark ? "rgba(16,185,129,0.13)" : "rgba(16,185,129,0.09)", border: `1px solid ${T.navActiveBorder}`, flexShrink: 0, color: s.dot }}>{s.icon}</div>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
                 </div>
                 <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 4, lineHeight: 1.3 }}>{s.label}</div>
