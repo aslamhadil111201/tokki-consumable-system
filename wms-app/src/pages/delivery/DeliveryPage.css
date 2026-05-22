@@ -52,6 +52,7 @@
 .dn-print-area { display: none; }
 
 @media print {
+  @page { margin: 2cm; }
   html, body, #root, .shell, .main { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; position: static !important; display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
   .sidebar, .topbar { display: none !important; }
   body * { visibility: hidden !important; }
