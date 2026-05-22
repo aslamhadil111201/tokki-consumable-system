@@ -568,7 +568,7 @@ export function HistoryPage() {
               return [
                 { label: "Total Transaksi", sub: "pengambilan approved", val: approvedOutTrx.length, valStr: null, icon: "📋", dot: T.primary },
                 { label: "Total Unit Keluar", sub: "unit total", val: totalOut, valStr: null, icon: "📦", dot: T.green },
-                { label: "Item Berbeda", sub: "jenis barang", val: [...new Set(approvedOutTrx.flatMap(t => t.items.map((i: any) => i.itemId)))].length, valStr: null, icon: "🏷", dot: T.primaryLight },
+                { label: "Item Berbeda", sub: "jenis barang", val: [...new Set(approvedOutTrx.flatMap(t => t.items.map((i: any) => i.itemId)))].length, valStr: null, icon: "🗂️", dot: T.primaryLight },
                 { label: "Jumlah Pengambil", sub: "karyawan", val: [...new Set(approvedOutTrx.map(t => t.taker))].length, valStr: null, icon: "👥", dot: T.amber },
                 { label: "Total Nilai", sub: "estimasi harga rata-rata", val: null, valStr: fmtMoney(totalNilai), icon: "Rp", dot: T.primary },
               ];
@@ -699,7 +699,7 @@ export function HistoryPage() {
               return [
                 { label: "Total Penerimaan", sub: "transaksi", val: receives.length, valStr: null, icon: "📥", dot: T.primary },
                 { label: "Total Unit Masuk", sub: "unit", val: totalIn, valStr: null, icon: "📦", dot: T.green },
-                { label: "Item Berbeda", sub: "jenis barang", val: [...new Set(receives.map(r => r.itemId))].length, valStr: null, icon: "🏷", dot: T.primaryLight },
+                { label: "Item Berbeda", sub: "jenis barang", val: [...new Set(receives.map(r => r.itemId))].length, valStr: null, icon: "🗂️", dot: T.primaryLight },
                 { label: "Admin Terlibat", sub: "admin", val: [...new Set(receives.map(r => r.admin).filter(Boolean))].length, valStr: null, icon: "👥", dot: T.amber },
                 { label: "Total Nilai", sub: "estimasi harga beli", val: null, valStr: fmtMoney(totalNilaiIn), icon: "Rp", dot: T.primary },
               ];
