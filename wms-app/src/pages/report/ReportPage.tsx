@@ -176,7 +176,7 @@ export function ReportPage() {
 
   const exportReportExcel = () => {
     const rows = [
-      ["TOKKI Consumable System"],
+      ["Warehouse Management System"],
       ["Laporan & Analitik"],
       ["Periode", reportRange.label],
       ["Rentang", `${fmtDate(reportRange.start)} - ${fmtDate(reportRange.end)}`],

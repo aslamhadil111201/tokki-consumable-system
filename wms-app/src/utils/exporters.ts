@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { todayStr, nowTime, fmtDate, todayFmt, fmtMoney, fmtDateExcel } from "./formatters";
@@ -30,7 +30,7 @@ export function exportTransactionsExcel({ filteredOut, reportPeriodLabel, toast$
   const source = filteredOut;
   const unitTotal = source.reduce((acc, t) => acc + toSafeRows(t.items).reduce((x, it) => x + Number(it.qty || 0), 0), 0);
   const rows = [
-    ["TOKKI Consumable System"], ["Laporan Riwayat Pengambilan"],
+    ["Warehouse Management System"], ["Laporan Riwayat Pengambilan"],
     ["Periode", reportPeriodLabel()], ["Dibuat", `${todayFmt()} ${nowTime()}`],
     ["Total Data", source.length], ["Total Unit", unitTotal], [],
     ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Unit", "Keterangan"],
@@ -47,7 +47,7 @@ export function exportReceivesExcel({ filteredIn, reportPeriodLabel, toast$ }) {
   const source = filteredIn;
   const unitTotal = source.reduce((a, r) => a + Number(r.qty || 0), 0);
   const rows = [
-    ["TOKKI Consumable System"], ["Laporan Riwayat Penerimaan"],
+    ["Warehouse Management System"], ["Laporan Riwayat Penerimaan"],
     ["Periode", reportPeriodLabel()], ["Dibuat", `${todayFmt()} ${nowTime()}`],
     ["Total Data", source.length], ["Total Unit", unitTotal], [],
     ["ID", "Tanggal", "Waktu", "Item", "Qty", "Unit", "PO", "DO", "Admin"],
@@ -96,7 +96,7 @@ export function exportReturnsExcel({ returns, itemMap, toast$ }) {
   const source = returns;
   const unitTotal = source.reduce((a, r) => a + Number(r.qty || 0), 0);
   const rows = [
-    ["TOKKI Consumable System"], ["Laporan Retur Barang"],
+    ["Warehouse Management System"], ["Laporan Retur Barang"],
     ["Dibuat", `${todayFmt()} ${nowTime()}`], ["Total Data", source.length], ["Total Unit", unitTotal], [],
     ["ID", "Tanggal", "Waktu", "Karyawan", "Item", "Qty", "Unit", "Alasan", "Catatan", "Status"],
     ...toSafeRows(source).map(r => {
@@ -131,7 +131,7 @@ export function exportApprovalExcel({ approvalReportSource, approvalReportRows, 
   const rejected = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "rejected").length;
   const pending = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "pending").length;
   const rows = [
-    ["TOKKI Consumable System"], ["Laporan Approval Pengambilan"],
+    ["Warehouse Management System"], ["Laporan Approval Pengambilan"],
     ["Dibuat", `${todayFmt()} ${nowTime()}`], ["Total Transaksi", approvalReportSource.length],
     ["Approved", approved], ["Rejected", rejected], ["Pending", pending], [],
     ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Unit", "Status", "Alasan Approval", "Diproses Oleh", "Waktu Proses", "Catatan", "Durasi SLA"],
@@ -160,7 +160,7 @@ export async function exportAuditExcel({ fetchAuditExportRows, auditPeriodLabel,
   try {
     const rowsData = await fetchAuditExportRows();
     const rows = [
-      ["TOKKI Consumable System"], ["Laporan Audit Log"],
+      ["Warehouse Management System"], ["Laporan Audit Log"],
       ["Periode", auditPeriodLabel()], ["Dibuat", `${todayFmt()} ${nowTime()}`], ["Total Data", rowsData.length], [],
       ["ID", "Timestamp", "Action", "Actor", "Role", "Target"],
       ...rowsData.map(a => [a.id, a.createdAt ? new Date(a.createdAt).toLocaleString("id-ID") : "", a.action || "", a.actor?.username || "", a.actor?.role || "", a.target || ""]),
@@ -187,7 +187,7 @@ export async function exportAuditPdf({ fetchAuditExportRows, auditPeriodLabel, t
 
 export function exportReportExcel({ reportRange, reportTotalOutUnits, reportTotalInUnits, reportEstimatedValue, lowStock, reportTxnSeries, reportTopItems, reportProjectUsage, reportProjectByRp, reportDeptStack, reportDeptCats, toast$ }) {
   const rows = [
-    ["TOKKI Consumable System"], ["Laporan & Analitik"],
+    ["Warehouse Management System"], ["Laporan & Analitik"],
     ["Periode", reportRange.label], ["Rentang", `${fmtDate(reportRange.start)} - ${fmtDate(reportRange.end)}`],
     ["Dibuat", `${todayFmt()} ${nowTime()}`], [],
     ["KPI", "Nilai"],

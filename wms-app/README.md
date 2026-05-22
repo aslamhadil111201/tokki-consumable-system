@@ -1,4 +1,4 @@
-# TOKKI Consumable System (wms-app)
+# Warehouse Management System (wms-app)
 
 Frontend React + Vite dengan API serverless (`/api/*`) di Vercel.
 

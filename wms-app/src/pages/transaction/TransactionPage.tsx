@@ -63,7 +63,7 @@ export function TransactionPage() {
     const source = filtTrx;
     const unitTotal = source.reduce((acc, t) => acc + toSafeRows(t.items).reduce((x, it) => x + Number(it.qty || 0), 0), 0);
     const rows = [
-      ["TOKKI Consumable System"],
+      ["Warehouse Management System"],
       ["Laporan Riwayat Pengambilan"],
       [`Periode`, trxDate ? fmtDate(trxDate) : "Semua Periode"],
       [`Total Data`, source.length],
@@ -83,7 +83,7 @@ export function TransactionPage() {
     const source = returns;
     const unitTotal = source.reduce((a, r) => a + Number(r.qty || 0), 0);
     const rows = [
-      ["TOKKI Consumable System"],
+      ["Warehouse Management System"],
       ["Laporan Retur Barang"],
       ["Total Data", source.length],
       ["Total Unit", unitTotal],

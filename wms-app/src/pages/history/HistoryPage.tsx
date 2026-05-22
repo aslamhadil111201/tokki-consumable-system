@@ -242,7 +242,7 @@ export function HistoryPage() {
 
   const exportTransactionsExcel = () => {
     const rows = [
-      ["TOKKI Consumable System"], ["Laporan Riwayat Pengambilan"], [],
+      ["Warehouse Management System"], ["Laporan Riwayat Pengambilan"], [],
       ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Unit", "Keterangan", "Status"],
       ...filteredOutByApproval.flatMap((t: any) => toSafeRows(t.items).map((it: any) => [
         csvText(t.id), fmtDateExcel(t.date), t.time, t.taker, t.dept, t.workOrder || "", t.admin || "", it.itemName, it.qty, it.unit, t.note || "", trxApprovalStatus(t).toUpperCase()
@@ -260,7 +260,7 @@ export function HistoryPage() {
 
   const exportReceivesExcel = () => {
     const rows = [
-      ["TOKKI Consumable System"], ["Laporan Penerimaan Barang"], [],
+      ["Warehouse Management System"], ["Laporan Penerimaan Barang"], [],
       ["ID", "Tanggal", "Waktu", "Admin", "Item", "Qty", "Unit", "Harga Satuan", "Total", "PO", "DO", "Supplier"],
       ...filteredIn.map((r: any) => {
         const p = Number(r.buyPrice || 0); const t = p * Number(r.qty || 0);
@@ -279,7 +279,7 @@ export function HistoryPage() {
 
   const exportAuditExcel = () => {
     const rows = [
-      ["TOKKI Consumable System"], ["Laporan Audit Trail"], [],
+      ["Warehouse Management System"], ["Laporan Audit Trail"], [],
       ["ID", "Waktu", "Aksi", "Actor", "Role", "Target"],
       ...auditRows.map(a => [csvText(a.id), new Date(a.createdAt).toLocaleString("id-ID"), a.action, a.actor?.username || "", a.actor?.role || "", a.target || ""])
     ];
