@@ -38,6 +38,7 @@ export function DeliveryPage() {
   const [formBatch, setFormBatch] = useState("");
   const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
   const [formProject, setFormProject] = useState("");
+  const [formPoNumber, setFormPoNumber] = useState("");
   const [formKendaraan, setFormKendaraan] = useState("");
   const [formDest, setFormDest] = useState("");
   const [formAttn, setFormAttn] = useState("");
@@ -76,7 +77,9 @@ export function DeliveryPage() {
     setFormCat("FNG");
     setFormBatch(genBatch("FNG"));
     setFormDate(new Date().toISOString().split("T")[0]);
-    setFormProject(""); setFormKendaraan(""); setFormDest(""); setFormAttn(""); setFormAddr("");
+    setFormProject("");
+    setFormPoNumber("");
+    setFormKendaraan(""); setFormDest(""); setFormAttn(""); setFormAddr("");
     setFormItems([{ id: Date.now().toString(), qty: "1", uom: "Pcs", desc: "" }]);
     setView("form");
   };
@@ -85,9 +88,19 @@ export function DeliveryPage() {
     setEditId(note.id);
     setFormCat(note.category || "FNG");
     setFormBatch(note.batch || "");
-    setFormDate(note.date || "");
-    setFormProject(note.project_no || "");
-    setFormKendaraan(note.no_kendaraan || "");
+    setFormDate(note.date ? note.date.split("T")[0] : "");
+    
+    const pNo = note.project_no || "";
+    if (pNo.includes(":::PO:")) {
+      const parts = pNo.split(":::PO:");
+      setFormProject(parts[0]);
+      setFormPoNumber(parts[1] || "");
+    } else {
+      setFormProject(pNo);
+      setFormPoNumber("");
+    }
+
+    setFormKendaraan(note.vehicle_no || "");
     setFormDest(note.destination || "");
     setFormAttn(note.attn || "");
     setFormAddr(note.full_address || "");
@@ -106,8 +119,8 @@ export function DeliveryPage() {
       batch: formBatch,
       category: formCat,
       date: formDate,
-      project_no: formProject,
-      no_kendaraan: formKendaraan,
+      project_no: formProject + (formPoNumber ? `:::PO:${formPoNumber}` : ""),
+      vehicle_no: formKendaraan,
       destination: formDest,
       attn: formAttn,
       full_address: formAddr,
@@ -293,6 +306,12 @@ export function DeliveryPage() {
             <label style={{ color: T.muted }}>Project No</label>
             <input className="ifield" value={formProject} onChange={e => setFormProject(e.target.value)} placeholder="E0063, C0557, -" />
           </div>
+          {formCat === "FNG" && (
+            <div className="dn-form-group">
+              <label style={{ color: T.muted }}>Purchase Order No</label>
+              <input className="ifield" value={formPoNumber} onChange={e => setFormPoNumber(e.target.value)} placeholder="Misal: 1300081917" />
+            </div>
+          )}
           <div className="dn-form-group">
             <label style={{ color: T.muted }}>No Kendaraan</label>
             <input className="ifield" value={formKendaraan} onChange={e => setFormKendaraan(e.target.value)} placeholder="B 1234 ABC" />
@@ -431,7 +450,7 @@ export function DeliveryPage() {
           <div className="dn-print-info">
             <div style={{ width: "57%" }}>
               <table><tbody>
-                <tr><td className="lbl" style={{ width: 80 }}>Project No.</td><td>: {printData.project_no || "-"}</td></tr>
+                <tr><td className="lbl" style={{ width: 80 }}>Project No.</td><td>: {(printData.project_no || "").split(":::PO:")[0] || "-"}</td></tr>
                 <tr><td className="lbl" style={{ width: 80 }}>Attn.</td><td>: {printData.attn || "-"}</td></tr>
               </tbody></table>
             </div>
@@ -446,6 +465,13 @@ export function DeliveryPage() {
               {(printData.items || []).map((it, i) => (
                 <tr key={i}><td>{it.qty} {it.uom}</td><td>{it.description}</td></tr>
               ))}
+              {printData.project_no?.includes(":::PO:") && (
+                <tr>
+                  <td colSpan={2} style={{ textAlign: "center", padding: "10px 5px", background: "#f0f0f0" }}>
+                    PURCHASE ORDER NO : {printData.project_no.split(":::PO:")[1]}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           <div className="dn-print-note">Seluruh item tersebut di atas telah diterima dengan baik.</div>
