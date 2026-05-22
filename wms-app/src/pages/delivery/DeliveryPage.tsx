@@ -6,6 +6,7 @@ import { getT } from "../../theme/tokens";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
 import { Printer, Edit, Trash2, Plus, ArrowLeft, Package, MapPin, ChevronDown, X } from "lucide-react";
+import TokkiLogo from "../../assets/tokki-logo.png";
 
 const CATS = { FNG: "Finish Good", DLV: "Sub Vendor", STW: "Site Work", ETC: "Lain-lain" };
 const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Kg", "Liter", "m", "cm"];
@@ -385,7 +386,7 @@ export function DeliveryPage() {
               <tbody>
                 <tr>
                   <td style={{ verticalAlign: "top", width: "57%" }}>
-                    <img src="/tokki-logo.png" alt="TOKKI" style={{ height: 70, objectFit: "contain", marginBottom: 4, marginLeft: "-15px" }} />
+                    <img src={TokkiLogo} alt="TOKKI" style={{ height: 70, objectFit: "contain", marginBottom: 4, marginLeft: "-15px" }} />
                   </td>
                   <td style={{ verticalAlign: "top", width: "43%" }}></td>
                 </tr>
