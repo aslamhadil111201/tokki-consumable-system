@@ -451,6 +451,9 @@ export function DeliveryPage() {
             <div style={{ width: "57%" }}>
               <table><tbody>
                 <tr><td className="lbl" style={{ width: 80 }}>Project No.</td><td>: {(printData.project_no || "").split(":::PO:")[0] || "-"}</td></tr>
+                {printData.project_no?.includes(":::PO:") && (
+                  <tr><td className="lbl" style={{ width: 80 }}>P.O. No.</td><td>: {printData.project_no.split(":::PO:")[1]}</td></tr>
+                )}
                 <tr><td className="lbl" style={{ width: 80 }}>Attn.</td><td>: {printData.attn || "-"}</td></tr>
               </tbody></table>
             </div>
@@ -465,13 +468,6 @@ export function DeliveryPage() {
               {(printData.items || []).map((it, i) => (
                 <tr key={i}><td>{it.qty} {it.uom}</td><td>{it.description}</td></tr>
               ))}
-              {printData.project_no?.includes(":::PO:") && (
-                <tr>
-                  <td colSpan={2} style={{ textAlign: "center", padding: "10px 5px", background: "#f0f0f0" }}>
-                    PURCHASE ORDER NO : {printData.project_no.split(":::PO:")[1]}
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
           <div className="dn-print-note">Seluruh item tersebut di atas telah diterima dengan baik.</div>
