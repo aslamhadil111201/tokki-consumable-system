@@ -52,9 +52,10 @@
 .dn-print-area { display: none; }
 
 @media print {
-  html, body, #root, .shell, .main { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; position: static !important; }
+  html, body, #root, .shell, .main { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; position: static !important; display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+  .sidebar, .topbar { display: none !important; }
   body * { visibility: hidden !important; }
-  .dn-print-area { display: block !important; visibility: visible !important; position: absolute; left: 0; top: 0; width: 100%; padding: 5mm; font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 9pt; background: white; z-index: 99999; }
+  .dn-print-area { display: block !important; visibility: visible !important; position: absolute; left: 0; top: 0; width: 100%; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 9pt; background: white; z-index: 99999; }
   .dn-print-area * { visibility: visible !important; }
   
   .dn-print-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 10px; border-bottom: 2.5px solid #000; margin-bottom: 14px; }
@@ -75,8 +76,8 @@
   .dn-print-greet { font-size: 9pt; margin-bottom: 6px; font-weight: 700; font-style: italic; }
   
   .dn-print-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-  .dn-print-table th { border: 1px solid #111; padding: 5px 6px; line-height: 1.4; background: #d9d9d9; font-size: 10pt; font-weight: 700; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .dn-print-table td { border: 1px solid #111; padding: 5px 6px; line-height: 1.4; font-size: 10pt; vertical-align: top; }
+  .dn-print-table th { border: 1px solid #111; padding: 5px 6px; line-height: 1.4; background: #d9d9d9; font-size: 9pt; font-weight: 700; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .dn-print-table td { border: 1px solid #111; padding: 5px 6px; line-height: 1.4; font-size: 9pt; vertical-align: top; }
   .dn-print-table td:first-child { text-align: center; }
   
   .dn-print-note { font-size: 8.5pt; margin-top: 30px; margin-bottom: 10px; }
