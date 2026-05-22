@@ -413,7 +413,7 @@ export function DeliveryPage() {
               <tbody>
                 <tr>
                   <td style={{ verticalAlign: "top", width: "57%" }}>
-                    <img src={TokkiLogo} alt="TOKKI" style={{ height: 70, objectFit: "contain", marginTop: 15, marginBottom: 4, marginLeft: "-15px" }} />
+                    <img src={TokkiLogo} alt="TOKKI" style={{ height: 70, objectFit: "contain", marginTop: 5, marginBottom: 4, marginLeft: "-15px" }} />
                   </td>
                   <td style={{ verticalAlign: "top", width: "43%" }}></td>
                 </tr>
