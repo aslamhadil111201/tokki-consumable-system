@@ -1,833 +1,543 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./DeliveryPage.css";
 import { useStore } from "../../store/useStore";
 import { getT } from "../../theme/tokens";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
-import { PrintDeliveryNote } from "./PrintDeliveryNote";
-import { todayStr, fmtDate } from "../../utils/formatters";
-import { Search, MapPin, Truck, Plus, Trash2, Printer, Edit, ArrowLeft, Building2, Check, X } from "lucide-react";
+import { Printer, Edit, Trash2, Plus, ArrowLeft, Package, MapPin, ChevronDown, X } from "lucide-react";
 
-// Categorized options
-const CATEGORIES = [
-  { id: "ALL", label: "Semua" },
-  { id: "FNG", label: "Finish Good (Customer)" },
-  { id: "DLV", label: "Sub Vendor (Pekerjaan Luar)" },
-  { id: "STW", label: "Site Work (Proyek Lapangan)" },
-  { id: "ETC", label: "Umum / Operasional" }
-];
-
-const UOM_OPTIONS = ["pcs", "lot", "set", "roll", "btg", "box", "kg", "mtr", "ltr", "unit"];
+const CATS = { FNG: "Finish Good", DLV: "Sub Vendor", STW: "Site Work", ETC: "Lain-lain" };
+const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Kg", "Liter", "m", "cm"];
 
 export function DeliveryPage() {
-  const {
-    dark,
-    deliveryNotes,
-    shippingAddresses,
-    saveDeliveryNote,
-    deleteDeliveryNote,
-    saveShippingAddress,
-    deleteShippingAddress,
-    fetchAll,
-    withLoading
-  } = useStore();
-
+  const { dark, user, setToast } = useStore();
   const T = getT(dark);
 
-  // General views state: "list" | "form" | "address_manager"
-  const [view, setView] = useState("list");
-  const [activeCat, setActiveCat] = useState("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [notes, setNotes] = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [view, setView] = useState("list"); // list | form | addr
+  const [editId, setEditId] = useState(null);
+  const [catFilter, setCatFilter] = useState("ALL");
+  const [searchQ, setSearchQ] = useState("");
+  const [formItems, setFormItems] = useState([{ id: "1", qty: "1", uom: "Pcs", desc: "" }]);
+  const [printData, setPrintData] = useState(null);
+  const [destOpen, setDestOpen] = useState(false);
+  const printRef = useRef(null);
 
-  // Print state
-  const [printNote, setPrintNote] = useState<any>(null);
+  // Address form state
+  const [addrForm, setAddrForm] = useState(false);
+  const [newDest, setNewDest] = useState("");
+  const [newAddr, setNewAddr] = useState("");
+  const [newAttn, setNewAttn] = useState("");
+  const [newContact, setNewContact] = useState("");
 
-  // Address manager states
-  const [addrFormOpen, setAddrFormOpen] = useState(false);
-  const [editingAddr, setEditingAddr] = useState<any>(null);
-  const [addrDestination, setAddrDestination] = useState("");
-  const [addrAttn, setAddrAttn] = useState("");
-  const [addrContact, setAddrContact] = useState("");
-  const [addrFullAddress, setAddrFullAddress] = useState("");
-
-  // Delivery Note Form states
-  const [editingNote, setEditingNote] = useState<any>(null);
+  // Form refs
+  const [formCat, setFormCat] = useState("FNG");
   const [formBatch, setFormBatch] = useState("");
-  const [formCategory, setFormCategory] = useState("FNG");
-  const [formDate, setFormDate] = useState(todayStr());
-  const [formProjectNo, setFormProjectNo] = useState("");
-  const [formNoKendaraan, setFormNoKendaraan] = useState("");
-  const [formDestination, setFormDestination] = useState("");
+  const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
+  const [formProject, setFormProject] = useState("");
+  const [formKendaraan, setFormKendaraan] = useState("");
+  const [formDest, setFormDest] = useState("");
   const [formAttn, setFormAttn] = useState("");
-  const [formFullAddress, setFormFullAddress] = useState("");
-  const [formItems, setFormItems] = useState<any[]>([{ qty: 1, uom: "pcs", description: "" }]);
+  const [formAddr, setFormAddr] = useState("");
 
-  // Autocomplete UI state
-  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
-  const autocompleteRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { fetchNotes(); fetchAddresses(); }, []);
 
-  // Fetch all data when page mounts
-  useEffect(() => {
-    fetchAll();
-  }, []);
-
-  // Listen to clicks outside autocomplete dropdown to close it
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
-        setShowAddressSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Auto-generate batch number when category changes in creation view
-  useEffect(() => {
-    if (view === "form" && (!editingNote || editingNote.isNew)) {
-      const generated = generateNextBatch(formCategory, deliveryNotes);
-      setFormBatch(generated);
-    }
-  }, [formCategory, view, editingNote, deliveryNotes]);
-
-  // Sequential batch code generator
-  function generateNextBatch(category: string, notes: any[]) {
-    const catNotes = notes.filter(n => n.category === category);
-    if (catNotes.length === 0) {
-      return `${category}001`;
-    }
-
-    let maxNum = 0;
-    let maxPad = 3;
-    const regex = new RegExp(`^${category}(\\d+)$`, 'i');
-
-    catNotes.forEach(n => {
-      const match = String(n.batch || "").trim().match(regex);
-      if (match) {
-        const numStr = match[1];
-        const num = parseInt(numStr, 10);
-        if (num > maxNum) {
-          maxNum = num;
-          maxPad = numStr.length;
-        }
-      }
-    });
-
-    const nextNum = maxNum + 1;
-    const nextNumStr = String(nextNum).padStart(Math.max(3, maxPad), '0');
-    return `${category}${nextNumStr}`;
-  }
-
-  // Address Manager Handlers
-  const handleOpenAddrForm = (addr: any = null) => {
-    if (addr) {
-      setEditingAddr(addr);
-      setAddrDestination(addr.destination);
-      setAddrAttn(addr.attn || "");
-      setAddrContact(addr.contact || "");
-      setAddrFullAddress(addr.full_address || "");
-    } else {
-      setEditingAddr(null);
-      setAddrDestination("");
-      setAddrAttn("");
-      setAddrContact("");
-      setAddrFullAddress("");
-    }
-    setAddrFormOpen(true);
+  const fetchNotes = async () => {
+    const { supabase } = await import("../../lib/supabase");
+    const { data } = await supabase.from("delivery_notes").select("*").order("created_at", { ascending: false });
+    setNotes(data || []);
   };
 
-  const handleSaveAddress = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!addrDestination.trim()) {
-      useStore.getState().setToast("Tujuan harus diisi", "err");
-      return;
-    }
-
-    const payload = {
-      id: editingAddr?.id,
-      isNew: !editingAddr,
-      destination: addrDestination.trim(),
-      attn: addrAttn.trim(),
-      contact: addrContact.trim(),
-      fullAddress: addrFullAddress.trim()
-    };
-
-    const res = await withLoading(() => saveShippingAddress(payload), "Menyimpan Alamat...");
-    if (res.ok) {
-      setAddrFormOpen(false);
-    }
+  const fetchAddresses = async () => {
+    const { supabase } = await import("../../lib/supabase");
+    const { data } = await supabase.from("shipping_addresses").select("*").order("destination");
+    setAddresses(data || []);
   };
 
-  const handleDeleteAddress = async (id: number) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus alamat pengiriman ini?")) {
-      await withLoading(() => deleteShippingAddress(id), "Menghapus Alamat...");
-    }
+  const genBatch = (cat) => {
+    const existing = notes.filter(n => n.category === cat);
+    const nums = existing.map(n => { const m = n.batch?.match(/\d+$/); return m ? +m[0] : 0; });
+    
+    let baseStart = 1;
+    if (cat === "DLV") baseStart = 977;
+    else if (cat === "FNG") baseStart = 14;
+    else if (cat === "STW") baseStart = 362;
+    else if (cat === "ETC") baseStart = 3;
+
+    const next = nums.length && Math.max(...nums) >= baseStart ? Math.max(...nums) + 1 : baseStart;
+    return cat + String(next).padStart(3, "0");
   };
 
-  // Delivery Note Form Handlers
-  const handleOpenNoteForm = (note: any = null) => {
-    if (note) {
-      setEditingNote(note);
-      setFormBatch(note.batch);
-      setFormCategory(note.category);
-      setFormDate(note.date);
-      setFormProjectNo(note.project_no || "");
-      setFormNoKendaraan(note.no_kendaraan || "");
-      setFormDestination(note.destination);
-      setFormAttn(note.attn || "");
-      setFormFullAddress(note.full_address || "");
-      setFormItems(note.items && note.items.length ? [...note.items] : [{ qty: 1, uom: "pcs", description: "" }]);
-    } else {
-      setEditingNote({ isNew: true });
-      setFormCategory("FNG");
-      setFormDate(todayStr());
-      setFormProjectNo("");
-      setFormNoKendaraan("");
-      setFormDestination("");
-      setFormAttn("");
-      setFormFullAddress("");
-      setFormItems([{ qty: 1, uom: "pcs", description: "" }]);
-    }
+  const openNew = () => {
+    setEditId(null);
+    setFormCat("FNG");
+    setFormBatch(genBatch("FNG"));
+    setFormDate(new Date().toISOString().split("T")[0]);
+    setFormProject(""); setFormKendaraan(""); setFormDest(""); setFormAttn(""); setFormAddr("");
+    setFormItems([{ id: Date.now().toString(), qty: "1", uom: "Pcs", desc: "" }]);
     setView("form");
   };
 
-  const handleAddItemRow = () => {
-    setFormItems([...formItems, { qty: 1, uom: "pcs", description: "" }]);
+  const openEdit = (note) => {
+    setEditId(note.id);
+    setFormCat(note.category || "FNG");
+    setFormBatch(note.batch || "");
+    setFormDate(note.date || "");
+    setFormProject(note.project_no || "");
+    setFormKendaraan(note.no_kendaraan || "");
+    setFormDest(note.destination || "");
+    setFormAttn(note.attn || "");
+    setFormAddr(note.full_address || "");
+    const items = (note.items || []).map((it, i) => ({ id: String(i), qty: String(it.qty || "1"), uom: it.uom || "Pcs", desc: it.description || "" }));
+    setFormItems(items.length ? items : [{ id: "1", qty: "1", uom: "Pcs", desc: "" }]);
+    setView("form");
   };
 
-  const handleRemoveItemRow = (index: number) => {
-    if (formItems.length === 1) return;
-    setFormItems(formItems.filter((_, idx) => idx !== index));
-  };
+  const handleSave = async () => {
+    if (!formDest.trim()) { setToast("Destination wajib diisi!", "err"); return; }
+    const validItems = formItems.filter(i => i.desc.trim());
+    if (!validItems.length) { setToast("Minimal satu item barang!", "err"); return; }
 
-  const handleItemFieldChange = (index: number, field: string, value: any) => {
-    const updated = [...formItems];
-    updated[index] = { ...updated[index], [field]: value };
-    setFormItems(updated);
-  };
-
-  const handleSaveDeliveryNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formBatch.trim()) {
-      useStore.getState().setToast("Nomor batch tidak boleh kosong", "err");
-      return;
-    }
-    if (!formDestination.trim()) {
-      useStore.getState().setToast("Tujuan pengiriman tidak boleh kosong", "err");
-      return;
-    }
-
-    // Validate items
-    const invalidItems = formItems.some(i => !i.description.trim() || Number(i.qty) <= 0);
-    if (invalidItems) {
-      useStore.getState().setToast("Semua item harus memiliki deskripsi dan kuantitas positif", "err");
-      return;
-    }
-
+    const { supabase } = await import("../../lib/supabase");
     const payload = {
-      id: editingNote?.id,
-      isNew: editingNote?.isNew,
-      batch: formBatch.trim(),
-      category: formCategory,
+      batch: formBatch,
+      category: formCat,
       date: formDate,
-      projectNo: formProjectNo.trim(),
-      noKendaraan: formNoKendaraan.trim(),
-      destination: formDestination.trim(),
-      attn: formAttn.trim(),
-      fullAddress: formFullAddress.trim(),
-      items: formItems.map(i => ({
-        qty: Number(i.qty),
-        uom: i.uom,
-        description: i.description.trim()
-      }))
+      project_no: formProject,
+      no_kendaraan: formKendaraan,
+      destination: formDest,
+      attn: formAttn,
+      full_address: formAddr,
+      items: validItems.map(i => ({ qty: i.qty, uom: i.uom, description: i.desc })),
     };
 
-    const res = await withLoading(() => saveDeliveryNote(payload), "Menyimpan Surat Jalan...");
-    if (res.ok) {
-      setView("list");
+    if (editId) {
+      const { error } = await supabase.from("delivery_notes").update(payload).eq("id", editId);
+      if (error) { setToast(error.message, "err"); return; }
+      setToast("Surat jalan diperbarui \u2713");
+    } else {
+      const { error } = await supabase.from("delivery_notes").insert([payload]);
+      if (error) { setToast(error.message, "err"); return; }
+      // Auto-save address
+      if (!addresses.find(a => a.destination?.toLowerCase() === formDest.toLowerCase())) {
+        await supabase.from("shipping_addresses").insert([{ destination: formDest, full_address: formAddr, attn: formAttn }]);
+        fetchAddresses();
+      }
+      setToast("Surat jalan berhasil dibuat \u2713");
     }
+    await fetchNotes();
+    setView("list");
   };
 
-  const handleDeleteDeliveryNote = async (id: number) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus surat jalan ini?")) {
-      await withLoading(() => deleteDeliveryNote(id), "Menghapus Surat Jalan...");
-    }
+  const handleDelete = async (id) => {
+    if (!confirm("Hapus surat jalan ini?")) return;
+    const { supabase } = await import("../../lib/supabase");
+    await supabase.from("delivery_notes").delete().eq("id", id);
+    setToast("Surat jalan dihapus");
+    fetchNotes();
   };
 
-  const handleTriggerPrint = (note: any) => {
-    setPrintNote(note);
-    setTimeout(() => {
-      window.print();
-    }, 250);
+  const handlePrint = (note) => {
+    setPrintData(note);
+    setTimeout(() => window.print(), 200);
   };
 
-  // Derive stats
-  const totalNotes = deliveryNotes.length;
-  const fngNotes = deliveryNotes.filter(n => n.category === "FNG").length;
-  const dlvNotes = deliveryNotes.filter(n => n.category === "DLV").length;
-  const stwNotes = deliveryNotes.filter(n => n.category === "STW").length;
-  const etcNotes = deliveryNotes.filter(n => n.category === "ETC").length;
-
-  // Filter & Search Logic
-  const filteredNotes = deliveryNotes.filter(n => {
-    const matchesCat = activeCat === "ALL" || n.category === activeCat;
-
-    const sq = searchQuery.toLowerCase().trim();
-    if (!sq) return matchesCat;
-
-    const matchesBatch = String(n.batch || "").toLowerCase().includes(sq);
-    const matchesDest = String(n.destination || "").toLowerCase().includes(sq);
-    const matchesAttn = String(n.attn || "").toLowerCase().includes(sq);
-    const matchesProj = String(n.project_no || "").toLowerCase().includes(sq);
-
-    // Search inside item descriptions
-    const matchesItems = (n.items || []).some((item: any) =>
-      String(item.description || "").toLowerCase().includes(sq)
-    );
-
-    return matchesCat && (matchesBatch || matchesDest || matchesAttn || matchesProj || matchesItems);
-  });
-
-  // Autocomplete filter
-  const addressSuggestions = formDestination.trim()
-    ? shippingAddresses.filter(addr =>
-        addr.destination.toLowerCase().includes(formDestination.toLowerCase())
-      )
-    : [];
-
-  const handleSelectSuggestion = (addr: any) => {
-    setFormDestination(addr.destination);
-    setFormAttn(addr.attn || "");
-    setFormFullAddress(addr.full_address || "");
-    setShowAddressSuggestions(false);
+  const onCatChange = (c) => {
+    setFormCat(c);
+    if (!editId) setFormBatch(genBatch(c));
   };
 
-  return (
-    <div className="delivery-container">
-      {/* Hidden print asset */}
-      <PrintDeliveryNote note={printNote} />
+  const onDestChange = (v) => {
+    setFormDest(v);
+    const a = addresses.find(x => x.destination?.toLowerCase() === v.toLowerCase());
+    if (a) { setFormAttn(a.attn || ""); setFormAddr(a.full_address || ""); }
+  };
 
-      {/* Main page Header */}
-      <div className="delivery-header">
-        <div className="delivery-title">
-          <Truck size={24} style={{ color: T.primary }} />
-          <span>Sistem Surat Jalan (Delivery Note)</span>
+  const addItem = () => setFormItems([...formItems, { id: Date.now().toString(), qty: "1", uom: "Pcs", desc: "" }]);
+  const removeItem = (id) => setFormItems(formItems.filter(i => i.id !== id));
+  const updateItem = (id, field, val) => setFormItems(formItems.map(i => i.id === id ? { ...i, [field]: val } : i));
+
+  // Filter
+  let filtered = [...notes];
+  if (catFilter !== "ALL") filtered = filtered.filter(n => n.category === catFilter);
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    filtered = filtered.filter(n => (n.batch || "").toLowerCase().includes(q) || (n.destination || "").toLowerCase().includes(q) || (n.project_no || "").toLowerCase().includes(q) || (n.items || []).some(i => (i.description || "").toLowerCase().includes(q)));
+  }
+
+  const fmtDate = (s) => s ? new Date(s).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+  const fmtDatePrint = (s) => {
+    if (!s) return "-";
+    const d = new Date(s);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  };
+
+  // ─── RENDER ───
+
+  // Address management view
+  if (view === "addr") {
+    const handleSaveAddr = async () => {
+      if (!newDest.trim()) { setToast("Destination wajib diisi!", "err"); return; }
+      const { supabase } = await import("../../lib/supabase");
+      const { error } = await supabase.from("shipping_addresses").insert([{ destination: newDest, full_address: newAddr, attn: newAttn, contact: newContact }]);
+      if (error) { setToast(error.message, "err"); return; }
+      setToast("Alamat berhasil ditambahkan \u2713");
+      setAddrForm(false); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact("");
+      fetchAddresses();
+    };
+
+    const handleDeleteAddr = async (id) => {
+      if (!confirm("Hapus alamat ini?")) return;
+      const { supabase } = await import("../../lib/supabase");
+      await supabase.from("shipping_addresses").delete().eq("id", id);
+      setToast("Alamat dihapus");
+      fetchAddresses();
+    };
+    return (
+      <div style={{ maxWidth: 820 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1rem" }}>
+          <BtnG onClick={() => setView("list")} style={{ padding: "6px 12px", fontSize: 12 }}><ArrowLeft size={14} /> Kembali</BtnG>
+          <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>Kelola Shipping Address</span>
+          <BtnP onClick={() => setAddrForm(true)} style={{ marginLeft: "auto", padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>
         </div>
 
-        <div className="delivery-actions">
-          {view === "list" && (
-            <>
-              <BtnG onClick={() => setView("address_manager")}>
-                <Building2 size={16} /> Kelola Alamat
-              </BtnG>
-              <BtnP onClick={() => handleOpenNoteForm()}>
-                <Plus size={16} /> Buat Surat Jalan
-              </BtnP>
-            </>
-          )}
+        {addrForm && (
+          <div className="dn-form-section" style={{ background: T.surface, border: `1px solid ${T.primary}`, marginBottom: "1rem" }}>
+            <div className="dn-form-title" style={{ color: T.primary }}>Tambah Alamat Baru</div>
+            <div className="dn-form-grid dn-form-grid-2">
+              <div className="dn-form-group" style={{ gridColumn: "1/-1" }}>
+                <label style={{ color: T.muted }}>Destination (Nama Customer) *</label>
+                <input className="ifield" value={newDest} onChange={e => setNewDest(e.target.value)} placeholder="PT. Nama Perusahaan" />
+              </div>
+              <div className="dn-form-group">
+                <label style={{ color: T.muted }}>Attn (PIC)</label>
+                <input className="ifield" value={newAttn} onChange={e => setNewAttn(e.target.value)} placeholder="Mr. / Bpk. Nama" />
+              </div>
+              <div className="dn-form-group">
+                <label style={{ color: T.muted }}>Contact</label>
+                <input className="ifield" value={newContact} onChange={e => setNewContact(e.target.value)} placeholder="08xxx" />
+              </div>
+              <div className="dn-form-group" style={{ gridColumn: "1/-1" }}>
+                <label style={{ color: T.muted }}>Full Address</label>
+                <input className="ifield" value={newAddr} onChange={e => setNewAddr(e.target.value)} placeholder="Jl. Alamat lengkap..." />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 10 }}>
+              <BtnG onClick={() => setAddrForm(false)} style={{ fontSize: 12, padding: "6px 12px" }}>Batal</BtnG>
+              <BtnP onClick={handleSaveAddr} style={{ fontSize: 12, padding: "6px 14px" }}>Simpan</BtnP>
+            </div>
+          </div>
+        )}
 
-          {view === "address_manager" && (
-            <BtnG onClick={() => { setView("list"); setAddrFormOpen(false); }}>
-              <ArrowLeft size={16} /> Kembali
-            </BtnG>
-          )}
+        <table className="dn-table" style={{ background: T.card, borderRadius: 12, overflow: "hidden" }}>
+          <thead><tr style={{ background: T.surface }}>
+            <th style={{ color: T.muted }}>Destination</th>
+            <th style={{ color: T.muted }}>Full Address</th>
+            <th style={{ color: T.muted }}>Attn</th>
+            <th style={{ color: T.muted, width: 60 }}>Aksi</th>
+          </tr></thead>
+          <tbody>
+            {addresses.length === 0 ? (
+              <tr><td colSpan={4} style={{ textAlign: "center", padding: "2rem", color: T.muted }}>Belum ada alamat tersimpan</td></tr>
+            ) : addresses.map(a => (
+              <tr key={a.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                <td style={{ fontWeight: 500, color: T.text }}>{a.destination}</td>
+                <td style={{ color: T.muted, fontSize: 11 }}>{a.full_address || "-"}</td>
+                <td style={{ color: T.muted }}>{a.attn || "-"}</td>
+                <td>
+                  <button className="dn-act-btn" onClick={() => handleDeleteAddr(a.id)} style={{ color: T.red }}><Trash2 size={14} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
-          {view === "form" && (
-            <BtnG onClick={() => setView("list")}>
-              <ArrowLeft size={16} /> Batal
-            </BtnG>
-          )}
+  if (view === "form") return (
+    <div style={{ maxWidth: 820 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1rem" }}>
+        <BtnG onClick={() => setView("list")} style={{ padding: "6px 12px", fontSize: 12 }}><ArrowLeft size={14} /> Kembali</BtnG>
+        <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{editId ? "Edit" : "Buat"} Surat Jalan</span>
+      </div>
+
+      <div className="dn-form-section" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+        <div className="dn-form-title" style={{ color: T.primary }}>Informasi Pengiriman</div>
+        <div className="dn-form-grid dn-form-grid-3" style={{ marginBottom: 10 }}>
+          <div className="dn-form-group">
+            <label style={{ color: T.muted }}>Kategori</label>
+            <select className="ifield" value={formCat} onChange={e => onCatChange(e.target.value)}>
+              {Object.entries(CATS).map(([k, v]) => <option key={k} value={k}>{v} ({k})</option>)}
+            </select>
+          </div>
+          <div className="dn-form-group">
+            <label style={{ color: T.muted }}>Batch No</label>
+            <input className="ifield" value={formBatch} readOnly style={{ background: T.inputBg, opacity: 0.7 }} />
+          </div>
+          <div className="dn-form-group">
+            <label style={{ color: T.muted }}>Tanggal</label>
+            <input className="ifield" type="date" value={formDate} onChange={e => setFormDate(e.target.value)} />
+          </div>
+        </div>
+        <div className="dn-form-grid dn-form-grid-2">
+          <div className="dn-form-group">
+            <label style={{ color: T.muted }}>Project No</label>
+            <input className="ifield" value={formProject} onChange={e => setFormProject(e.target.value)} placeholder="E0063, C0557, -" />
+          </div>
+          <div className="dn-form-group">
+            <label style={{ color: T.muted }}>No Kendaraan</label>
+            <input className="ifield" value={formKendaraan} onChange={e => setFormKendaraan(e.target.value)} placeholder="B 1234 ABC" />
+          </div>
         </div>
       </div>
 
-      {/* VIEW: 1. LIST OF NOTES VIEW */}
-      {view === "list" && (
-        <>
-          {/* Quick stats blocks */}
-          <div className="delivery-stats">
-            <div className={`delivery-stat-card cat-all ${activeCat === "ALL" ? "active" : ""}`} onClick={() => setActiveCat("ALL")}>
-              <div className="delivery-stat-lbl">Semua SJ</div>
-              <div className="delivery-stat-val">{totalNotes}</div>
-              <div className="delivery-stat-sub">Semua Kategori</div>
-            </div>
-            <div className={`delivery-stat-card cat-fng ${activeCat === "FNG" ? "active" : ""}`} onClick={() => setActiveCat("FNG")}>
-              <div className="delivery-stat-lbl">Finish Good</div>
-              <div className="delivery-stat-val">{fngNotes}</div>
-              <div className="delivery-stat-sub">Kirim ke Customer</div>
-            </div>
-            <div className={`delivery-stat-card cat-dlv ${activeCat === "DLV" ? "active" : ""}`} onClick={() => setActiveCat("DLV")}>
-              <div className="delivery-stat-lbl">Sub Vendor</div>
-              <div className="delivery-stat-val">{dlvNotes}</div>
-              <div className="delivery-stat-sub">Pekerjaan Luar</div>
-            </div>
-            <div className={`delivery-stat-card cat-stw ${activeCat === "STW" ? "active" : ""}`} onClick={() => setActiveCat("STW")}>
-              <div className="delivery-stat-lbl">Site Work</div>
-              <div className="delivery-stat-val">{stwNotes}</div>
-              <div className="delivery-stat-sub">Proyek Lapangan</div>
-            </div>
-            <div className={`delivery-stat-card cat-etc ${activeCat === "ETC" ? "active" : ""}`} onClick={() => setActiveCat("ETC")}>
-              <div className="delivery-stat-lbl">Lain-lain</div>
-              <div className="delivery-stat-val">{etcNotes}</div>
-              <div className="delivery-stat-sub">Umum / Operasional</div>
-            </div>
-          </div>
-
-          {/* Filtering and Toolbar */}
-          <div className="delivery-toolbar">
-            <div className="delivery-search">
-              <Search className="delivery-search-icon" size={16} />
-              <input
-                type="text"
-                className="delivery-search-input"
-                placeholder="Cari nomor batch, tujuan, item..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+      <div className="dn-form-section" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+        <div className="dn-form-title" style={{ color: T.primary }}>Data Penerima</div>
+        <div className="dn-form-grid dn-form-grid-2">
+          <div className="dn-form-group" style={{ gridColumn: "1/-1", position: "relative" }}>
+            <label style={{ color: T.muted }}>Destination (Tujuan) *</label>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input 
+                className="ifield" 
+                value={formDest} 
+                onChange={e => { onDestChange(e.target.value); setDestOpen(true); }} 
+                onFocus={(e) => { setDestOpen(true); e.target.select(); }}
+                onBlur={() => setTimeout(() => setDestOpen(false), 200)}
+                placeholder="PT. Nama Perusahaan..." 
+                style={{ paddingRight: 60 }}
               />
+              {formDest && (
+                <X size={15} color={T.muted} style={{ position: "absolute", right: 32, cursor: "pointer" }} onClick={() => { onDestChange(""); setDestOpen(true); }} />
+              )}
+              <ChevronDown size={16} color={T.muted} style={{ position: "absolute", right: 12, pointerEvents: "none" }} />
             </div>
-
-            <div className="delivery-tabs">
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  className={`delivery-tab-btn ${activeCat === cat.id ? "active" : ""}`}
-                  onClick={() => setActiveCat(cat.id)}
-                >
-                  {cat.id === "ALL" ? "Semua" : cat.id}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* List Card Container */}
-          <div className="delivery-card">
-            {filteredNotes.length === 0 ? (
-              <div className="delivery-empty">
-                <div className="delivery-empty-icon">📭</div>
-                <h3>Tidak ada Surat Jalan ditemukan</h3>
-                <p style={{ fontSize: '12px', marginTop: '4px' }}>Silakan sesuaikan filter pencarian atau buat surat jalan baru.</p>
-              </div>
-            ) : (
-              <div className="delivery-table-wrap">
-                <table className="delivery-table">
-                  <thead>
-                    <tr>
-                      <th>Batch No.</th>
-                      <th>Kategori</th>
-                      <th>Tanggal</th>
-                      <th>Tujuan</th>
-                      <th>Penerima (Attn)</th>
-                      <th>Deskripsi Barang</th>
-                      <th style={{ textAlign: "right" }}>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredNotes.map((note) => (
-                      <tr key={note.id}>
-                        <td style={{ fontWeight: 800 }}>{note.batch}</td>
-                        <td>
-                          <span className={`delivery-badge ${note.category.toLowerCase()}`}>
-                            {note.category}
-                          </span>
-                        </td>
-                        <td>{fmtDate(note.date)}</td>
-                        <td style={{ fontWeight: 600 }}>{note.destination}</td>
-                        <td>{note.attn || "-"}</td>
-                        <td>
-                          <div className="delivery-cell-items">
-                            {(note.items || []).map((i: any) => `${i.qty} ${i.uom} x ${i.description}`).join(", ")}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="delivery-row-actions">
-                            <button
-                              className="icon-btn btn-print"
-                              title="Cetak Surat Jalan"
-                              onClick={() => handleTriggerPrint(note)}
-                            >
-                              <Printer size={14} />
-                            </button>
-                            <button
-                              className="icon-btn"
-                              title="Edit Surat Jalan"
-                              onClick={() => handleOpenNoteForm(note)}
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              className="icon-btn btn-delete"
-                              title="Hapus Surat Jalan"
-                              onClick={() => handleDeleteDeliveryNote(note.id)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {destOpen && addresses.length > 0 && (
+              <div style={{
+                position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
+                background: T.surfaceSolid, border: `1px solid ${T.border}`, borderRadius: 8,
+                boxShadow: T.shadowCard, maxHeight: 250, overflowY: "auto", marginTop: 4, padding: "4px 0"
+              }}>
+                {addresses.filter(a => a.destination.toLowerCase().includes((formDest || "").toLowerCase())).map(a => (
+                  <div key={a.id} 
+                    className="dn-dd-item"
+                    onClick={() => { onDestChange(a.destination); setDestOpen(false); }}
+                    style={{ padding: "8px 14px", cursor: "pointer", color: T.text, fontSize: 13 }}
+                  >
+                    {a.destination}
+                  </div>
+                ))}
+                {addresses.filter(a => a.destination.toLowerCase().includes((formDest || "").toLowerCase())).length === 0 && (
+                  <div style={{ padding: "8px 14px", color: T.muted, fontSize: 13, fontStyle: "italic" }}>Perusahaan tidak ditemukan. (Tekan simpan untuk menambah baru)</div>
+                )}
               </div>
             )}
           </div>
-        </>
-      )}
-
-      {/* VIEW: 2. SHIPPING ADDRESS MANAGER VIEW */}
-      {view === "address_manager" && (
-        <div className="delivery-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "800", color: T.text }}>
-              Buku Alamat Pengiriman
-            </h3>
-            {!addrFormOpen && (
-              <BtnP onClick={() => handleOpenAddrForm()}>
-                <Plus size={16} /> Tambah Alamat Baru
-              </BtnP>
-            )}
+          <div className="dn-form-group">
+            <label style={{ color: T.muted }}>Attn</label>
+            <input className="ifield" value={formAttn} onChange={e => setFormAttn(e.target.value)} placeholder="Mr. / Bpk. Nama" />
           </div>
+          <div className="dn-form-group">
+            <label style={{ color: T.muted }}>Alamat (untuk cetak)</label>
+            <input className="ifield" value={formAddr} onChange={e => setFormAddr(e.target.value)} placeholder="Jl. Alamat lengkap..." />
+          </div>
+        </div>
+      </div>
 
-          {/* Add / Edit Address form panel */}
-          {addrFormOpen && (
-            <div
-              style={{
-                background: "var(--t-surface)",
-                border: "1px solid var(--t-border)",
-                borderRadius: "16px",
-                padding: "20px",
-                marginBottom: "24px",
-                backdropFilter: "blur(10px)"
-              }}
-            >
-              <h4 style={{ fontSize: "14px", fontWeight: "800", marginBottom: "14px", color: T.text }}>
-                {editingAddr ? "Edit Alamat Pengiriman" : "Tambah Alamat Pengiriman Baru"}
-              </h4>
-              <form onSubmit={handleSaveAddress}>
-                <div className="delivery-form-grid">
-                  <div className="form-group">
-                    <label className="form-lbl">Nama Tujuan (Perusahaan/Site)</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Contoh: PT. Krakatau Steel (Persero) Tbk"
-                      value={addrDestination}
-                      onChange={e => setAddrDestination(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-lbl">Penerima (Attn)</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Contoh: Bpk. Bambang Hermawan"
-                      value={addrAttn}
-                      onChange={e => setAddrAttn(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group col-span-2">
-                    <label className="form-lbl">Kontak / Telepon</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Contoh: 0812-3456-7890"
-                      value={addrContact}
-                      onChange={e => setAddrContact(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group col-span-2">
-                    <label className="form-lbl">Alamat Lengkap</label>
-                    <textarea
-                      className="form-input"
-                      style={{ minHeight: "80px", resize: "vertical" }}
-                      placeholder="Masukkan alamat lengkap pengiriman untuk dicetak..."
-                      value={addrFullAddress}
-                      onChange={e => setAddrFullAddress(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                </div>
+      <div className="dn-form-section" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div className="dn-form-title" style={{ color: T.primary, margin: 0 }}>Description of Goods</div>
+          <BtnG onClick={addItem} style={{ padding: "5px 10px", fontSize: 11 }}><Plus size={13} /> Tambah Baris</BtnG>
+        </div>
+        <table className="dn-items-table">
+          <thead><tr><th style={{ width: 28 }}>No</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 80 }}>UoM</th><th>Description of Goods</th><th style={{ width: 34 }}></th></tr></thead>
+          <tbody>
+            {formItems.map((it, i) => (
+              <tr key={it.id}>
+                <td style={{ textAlign: "center", color: T.muted, fontSize: 11 }}>{i + 1}</td>
+                <td><input type="number" value={it.qty} min="0.01" step="any" onChange={e => updateItem(it.id, "qty", e.target.value)} style={{ textAlign: "center" }} /></td>
+                <td><select value={it.uom} onChange={e => updateItem(it.id, "uom", e.target.value)}>{UOMS.map(u => <option key={u} value={u}>{u}</option>)}</select></td>
+                <td><input type="text" value={it.desc} onChange={e => updateItem(it.id, "desc", e.target.value)} placeholder="Description of goods..." /></td>
+                <td><button className="dn-act-btn" onClick={() => removeItem(it.id)} style={{ color: T.red }}><Trash2 size={14} /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "14px" }}>
-                  <BtnG type="button" onClick={() => setAddrFormOpen(false)}>
-                    <X size={14} /> Batal
-                  </BtnG>
-                  <BtnP type="submit">
-                    <Check size={14} /> Simpan Alamat
-                  </BtnP>
-                </div>
-              </form>
-            </div>
-          )}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <BtnG onClick={() => setView("list")}>Batal</BtnG>
+        <BtnP onClick={handleSave} style={{ padding: "10px 20px" }}>Simpan Surat Jalan</BtnP>
+      </div>
+    </div>
+  );
 
-          {/* List layout of addresses */}
-          {shippingAddresses.length === 0 ? (
-            <div className="delivery-empty">
-              <div className="delivery-empty-icon">📍</div>
-              <h3>Belum ada alamat pengiriman tercatat</h3>
-              <p style={{ fontSize: '12px', marginTop: '4px' }}>Alamat pengiriman membantu mempercepat pengisian surat jalan.</p>
-            </div>
-          ) : (
-            <div className="address-grid">
-              {shippingAddresses.map((addr) => (
-                <div className="address-card" key={addr.id}>
-                  <div className="address-card-header">
-                    <div className="address-card-title">{addr.destination}</div>
+  // ─── LIST VIEW ───
+  return (
+    <div>
+      {/* Print area (hidden, shown only during print) */}
+      {printData && (
+        <div className="dn-print-area" ref={printRef}>
+          <div className="dn-print-header">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td style={{ verticalAlign: "top", width: "57%" }}>
+                    <img src="/tokki-logo.png" alt="TOKKI" style={{ height: 70, objectFit: "contain", marginBottom: 4, marginLeft: "-15px" }} />
+                  </td>
+                  <td style={{ verticalAlign: "top", width: "43%" }}></td>
+                </tr>
+                <tr>
+                  <td style={{ verticalAlign: "top", fontSize: "8.5pt", lineHeight: 1.55 }}>
+                    <div><strong>Cilegon Factory &amp; Office :</strong></div>
+                    <div>Jl. Australia 1 Kav. C1/2</div>
+                    <div>Kawasan Krakatau Industri Estate Cilegon (KIEC)</div>
+                    <div>Cilegon - Banten - Indonesia</div>
                     <div style={{ display: "flex", gap: "4px" }}>
-                      <button
-                        className="icon-btn"
-                        style={{ width: "26px", height: "26px" }}
-                        onClick={() => handleOpenAddrForm(addr)}
-                      >
-                        <Edit size={12} />
-                      </button>
-                      <button
-                        className="icon-btn btn-delete"
-                        style={{ width: "26px", height: "26px" }}
-                        onClick={() => handleDeleteAddress(addr.id)}
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      <div>Phone :</div>
+                      <div>
+                        <div>+62 - 254 831 7244 (Hunting)</div>
+                        <div>+62 - 254 831 7243, +62 - 254 831 7245</div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="address-card-meta">
-                    {addr.attn && (
-                      <div>
-                        <strong>Attn:</strong> {addr.attn}
-                      </div>
-                    )}
-                    {addr.contact && (
-                      <div>
-                        <strong>Kontak:</strong> {addr.contact}
-                      </div>
-                    )}
-                  </div>
-
-                  {addr.full_address && (
-                    <div className="address-card-desc">{addr.full_address}</div>
-                  )}
-                </div>
+                  </td>
+                  <td style={{ verticalAlign: "top", fontSize: "9pt", width: "43%", wordBreak: "break-word" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 2 }}>
+                      <tbody>
+                        <tr><td style={{ width: 105, paddingBottom: 2 }}>Shipment Batch</td><td style={{ paddingBottom: 2 }}>: <strong>{printData.batch}</strong></td></tr>
+                        <tr><td style={{ paddingBottom: 2 }}>Cilegon</td><td style={{ paddingBottom: 2 }}>: {fmtDatePrint(printData.date)}</td></tr>
+                        <tr><td style={{ paddingBottom: 2 }}>Kepada Yth</td><td style={{ paddingBottom: 2 }}>:</td></tr>
+                      </tbody>
+                    </table>
+                    <div className="dn-print-recv">{printData.destination}</div>
+                    {printData.full_address && <div style={{ fontSize: "8.5pt", color: "#444", marginTop: 2, lineHeight: 1.45 }}>{printData.full_address}</div>}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="dn-print-title"><h2>Delivery Note</h2><p>Surat Jalan</p></div>
+          <div className="dn-print-info">
+            <div style={{ width: "57%" }}>
+              <table><tbody>
+                <tr><td className="lbl" style={{ width: 80 }}>Project No.</td><td>: {printData.project_no || "-"}</td></tr>
+                <tr><td className="lbl" style={{ width: 80 }}>Attn.</td><td>: {printData.attn || "-"}</td></tr>
+              </tbody></table>
+            </div>
+            <div style={{ width: "43%", textAlign: "right" }}>
+              No Kendaraan : {printData.no_kendaraan || "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"}
+            </div>
+          </div>
+          <div className="dn-print-greet">dengan ini kami mengirimkan barang-barang berikut di bawah ini :</div>
+          <table className="dn-print-table">
+            <thead><tr><th style={{ width: 80 }}>Quantity</th><th>Description of Goods</th></tr></thead>
+            <tbody>
+              {(printData.items || []).map((it, i) => (
+                <tr key={i}><td>{it.qty} {it.uom}</td><td>{it.description}</td></tr>
               ))}
+            </tbody>
+          </table>
+          <div className="dn-print-note">Seluruh item tersebut di atas telah diterima dengan baik.</div>
+          <div className="dn-print-sigs">
+            <div className="dn-print-sig-col">
+              <div className="dn-print-sig-role">Penerima,</div>
+              <div className="dn-print-sig-line"></div>
             </div>
-          )}
+            <div className="dn-print-sig-col">
+              <div className="dn-print-sig-role">Diserahkan Oleh,</div>
+              <div className="dn-print-sig-line"></div>
+            </div>
+            <div className="dn-print-sig-col">
+              <div className="dn-print-sig-role">Hormat Kami,</div>
+              <div className="dn-print-sig-line"></div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* VIEW: 3. CREATE / EDIT DELIVERY NOTE FORM */}
-      {view === "form" && (
-        <div className="delivery-card">
-          <h3 style={{ fontSize: "16px", fontWeight: "800", marginBottom: "20px", color: T.text }}>
-            {editingNote && !editingNote.isNew ? `Edit Surat Jalan: ${formBatch}` : "Buat Surat Jalan Baru"}
-          </h3>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: 10 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 8 }}>
+          <Package size={20} /> Sistem Surat Jalan (Delivery Note)
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <BtnG onClick={() => setView("addr")} style={{ fontSize: 12, padding: "8px 14px" }}><MapPin size={14} /> Kelola Alamat</BtnG>
+          <BtnP onClick={openNew} style={{ fontSize: 12, padding: "8px 14px" }}><Plus size={14} /> Buat Surat Jalan</BtnP>
+        </div>
+      </div>
 
-          <form onSubmit={handleSaveDeliveryNote}>
-            <div className="delivery-form-grid">
-              <div className="form-group">
-                <label className="form-lbl">Nomor Batch (Auto-Generated)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formBatch}
-                  onChange={e => setFormBatch(e.target.value)}
-                  style={{ fontWeight: "bold" }}
-                  required
-                />
-              </div>
+      {/* Stats */}
+      <div className="dn-stats">
+        {[
+          { label: "SEMUA SJ", val: notes.length, sub: "Semua Kategori", color: T.primary },
+          { label: "FINISH GOOD", val: notes.filter(n => n.category === "FNG").length, sub: "Kirim ke Customer", color: "#10b981" },
+          { label: "SUB VENDOR", val: notes.filter(n => n.category === "DLV").length, sub: "Pekerjaan Luar", color: "#3b82f6" },
+          { label: "SITE WORK", val: notes.filter(n => n.category === "STW").length, sub: "Proyek Lapangan", color: "#f59e0b" },
+          { label: "LAIN-LAIN", val: notes.filter(n => n.category === "ETC").length, sub: "Umum / Operasional", color: "#6b7280" },
+        ].map((s, i) => (
+          <div key={i} className="dn-stat" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+            <div className="dn-stat-lbl" style={{ color: T.muted }}>{s.label}</div>
+            <div className="dn-stat-val" style={{ color: s.color }}>{s.val}</div>
+            <div className="dn-stat-sub" style={{ color: T.muted }}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
 
-              <div className="form-group">
-                <label className="form-lbl">Kategori</label>
-                <select
-                  className="form-input"
-                  value={formCategory}
-                  onChange={e => setFormCategory(e.target.value)}
-                  disabled={editingNote && !editingNote.isNew}
-                >
-                  <option value="FNG">FNG - Finish Good (Customer)</option>
-                  <option value="DLV">DLV - Sub Vendor (Pekerjaan Luar)</option>
-                  <option value="STW">STW - Site Work (Proyek Lapangan)</option>
-                  <option value="ETC">ETC - Lain-lain (Umum / Operasional)</option>
-                </select>
-              </div>
+      {/* Toolbar */}
+      <div className="dn-toolbar">
+        <input className="ifield" placeholder="Cari nomor batch, tujuan, item..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+        <div className="dn-cat-tabs">
+          {["ALL", ...Object.keys(CATS)].map(c => (
+            <button key={c} className={`dn-cat-btn`} onClick={() => setCatFilter(c)}
+              style={{ background: catFilter === c ? T.primary : T.surface, color: catFilter === c ? "white" : T.muted, border: `1px solid ${catFilter === c ? T.primary : T.border}` }}>
+              {c === "ALL" ? "Semua" : c}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              <div className="form-group">
-                <label className="form-lbl">Tanggal Pengiriman</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={formDate}
-                  onChange={e => setFormDate(e.target.value)}
-                  onClick={e => e.currentTarget.showPicker()}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-lbl">Nomor Proyek (Project No.)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Contoh: PROJ-2026-X"
-                  value={formProjectNo}
-                  onChange={e => setFormProjectNo(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-lbl">Nomor Kendaraan / Driver</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Contoh: B 9876 CG / Driver Ahmad"
-                  value={formNoKendaraan}
-                  onChange={e => setFormNoKendaraan(e.target.value)}
-                />
-              </div>
-
-              {/* Destination Autocomplete integration */}
-              <div className="form-group" ref={autocompleteRef}>
-                <label className="form-lbl">Tujuan Pengiriman (Destination)</label>
-                <div className="autocomplete-wrap">
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Ketik nama tujuan untuk melacak buku alamat..."
-                    value={formDestination}
-                    onChange={e => {
-                      setFormDestination(e.target.value);
-                      setShowAddressSuggestions(true);
-                    }}
-                    onFocus={() => setShowAddressSuggestions(true)}
-                    required
-                  />
-
-                  {showAddressSuggestions && addressSuggestions.length > 0 && (
-                    <div className="autocomplete-dropdown">
-                      {addressSuggestions.map(addr => (
-                        <div
-                          key={addr.id}
-                          className="autocomplete-item"
-                          onClick={() => handleSelectSuggestion(addr)}
-                        >
-                          <div className="autocomplete-title">{addr.destination}</div>
-                          {addr.attn && <div className="autocomplete-desc">Attn: {addr.attn}</div>}
-                          {addr.full_address && <div className="autocomplete-desc">{addr.full_address}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+      {/* Table */}
+      <table className="dn-table">
+        <thead><tr style={{ background: T.surface, borderBottom: `1px solid ${T.border}` }}>
+          <th style={{ color: T.muted }}>BATCH NO.</th>
+          <th style={{ color: T.muted }}>KATEGORI</th>
+          <th style={{ color: T.muted }}>TANGGAL</th>
+          <th style={{ color: T.muted }}>TUJUAN</th>
+          <th style={{ color: T.muted }}>PENERIMA (ATTN)</th>
+          <th style={{ color: T.muted }}>DESKRIPSI BARANG</th>
+          <th style={{ color: T.muted }}>AKSI</th>
+        </tr></thead>
+        <tbody>
+          {filtered.length === 0 ? (
+            <tr><td colSpan={7} style={{ textAlign: "center", padding: "3rem", color: T.muted }}>
+              {notes.length === 0 ? "Belum ada surat jalan. Buat yang pertama!" : "Tidak ada hasil."}
+            </td></tr>
+          ) : filtered.map(n => (
+            <tr key={n.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+              <td><span className={`dn-batch-badge dn-batch-${n.category}`}>{n.batch}</span></td>
+              <td style={{ color: T.muted, fontSize: 11 }}>{n.category}</td>
+              <td style={{ color: T.muted }}>{fmtDate(n.date)}</td>
+              <td style={{ fontWeight: 500, color: T.text }}>{n.destination || "-"}</td>
+              <td style={{ color: T.muted }}>{n.attn || "-"}</td>
+              <td style={{ color: T.muted, fontSize: 11 }} title={(n.items || []).map(i => `${i.qty} ${i.uom} x ${i.description}`).join("\n")}>
+                {(() => {
+                  const full = (n.items || []).map(i => `${i.qty} ${i.uom} x ${i.description}`).join(", ");
+                  return full.length > 50 ? full.substring(0, 50) + "..." : full;
+                })()}
+              </td>
+              <td>
+                <div className="dn-actions">
+                  <button className="dn-act-btn" onClick={() => handlePrint(n)} title="Cetak" style={{ color: T.text }}><Printer size={15} /></button>
+                  <button className="dn-act-btn" onClick={() => openEdit(n)} title="Edit / Lihat Detail" style={{ color: T.text }}><Edit size={15} /></button>
+                  <button className="dn-act-btn" onClick={() => handleDelete(n.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={15} /></button>
                 </div>
-              </div>
-
-              <div className="form-group col-span-2">
-                <label className="form-lbl">Penerima (Attn)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Nama contact person penerima barang..."
-                  value={formAttn}
-                  onChange={e => setFormAttn(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group col-span-2">
-                <label className="form-lbl">Alamat Lengkap Pengiriman</label>
-                <textarea
-                  className="form-input"
-                  style={{ minHeight: "80px", resize: "vertical" }}
-                  placeholder="Tulis alamat tujuan pengiriman selengkap mungkin untuk dicetak..."
-                  value={formFullAddress}
-                  onChange={e => setFormFullAddress(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            {/* Dynamic list rows */}
-            <div className="form-items-section">
-              <div className="form-items-title">
-                <span>Daftar Barang (List of Goods)</span>
-                <BtnG type="button" onClick={handleAddItemRow} style={{ padding: "6px 12px", fontSize: "11px" }}>
-                  <Plus size={12} /> Tambah Item Baris
-                </BtnG>
-              </div>
-
-              <table className="form-items-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: "90px" }}>Jumlah (Qty)</th>
-                    <th style={{ width: "120px" }}>Satuan (Unit)</th>
-                    <th>Deskripsi Barang (Description of Goods)</th>
-                    <th style={{ width: "40px", textAlign: "right" }}>Hapus</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td>
-                        <input
-                          type="number"
-                          className="form-input"
-                          style={{ textAlign: "center" }}
-                          value={item.qty}
-                          onChange={e => handleItemFieldChange(idx, "qty", e.target.value)}
-                          min="1"
-                          required
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className="form-input"
-                          value={item.uom}
-                          onChange={e => handleItemFieldChange(idx, "uom", e.target.value)}
-                        >
-                          {UOM_OPTIONS.map(opt => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Masukkan nama barang, spesifikasi, atau seri..."
-                          value={item.description}
-                          onChange={e => handleItemFieldChange(idx, "description", e.target.value)}
-                          required
-                        />
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <button
-                          type="button"
-                          className="icon-btn btn-delete"
-                          onClick={() => handleRemoveItemRow(idx)}
-                          disabled={formItems.length === 1}
-                          style={{ opacity: formItems.length === 1 ? 0.3 : 1 }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="form-btn-row">
-              <BtnG type="button" onClick={() => setView("list")}>
-                Batal
-              </BtnG>
-              <BtnP type="submit">
-                Simpan & Selesai
-              </BtnP>
-            </div>
-          </form>
-        </div>
-      )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

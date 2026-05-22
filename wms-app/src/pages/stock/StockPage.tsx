@@ -88,21 +88,6 @@ export function StockPage() {
         </div>
 
         <div className="stock-filter-panel">
-          <div className="stock-filter-title"><UIIcon name="filter" size={14} /> Filter Barang</div>
-          <div className="stock-filter-row">
-            <div className="stock-filter-label">Kategori</div>
-            <div className="stock-filter-group">
-              {CATS.map(c => {
-                const active = catF === c;
-                return (
-                  <button key={c} onClick={() => setCatF(c)} className={`stk-filter-btn${active ? ' active' : ''}`}>
-                    {active && <UIIcon name="check" size={13} />}{c}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="stock-filter-divider" />
           <div className="stock-filter-row">
             <div className="stock-filter-label">Status</div>
             <div className="stock-filter-group">

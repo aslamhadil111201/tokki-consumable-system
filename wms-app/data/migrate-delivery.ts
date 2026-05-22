@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,7 +9,7 @@ function loadEnv() {
   if (fs.existsSync(envPath)) {
     console.log("Found .env.local, loading credentials...");
     const content = fs.readFileSync(envPath, 'utf-8');
-    content.split(/\r?\n/).forEach(line => {
+    content.split(/\r?\n/).forEach((line: string) => {
       const parts = line.split('=');
       if (parts.length >= 2) {
         const key = parts[0].trim();
