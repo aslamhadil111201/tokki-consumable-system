@@ -142,7 +142,7 @@ export function DeliveryPage() {
 
   const handlePrint = (note) => {
     setPrintData(note);
-    setTimeout(() => window.print(), 200);
+    setTimeout(() => window.print(), 500);
   };
 
   const onCatChange = (c) => {
@@ -378,6 +378,9 @@ export function DeliveryPage() {
   // ─── LIST VIEW ───
   return (
     <div>
+      {/* Preload logo for printing */}
+      <img src={TokkiLogo} style={{ display: "none" }} alt="" />
+
       {/* Print area (hidden, shown only during print) */}
       {printData && (
         <div className="dn-print-area" ref={printRef}>
