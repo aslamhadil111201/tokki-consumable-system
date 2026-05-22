@@ -142,7 +142,12 @@ export function DeliveryPage() {
 
   const handlePrint = (note) => {
     setPrintData(note);
-    setTimeout(() => window.print(), 500);
+    const oldTitle = document.title;
+    document.title = "Official Delivery Document";
+    setTimeout(() => {
+      window.print();
+      document.title = oldTitle;
+    }, 500);
   };
 
   const onCatChange = (c) => {
