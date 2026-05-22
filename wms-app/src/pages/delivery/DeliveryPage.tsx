@@ -100,7 +100,7 @@ export function DeliveryPage() {
       setFormPoNumber("");
     }
 
-    setFormKendaraan(note.vehicle_no || "");
+    setFormKendaraan(note.no_kendaraan || "");
     setFormDest(note.destination || "");
     setFormAttn(note.attn || "");
     setFormAddr(note.full_address || "");
@@ -120,7 +120,7 @@ export function DeliveryPage() {
       category: formCat,
       date: formDate,
       project_no: formProject + (formPoNumber ? `:::PO:${formPoNumber}` : ""),
-      vehicle_no: formKendaraan,
+      no_kendaraan: formKendaraan,
       destination: formDest,
       attn: formAttn,
       full_address: formAddr,
