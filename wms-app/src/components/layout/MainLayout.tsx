@@ -1,21 +1,13 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { useStore } from "../../store/useStore";
 import { getT, gText } from "../../theme/tokens";
 import { TABS } from "../../constants/index";
 import { todayStr, todayFmt } from "../../utils/formatters";
-import { triggerDownload } from "../../utils/helpers";
+import { triggerDownload, trxApprovalStatus, isApprovedOutTrx } from "../../utils/helpers";
 import { stockStatus, stockStatusIcon } from "../../utils/stockHelpers";
 import { GlobalStyle } from "./GlobalStyle";
-
-const trxApprovalStatus = (t) => {
-  if (t.approvalStatus === "rejected") return "rejected";
-  if (t.approvalStatus === "approved") return "approved";
-  if (t.approvedBy) return "approved";
-  return "pending";
-};
-const isApprovedOutTrx = (t) => trxApprovalStatus(t) === "approved" && String(t.type || "out").toLowerCase() === "out";
 
 const Blobs = () => {
   const dark = useStore(s => s.dark);
