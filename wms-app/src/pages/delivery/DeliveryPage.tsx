@@ -506,7 +506,7 @@ export function DeliveryPage() {
           <th style={{ color: T.muted }}>KATEGORI</th>
           <th style={{ color: T.muted }}>TANGGAL</th>
           <th style={{ color: T.muted }}>TUJUAN</th>
-          <th style={{ color: T.muted }}>PENERIMA (ATTN)</th>
+          <th style={{ color: T.muted }}>PROJECT NO.</th>
           <th style={{ color: T.muted }}>DESKRIPSI BARANG</th>
           <th style={{ color: T.muted }}>AKSI</th>
         </tr></thead>
@@ -521,7 +521,7 @@ export function DeliveryPage() {
               <td style={{ color: T.muted, fontSize: 11 }}>{n.category}</td>
               <td style={{ color: T.muted }}>{fmtDate(n.date)}</td>
               <td style={{ fontWeight: 500, color: T.text }}>{n.destination || "-"}</td>
-              <td style={{ color: T.muted }}>{n.attn || "-"}</td>
+              <td style={{ color: T.muted }}>{n.project_no || "-"}</td>
               <td style={{ color: T.muted, fontSize: 11 }} title={(n.items || []).map(i => `${i.qty} ${i.uom} x ${i.description}`).join("\n")}>
                 {(() => {
                   const full = (n.items || []).map(i => `${i.qty} ${i.uom} x ${i.description}`).join(", ");
