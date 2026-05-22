@@ -82,6 +82,13 @@ export const TransactionModal = ({
         const { error } = await supabase.from("transactions").insert([insertPayload]);
         if (error) throw new Error(error.message || "Gagal menyimpan transaksi");
         
+        // Log audit
+        await supabase.from("audit_logs").insert([{
+          action: "transactions.create",
+          actor: { username: user?.username || "unknown", role: user?.role || "unknown" },
+          target: `Transaction for ${form.taker}`
+        }]);
+        
         // Jika langsung approved, kurangi stok
         if (approvalStatus === "approved") {
           for (const c of form.cart) {

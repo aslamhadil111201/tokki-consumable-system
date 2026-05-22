@@ -47,6 +47,13 @@ export const AddStockModal = ({
           date: addForm.date, admin: addForm.admin, attachment: addForm.attachment || null
         }]);
         if (error) throw new Error(error.message || "Gagal menyimpan penerimaan");
+        
+        // Log audit
+        await supabase.from("audit_logs").insert([{
+          action: "receives.create",
+          actor: { username: user?.username || "unknown", role: user?.role || "unknown" },
+          target: `Receive ${itemName}`
+        }]);
         // Update item stock
         if (it) {
           const newStock = (it.stock || 0) + (+addForm.qty);

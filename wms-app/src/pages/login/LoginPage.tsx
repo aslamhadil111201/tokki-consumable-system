@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
@@ -37,7 +37,7 @@ export function LoginPage() {
         console.log("[LOGIN] Password match! Calling storeLogin...");
         storeLogin("supabase-session", { id: user.id, username: user.username, role: user.role });
         // Log audit (fire and forget)
-        supabase.from("audit_logs").insert([{
+        await supabase.from("audit_logs").insert([{
           action: "auth.login",
           actor: { username: user.username, role: user.role },
           target: user.username

@@ -162,7 +162,7 @@ export function HistoryPage() {
       }
 
       // Log audit
-      supabase.from("audit_logs").insert([{
+      await supabase.from("audit_logs").insert([{
         action: `transactions.${act}`,
         actor: { username: user?.username, role: user?.role },
         target: `Transaction #${id}`
@@ -181,7 +181,7 @@ export function HistoryPage() {
         const { supabase } = await import("../../lib/supabase");
         const { error } = await supabase.from("transactions").delete().eq("id", id);
         if (error) throw new Error(error.message || "Gagal menghapus transaksi");
-        supabase.from("audit_logs").insert([{
+        await supabase.from("audit_logs").insert([{
           action: "transactions.delete",
           actor: { username: user?.username, role: user?.role },
           target: `Transaction #${id}`
