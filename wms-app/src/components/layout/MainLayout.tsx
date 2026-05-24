@@ -143,15 +143,17 @@ export const MainLayout = () => {
           "application/json;charset=utf-8;"
         );
 
-        // Audit log
-        await supabase.from("audit_logs").insert([{
+        // Audit log — fire and forget, jangan throw kalau gagal
+        supabase.from("audit_logs").insert([{
           action: "admin.backupExport",
           actor: { username: user?.username, role: user?.role },
           target: "system",
-        }]);
+        }]).catch(() => {});
 
         setToast("Backup data berhasil diunduh ✓");
-      } catch (e: any) { setToast(e?.message || "Gagal backup data", "err"); }
+      } catch (e: any) {
+        setToast(e?.message || "Gagal backup data", "err");
+      }
     }, "Sedang menyiapkan file backup...");
   };
 

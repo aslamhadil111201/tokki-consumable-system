@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { create } from 'zustand';
-import { API } from '../constants/index';
 import { updateT } from '../theme/tokens';
 
 interface User {
@@ -48,7 +47,6 @@ interface StoreState {
 
   // Actions
   fetchAll: () => Promise<void>;
-  apiFetch: (path: string, options?: RequestInit) => Promise<Response>;
   saveDeliveryNote: (note: any) => Promise<any>;
   deleteDeliveryNote: (id: string | number) => Promise<any>;
   saveShippingAddress: (address: any) => Promise<any>;
