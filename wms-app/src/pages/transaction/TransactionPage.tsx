@@ -327,9 +327,13 @@ export function TransactionPage() {
                       {!isDiterima && (
                         <button onClick={async () => {
                           await withLoading(async () => {
-                            const resp = await apiFetch(`/returns/${r.id}`, { method: "PATCH", body: JSON.stringify({ status: "Diterima" }) });
-                            if (!resp.ok) { const e = await resp.json().catch(() => ({})); setToast(e.error || "Gagal update status", "err"); return; }
-                            setToast("Status retur diperbarui"); fetchAll();
+                            try {
+                              const { supabase } = await import("../../lib/supabase");
+                              const { error } = await supabase.from("returns").update({ status: "Diterima" }).eq("id", r.id);
+                              if (error) throw new Error(error.message || "Gagal update status");
+                              setToast("Status retur diperbarui ✓");
+                              fetchAll();
+                            } catch (e: any) { setToast(e?.message || "Gagal update status", "err"); }
                           }, "Memperbarui...");
                         }} className="retur-btn-terima">✅ Terima</button>
                       )}

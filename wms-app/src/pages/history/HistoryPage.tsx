@@ -15,7 +15,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { AddStockModal } from "../../components/modals/AddStockModal";
 
 export function HistoryPage() {
-  const { dark, user, trx, receives, items, apiFetch, setToast, withLoading, fetchAll } = useStore();
+  const { dark, user, trx, receives, items, setToast, withLoading, fetchAll } = useStore();
   const T = getT(dark);
 
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
@@ -208,12 +208,16 @@ export function HistoryPage() {
 
   const fetchReceiveAttachment = async (id: number) => {
     try {
-      const r = await apiFetch(`/receives/${id}/attachment`);
-      if (!r.ok) { setToast("Gagal mengambil lampiran", "err"); return; }
-      const j = await r.json();
-      if (!j.attachment) { setToast("Lampiran kosong", "err"); return; }
+      const { supabase } = await import("../../lib/supabase");
+      const { data, error } = await supabase
+        .from("receives")
+        .select("attachment")
+        .eq("id", id)
+        .single();
+      if (error || !data) { setToast("Gagal mengambil lampiran", "err"); return; }
+      if (!data.attachment) { setToast("Lampiran kosong", "err"); return; }
       const w = window.open("");
-      if (w) w.document.write(`<iframe src="${j.attachment}" style="width:100%;height:100vh;border:none;"></iframe>`);
+      if (w) w.document.write(`<iframe src="${data.attachment}" style="width:100%;height:100vh;border:none;"></iframe>`);
       else setToast("Pop-up diblokir", "err");
     } catch { setToast("Gagal mengambil lampiran", "err"); }
   };
