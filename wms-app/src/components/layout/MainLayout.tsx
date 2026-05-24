@@ -105,6 +105,18 @@ export const MainLayout = () => {
     "delivery_notes", "shipping_addresses", "audit_logs",
   ] as const;
 
+  // Helper: hapus semua baris dari sebuah tabel Supabase
+  // Menggunakan filter id >= 0 untuk integer id, atau neq id '' untuk uuid
+  const clearTable = async (supabase: any, table: string) => {
+    // Coba dengan id >= 0 (integer primary key)
+    const { error } = await supabase.from(table).delete().gte("id", 0);
+    if (error) {
+      // Fallback: filter dengan neq yang selalu true untuk semua tipe id
+      const { error: err2 } = await supabase.from(table).delete().not("id", "is", null);
+      if (err2) throw new Error(`Gagal hapus tabel ${table}: ${err2.message}`);
+    }
+  };
+
   const downloadBackupData = async () => {
     if (!isAdmin) { setToast("Hanya admin yang boleh backup data", "err"); return; }
     await withLoading(async () => {
@@ -174,8 +186,7 @@ export const MainLayout = () => {
         // Hapus data lama lalu insert baru, per tabel
         for (const table of BACKUP_TABLES) {
           const rows: unknown[] = Array.isArray(collections[table]) ? collections[table] : [];
-          // Hapus semua baris (filter id > 0 agar tidak error jika tabel kosong)
-          await supabase.from(table).delete().gte("id", 0);
+          await clearTable(supabase, table);
           if (rows.length > 0) {
             // Insert dalam batch 500 untuk menghindari payload terlalu besar
             const BATCH = 500;
@@ -201,24 +212,28 @@ export const MainLayout = () => {
 
   const resetDummyData = async () => {
     if (!isAdmin) { setToast("Hanya admin yang boleh reset data dummy", "err"); return; }
-    if (!window.confirm("Reset data dummy akan menghapus semua transaksi & mengembalikan data awal. Lanjutkan?")) return;
+    if (!window.confirm("Reset data dummy akan menghapus semua transaksi & mereset stok item ke 0. Master data (karyawan, departemen, dll) tetap aman. Lanjutkan?")) return;
 
     await withLoading(async () => {
       try {
         const { supabase } = await import("../../lib/supabase");
 
-        // Tabel transaksional yang di-reset (master data dipertahankan)
+        // Hanya hapus data transaksional — master data dipertahankan
         const RESET_TABLES = [
           "transactions", "receives", "returns",
           "delivery_notes", "audit_logs",
         ] as const;
 
         for (const table of RESET_TABLES) {
-          await supabase.from(table).delete().gte("id", 0);
+          await clearTable(supabase, table);
         }
 
         // Reset stok semua item ke 0
-        await supabase.from("items").update({ stock: 0, averageCost: 0, lastPrice: 0, totalValue: 0 }).gte("id", 0);
+        const { error: stockErr } = await supabase
+          .from("items")
+          .update({ stock: 0, averageCost: 0, lastPrice: 0, totalValue: 0 })
+          .gte("id", 0);
+        if (stockErr) throw new Error(`Gagal reset stok: ${stockErr.message}`);
 
         // Audit log
         await supabase.from("audit_logs").insert([{
@@ -227,9 +242,9 @@ export const MainLayout = () => {
           target: "system",
         }]);
 
-        setToast("Reset data dummy berhasil ✓");
+        setToast("Reset data berhasil ✓ — transaksi dihapus, stok direset ke 0");
         await fetchAll();
-      } catch (e: any) { setToast(e?.message || "Gagal reset data dummy", "err"); }
+      } catch (e: any) { setToast(e?.message || "Gagal reset data", "err"); }
     }, "Sedang mereset data...");
   };
 
