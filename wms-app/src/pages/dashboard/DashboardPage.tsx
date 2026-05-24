@@ -14,7 +14,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { useNavigate } from "react-router-dom";
 
 export function DashboardPage() {
-  const { dark, items, trx, receives, user, apiFetch, setToast } = useStore();
+  const { dark, items, trx, receives, user, setToast } = useStore();
   const navigate = useNavigate();
 
   const [dashDonutSegIdx, setDashDonutSegIdx] = useState(-1);
@@ -57,8 +57,12 @@ export function DashboardPage() {
     if (!Number.isFinite(h) || h < 1 || h > 720) { setToast("Masukkan jam antara 1–720", "err"); return; }
     setAutoRejectSaving(true);
     try {
-      const r = await apiFetch("/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ autoRejectHours: h }) });
-      if (!r.ok) { const e = await r.json().catch(() => ({})); setToast(e?.error || "Gagal simpan setting", "err"); return; }
+      const { supabase } = await import("../../lib/supabase");
+      const { error } = await supabase
+        .from("settings")
+        .update({ autoRejectHours: h })
+        .neq("id", -1);
+      if (error) throw new Error(error.message || "Gagal simpan setting");
       setToast(`Auto-reject diset ke ${h} jam`, "ok");
     } catch (e: any) { setToast(e?.message || "Gagal simpan setting", "err"); }
     finally { setAutoRejectSaving(false); }

@@ -18,7 +18,7 @@ export const AddStockModal = ({
   onClose: () => void;
   initialItem?: any;
 }) => {
-  const { items, admins, apiFetch, withLoading, setToast, fetchAll, user } = useStore();
+  const { items, admins, withLoading, setToast, fetchAll, user } = useStore();
   
   const [addForm, setAddForm] = useState(() => emptyAddForm(
     initialItem ? { itemId: String(initialItem.id), buyPrice: initialItem.lastPrice ? String(initialItem.lastPrice) : "", qty: "1" } : {}

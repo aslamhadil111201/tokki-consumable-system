@@ -15,7 +15,7 @@ export const NewItemModal = ({
   open: boolean;
   onClose: () => void;
 }) => {
-  const { apiFetch, withLoading, setToast, fetchAll, user } = useStore();
+  const { withLoading, setToast, fetchAll, user } = useStore();
   const [newItemForm, setNewItemForm] = useState(() => emptyNewItem());
 
   const canManage = (user?.role || "").toLowerCase() === "admin" || (user?.role || "").toLowerCase() === "operator";

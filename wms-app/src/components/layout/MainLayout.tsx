@@ -34,7 +34,7 @@ const Toggle = ({ mini = false }) => {
 export const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loggedIn, logout, dark, items, trx, apiFetch, withLoading, setToast, fetchAll } = useStore();
+  const { user, loggedIn, logout, dark, items, trx, withLoading, setToast, fetchAll } = useStore();
   const T = getT(dark);
 
   const [sidebar, setSidebar] = useState(false);

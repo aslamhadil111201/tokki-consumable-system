@@ -20,7 +20,7 @@ export const TransactionModal = ({
   onClose: () => void;
   initialItem?: any;
 }) => {
-  const { items, employees, departments, admins, workOrders, apiFetch, withLoading, setToast, fetchAll, dark, user } = useStore();
+  const { items, employees, departments, admins, workOrders, withLoading, setToast, fetchAll, dark, user } = useStore();
   
   const [form, setForm] = useState(() => emptyForm({
     cart: initialItem ? [{ itemId: Number(initialItem.id), qty: 1 }] : []

@@ -16,7 +16,7 @@ import autoTable from "jspdf-autotable";
 import { getT } from "../../theme/tokens";
 
 export function TransactionPage() {
-  const { trx, returns, itemMap, user, apiFetch, withLoading, setToast, fetchAll, dark } = useStore();
+  const { trx, returns, itemMap, user, withLoading, setToast, fetchAll, dark } = useStore();
   const T = getT(dark);
   
   const [returSubTab, setReturSubTab] = useState("log");

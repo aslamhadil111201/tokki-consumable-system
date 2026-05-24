@@ -16,7 +16,7 @@ export const EditItemModal = ({
   onClose: () => void;
   item: any;
 }) => {
-  const { apiFetch, withLoading, setToast, fetchAll, user } = useStore();
+  const { withLoading, setToast, fetchAll, user } = useStore();
   const [editItem, setEditItem] = useState<any>(null);
 
   useEffect(() => {

@@ -16,7 +16,7 @@ export const ReturModal = ({
   open: boolean;
   onClose: () => void;
 }) => {
-  const { items, employees, apiFetch, withLoading, setToast, fetchAll } = useStore();
+  const { items, employees, withLoading, setToast, fetchAll } = useStore();
   const [returForm, setReturForm] = useState(() => emptyReturForm());
 
   if (!open) return null;
