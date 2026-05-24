@@ -1,14 +1,19 @@
 import { supabase } from './supabase';
-console.log("HELLO WORLD FROM API.TS");
 
-export const apiFetchProxy = async (path: string, options: any = {}) => {
-  const method = (options.method || "GET").toUpperCase();
-  const body = options.body ? JSON.parse(options.body) : null;
+// ─── apiFetchProxy ────────────────────────────────────────────────
+// Catatan: file ini adalah legacy Supabase proxy yang dipakai sebelum
+// migrasi ke direct Supabase calls di useStore.fetchAll().
+// Saat ini hanya dipakai untuk endpoint yang belum dimigrasikan.
+// window.alert() dan console.log debug sudah dihapus.
 
-  const res = (data: any, status = 200) => ({
+export const apiFetchProxy = async (path: string, options: RequestInit = {}) => {
+  const method = ((options.method as string) || "GET").toUpperCase();
+  const body = options.body ? JSON.parse(options.body as string) : null;
+
+  const res = (data: unknown, status = 200) => ({
     ok: status >= 200 && status < 300,
     status,
-    json: async () => data
+    json: async () => data,
   });
 
   const errorRes = (msg: string, status = 400) => res({ error: msg }, status);
@@ -21,11 +26,10 @@ export const apiFetchProxy = async (path: string, options: any = {}) => {
         .select('*')
         .eq('username', body.username)
         .eq('password', body.password);
-      
+
       if (error) throw error;
       if (data && data.length > 0) {
         const user = data[0];
-        // Fake JWT payload for frontend state
         const fakeToken = btoa(JSON.stringify({ sub: user.id, username: user.username, role: user.role, name: user.name }));
         return res({ token: fakeToken, user });
       }
@@ -36,7 +40,6 @@ export const apiFetchProxy = async (path: string, options: any = {}) => {
     if (path === "/items" && method === "GET") {
       const { data, error } = await supabase.from('items').select('*').order('id', { ascending: true });
       if (error) throw error;
-      window.alert("DEBUG: /items returned " + (data ? data.length : 0) + " items");
       return res(data);
     }
     if (path === "/items" && method === "POST") {
@@ -59,14 +62,14 @@ export const apiFetchProxy = async (path: string, options: any = {}) => {
 
     // ── TRANSACTIONS ──────────────────────────────────────────────────
     if (path.startsWith("/transactions") && method === "GET") {
-      // Check query params
       const urlParams = new URLSearchParams(path.split("?")[1] || "");
       let query = supabase.from('transactions').select('*').order('id', { ascending: false });
-      
-      if (urlParams.get("approvalStatus")) {
-        query = query.eq('approvalStatus', urlParams.get("approvalStatus"));
+
+      const approvalStatus = urlParams.get("approvalStatus");
+      if (approvalStatus) {
+        query = query.eq('approvalStatus', approvalStatus);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return res(data);
@@ -98,12 +101,11 @@ export const apiFetchProxy = async (path: string, options: any = {}) => {
     if (path === "/receives" && method === "POST") {
       const { data, error } = await supabase.from('receives').insert([body]).select().single();
       if (error) throw error;
-      // Note: original backend updates item stock too, we need to do that!
       if (data) {
-         const { data: itemData } = await supabase.from('items').select('stock').eq('id', body.itemId).single();
-         if (itemData) {
-            await supabase.from('items').update({ stock: itemData.stock + body.qty }).eq('id', body.itemId);
-         }
+        const { data: itemData } = await supabase.from('items').select('stock').eq('id', body.itemId).single();
+        if (itemData) {
+          await supabase.from('items').update({ stock: itemData.stock + body.qty }).eq('id', body.itemId);
+        }
       }
       return res(data, 201);
     }
@@ -111,10 +113,10 @@ export const apiFetchProxy = async (path: string, options: any = {}) => {
       const id = path.split("/")[2];
       const { data: rec } = await supabase.from('receives').select('*').eq('id', id).single();
       if (rec) {
-         const { data: itemData } = await supabase.from('items').select('stock').eq('id', rec.itemId).single();
-         if (itemData) {
-            await supabase.from('items').update({ stock: itemData.stock - rec.qty }).eq('id', rec.itemId);
-         }
+        const { data: itemData } = await supabase.from('items').select('stock').eq('id', rec.itemId).single();
+        if (itemData) {
+          await supabase.from('items').update({ stock: itemData.stock - rec.qty }).eq('id', rec.itemId);
+        }
       }
       const { error } = await supabase.from('receives').delete().eq('id', id);
       if (error) throw error;
@@ -131,16 +133,16 @@ export const apiFetchProxy = async (path: string, options: any = {}) => {
       const { data, error } = await supabase.from('returns').insert([body]).select().single();
       if (error) throw error;
       if (data) {
-         const { data: itemData } = await supabase.from('items').select('stock').eq('id', body.itemId).single();
-         if (itemData) {
-            await supabase.from('items').update({ stock: itemData.stock + body.qty }).eq('id', body.itemId);
-         }
+        const { data: itemData } = await supabase.from('items').select('stock').eq('id', body.itemId).single();
+        if (itemData) {
+          await supabase.from('items').update({ stock: itemData.stock + body.qty }).eq('id', body.itemId);
+        }
       }
       return res(data, 201);
     }
 
     // ── MASTER DATA ───────────────────────────────────────────────────
-    const masterRoutes = ["/admins", "/departments", "/employees", "/work-orders"];
+    const masterRoutes = ["/admins", "/departments", "/employees", "/work-orders"] as const;
     for (const route of masterRoutes) {
       const table = route === "/work-orders" ? "workOrders" : route.slice(1);
       if (path === route && method === "GET") {
@@ -182,9 +184,9 @@ export const apiFetchProxy = async (path: string, options: any = {}) => {
 
     return errorRes("Not Found", 404);
 
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal Server Error";
     console.error(`apiFetchProxy Error on ${method} ${path}:`, err);
-    window.alert(`apiFetchProxy Error on ${method} ${path}: ` + err.message);
-    return errorRes(err.message || "Internal Server Error", 500);
+    return errorRes(message, 500);
   }
 };

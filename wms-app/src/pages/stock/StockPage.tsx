@@ -116,6 +116,22 @@ export function StockPage() {
             </div>
             <div className="stock-summary-divider" />
             <div className="stock-summary-item">
+              <div className="stock-summary-icon" style={{ color: "#16a34a", background: "rgba(22,163,74,0.1)" }}><UIIcon name="shield" size={20} /></div>
+              <div>
+                <div className="stock-summary-val" style={{ color: "#16a34a" }}>{filtItems.filter(i => stockStatusKey(i) === "aman").length} Aman</div>
+                <div className="stock-summary-lbl">Stok aman</div>
+              </div>
+            </div>
+            <div className="stock-summary-divider" />
+            <div className="stock-summary-item">
+              <div className="stock-summary-icon" style={{ color: "#d97706", background: "rgba(217,119,6,0.1)" }}><UIIcon name="clock" size={20} /></div>
+              <div>
+                <div className="stock-summary-val" style={{ color: "#d97706" }}>{filtItems.filter(i => stockStatusKey(i) === "mendekati").length} Mendekati</div>
+                <div className="stock-summary-lbl">Mendekati minimum</div>
+              </div>
+            </div>
+            <div className="stock-summary-divider" />
+            <div className="stock-summary-item">
               <div className="stock-summary-icon stock-summary-icon--amber"><UIIcon name="alert" size={20} /></div>
               <div>
                 <div className="stock-summary-val stock-summary-val--amber">{filtMenipisCount} Menipis</div>

@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { T, gText } from "../../theme/tokens";
@@ -36,8 +36,7 @@ export const ReturModal = ({
         const it = items.find(i => i.id === itemId);
         const { error } = await supabase.from("returns").insert([{
           employee: empName, itemId, qty, reason: returForm.reason,
-          note: String(returForm.note || "").trim(), date: todayStr(), time: nowTime(),
-          itemName: it?.name || "", status: "Diterima"
+          note: String(returForm.note || "").trim(), date: todayStr(), time: nowTime()
         }]);
         if (error) throw new Error(error.message || "Gagal menyimpan retur");
         // Update item stock (add back)

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // ─── Constants ───────────────────────────────────────────────────
 import { FileSpreadsheet, FileText, LayoutDashboard, ArrowUpCircle, Package, History, BarChart3, Truck } from "lucide-react";
 
@@ -7,9 +6,10 @@ export const API = (
   (import.meta.env.DEV ? "http://localhost:3001/api" : "/api")
 ).replace(/\/$/, "");
 
+// Default 30 menit — bisa di-override via VITE_IDLE_TIMEOUT_MINUTES di .env
 export const IDLE_TIMEOUT_MINUTES = Math.max(
   1,
-  Number(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || 3),
+  Number(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || 30),
 );
 export const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MINUTES * 60 * 1000;
 export const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || import.meta.env.VITE_GIT_SHA || "dev-local");

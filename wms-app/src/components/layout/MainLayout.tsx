@@ -160,7 +160,7 @@ export const MainLayout = () => {
               <div className="brand-logo"><img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 900, color: T.primaryLight, lineHeight: 1.2 }}>Warehouse</div>
-                <div style={{ fontSize: 9, color: T.muted, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, marginTop: 2 }}>Consumable Sys</div>
+                <div style={{ fontSize: 9, color: T.muted, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, marginTop: 2 }}>Management System</div>
               </div>
             </Link>
             <div className="sb-nav-scroll">

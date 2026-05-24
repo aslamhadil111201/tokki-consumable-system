@@ -81,7 +81,7 @@ export function LoginPage() {
             <span style={{ color: T.primary }}>Datang</span>
           </div>
           <div style={{ fontSize: 13, color: T.muted, marginBottom: 28, fontWeight: 500, lineHeight: 1.65 }}>
-            Masuk untuk mengelola inventaris barang consumable gudang
+            Masuk untuk mengelola inventaris barang gudang
           </div>
 
           <div style={{ marginBottom: 14 }}>

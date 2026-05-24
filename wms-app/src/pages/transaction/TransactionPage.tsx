@@ -190,7 +190,7 @@ export function TransactionPage() {
         <div>
           <div className="fbar">
             <span className="fbar-label">Filter tanggal:</span>
-            <input type="date" className="ifield trx-date-input" value={trxDate} onChange={e => setTrxDate(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
+            <input type="date" className="ifield trx-date-input" style={{ maxWidth: 160 }} value={trxDate} onChange={e => setTrxDate(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
             {trxDate && <BtnG style={{ fontSize: 11.5, padding: "7px 12px" }} onClick={() => setTrxDate("")}>✕ Reset</BtnG>}
             <select className="ifield" style={{ width: 120, marginLeft: 8 }} value={trxPageSize} onChange={e => { setTrxPageSize(Number(e.target.value) || 8); setTrxPage(1); }}>
               {[8, 12, 24, 48].map(n => <option key={n} value={n}>{n}/hal</option>)}

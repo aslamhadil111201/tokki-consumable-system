@@ -20,7 +20,7 @@ export const TransactionModal = ({
   onClose: () => void;
   initialItem?: any;
 }) => {
-  const { items, employees, departments, admins, workOrders, apiFetch, withLoading, setToast, fetchAll, dark } = useStore();
+  const { items, employees, departments, admins, workOrders, apiFetch, withLoading, setToast, fetchAll, dark, user } = useStore();
   
   const [form, setForm] = useState(() => emptyForm({
     cart: initialItem ? [{ itemId: Number(initialItem.id), qty: 1 }] : []
@@ -117,7 +117,7 @@ export const TransactionModal = ({
         <div className="sect-box">
           <div className="sect-lbl">👤 Data Pengambil</div>
           <div className="mgrid">
-            <div><FL>Tanggal *</FL><input className="ifield" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} onClick={e => e.currentTarget.showPicker()} /></div>
+            <div><FL>Tanggal *</FL><input className="ifield" type="date" style={{ maxWidth: 160 }} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} onClick={e => e.currentTarget.showPicker()} /></div>
             <div><FL>Nama Pengambil *</FL>
               <SearchSelect options={employees.map(e => ({ value: e.name, label: e.name }))} value={form.taker} onChange={v => setForm({ ...form, taker: v })} placeholder="— Cari/pilih karyawan —" />
             </div>
