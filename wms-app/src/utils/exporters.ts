@@ -5,7 +5,9 @@ import { todayStr, nowTime, fmtDate, todayFmt, fmtMoney, fmtDateExcel } from "./
 import { csvEscape, csvText, toSafeRows, triggerDownload } from "./helpers";
 
 type ToastFn = (msg: string, type?: "ok" | "err") => void;
-type CsvRow = (string | number | null | undefined)[];
+// CsvRow: array of any values — typed loosely to allow mixed data from runtime records
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CsvRow = any[];
 
 interface PdfTableOptions {
   fileName?: string;

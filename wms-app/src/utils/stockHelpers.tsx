@@ -1,5 +1,5 @@
 // ─── Stock Helpers ───────────────────────────────────────────────
-import { JSX } from "react";
+import type { JSX } from "react";
 import { getT } from "../theme/tokens";
 import { UIIcon } from "../components/ui/UIIcon";
 
