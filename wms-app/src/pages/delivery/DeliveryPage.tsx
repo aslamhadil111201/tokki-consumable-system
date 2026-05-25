@@ -12,7 +12,7 @@ import { ModalImportDelivery } from "../../components/modals/ModalImportDelivery
 import { ModalImportAddress } from "../../components/modals/ModalImportAddress";
 
 const CATS = { FNG: "Finish Good", DLV: "Sub Vendor", STW: "Site Work", ETC: "Lain-lain" };
-const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Kg", "Liter", "m", "cm"];
+const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "Plastic", "Lusin", "Pair", "Lembar", "Batang", "Lonjor", "Kg", "Ton", "Liter", "m", "cm", "mm", "m²", "m³"];
 
 export function DeliveryPage() {
   const { dark, user, setToast } = useStore();
@@ -26,6 +26,8 @@ export function DeliveryPage() {
   const [editId, setEditId] = useState(null);
   const [catFilter, setCatFilter] = useState("ALL");
   const [searchQ, setSearchQ] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
   const [formItems, setFormItems] = useState([{ id: "1", qty: "1", uom: "Pcs", desc: "" }]);
   const [printData, setPrintData] = useState(null);
   const [destOpen, setDestOpen] = useState(false);
@@ -258,6 +260,9 @@ export function DeliveryPage() {
     const q = searchQ.toLowerCase();
     filtered = filtered.filter(n => (n.batch || "").toLowerCase().includes(q) || (n.destination || "").toLowerCase().includes(q) || (n.project_no || "").toLowerCase().includes(q) || (n.items || []).some(i => (i.description || "").toLowerCase().includes(q)));
   }
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const fmtDate = (s) => s ? new Date(s).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "-";
   const fmtDatePrint = (s) => {
@@ -658,10 +663,10 @@ export function DeliveryPage() {
 
       {/* Toolbar */}
       <div className="dn-toolbar">
-        <input className="ifield" placeholder="Cari nomor batch, tujuan, item..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+        <input className="ifield" placeholder="Cari nomor batch, tujuan, item..." value={searchQ} onChange={e => { setSearchQ(e.target.value); setPage(1); }} />
         <div className="dn-cat-tabs">
           {["ALL", ...Object.keys(CATS)].map(c => (
-            <button key={c} className={`dn-cat-btn`} onClick={() => setCatFilter(c)}
+            <button key={c} className={`dn-cat-btn`} onClick={() => { setCatFilter(c); setPage(1); }}
               style={{ background: catFilter === c ? T.primary : T.surface, color: catFilter === c ? "white" : T.muted, border: `1px solid ${catFilter === c ? T.primary : T.border}` }}>
               {c === "ALL" ? "Semua" : c}
             </button>
@@ -685,7 +690,7 @@ export function DeliveryPage() {
             <tr><td colSpan={7} style={{ textAlign: "center", padding: "3rem", color: T.muted }}>
               {notes.length === 0 ? "Belum ada surat jalan. Buat yang pertama!" : "Tidak ada hasil."}
             </td></tr>
-          ) : filtered.map(n => (
+          ) : paginated.map(n => (
             <tr key={n.id} style={{ borderBottom: `1px solid ${T.border}` }}>
               <td><span className={`dn-batch-badge dn-batch-${n.category}`}>{n.batch}</span></td>
               <td style={{ color: T.muted, fontSize: 11 }}>{n.category}</td>
@@ -709,6 +714,50 @@ export function DeliveryPage() {
           ))}
         </tbody>
       </table>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1rem", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ fontSize: 12, color: T.muted }}>
+            Menampilkan <strong style={{ color: T.text }}>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</strong> dari <strong style={{ color: T.text }}>{filtered.length}</strong> surat jalan
+          </div>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button
+              onClick={() => setPage(1)} disabled={page === 1}
+              style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${T.border}`, background: T.surface, color: page === 1 ? T.muted : T.text, cursor: page === 1 ? "default" : "pointer", fontSize: 12 }}>
+              «
+            </button>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${T.border}`, background: T.surface, color: page === 1 ? T.muted : T.text, cursor: page === 1 ? "default" : "pointer", fontSize: 12 }}>
+              ‹
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let p;
+              if (totalPages <= 5) p = i + 1;
+              else if (page <= 3) p = i + 1;
+              else if (page >= totalPages - 2) p = totalPages - 4 + i;
+              else p = page - 2 + i;
+              return (
+                <button key={p} onClick={() => setPage(p)}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${page === p ? T.primary : T.border}`, background: page === p ? T.primary : T.surface, color: page === p ? "white" : T.text, cursor: "pointer", fontSize: 12, fontWeight: page === p ? 700 : 400, minWidth: 34 }}>
+                  {p}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${T.border}`, background: T.surface, color: page === totalPages ? T.muted : T.text, cursor: page === totalPages ? "default" : "pointer", fontSize: 12 }}>
+              ›
+            </button>
+            <button
+              onClick={() => setPage(totalPages)} disabled={page === totalPages}
+              style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${T.border}`, background: T.surface, color: page === totalPages ? T.muted : T.text, cursor: page === totalPages ? "default" : "pointer", fontSize: 12 }}>
+              »
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
