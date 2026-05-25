@@ -264,17 +264,13 @@ export function DeliveryPage() {
     filtered = filtered.filter(n => (n.batch || "").toLowerCase().includes(q) || (n.destination || "").toLowerCase().includes(q) || (n.project_no || "").toLowerCase().includes(q) || (n.items || []).some(i => (i.description || "").toLowerCase().includes(q)));
   }
 
-  // Sort: Semua → by tanggal terbaru; per kategori → by batch number descending
-  if (catFilter === "ALL") {
-    filtered.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  } else {
-    filtered.sort((a, b) => {
-      const numA = parseInt((a.batch || "").match(/\d+$/)?.[0] || "0", 10);
-      const numB = parseInt((b.batch || "").match(/\d+$/)?.[0] || "0", 10);
-      if (numB !== numA) return numB - numA;
-      return (b.date || "").localeCompare(a.date || "");
-    });
-  }
+  // Sort: Semua → by batch number descending lintas kategori; per kategori → by batch number descending
+  filtered.sort((a, b) => {
+    const numA = parseInt((a.batch || "").match(/\d+$/)?.[0] || "0", 10);
+    const numB = parseInt((b.batch || "").match(/\d+$/)?.[0] || "0", 10);
+    if (numB !== numA) return numB - numA;
+    return (b.date || "").localeCompare(a.date || "");
+  });
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
