@@ -48,15 +48,53 @@
 .dn-dd-item { transition: background 0.1s; }
 .dn-dd-item:hover { background: rgba(16, 185, 129, 0.15); }
 
-/* Print styles */
-.dn-print-area { display: none; }
+/* Print area - hidden on screen */
+.dn-print-area { 
+  display: none;
+}
 
 @media print {
-  @page { margin: 0; }
-  html, body, #root, .shell, .main { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; position: static !important; display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
-  .sidebar, .topbar { display: none !important; }
-  body * { visibility: hidden !important; }
-  .dn-print-area { display: block !important; visibility: visible !important; position: absolute; left: 0; top: 0; width: 100%; padding: 0.5cm 2cm 1.5cm 2cm; margin: 0; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 9pt; background: white; z-index: 99999; }
+  @page { 
+    size: A4 portrait;
+    margin: 1.2cm 2cm;
+  }
+
+  html, body {
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Sembunyikan semua */
+  body > *:not(.dn-print-area) {
+    display: none !important;
+  }
+
+  /* Tampilkan print area */
+  .dn-print-area {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    color: #000 !important;
+    font-size: 9pt !important;
+    background: white !important;
+  }
+
+  .dn-print-area * {
+    visibility: visible !important;
+    color: #000 !important;
+  }
+
+  .dn-print-table { page-break-inside: auto !important; }
+  .dn-print-table tr { page-break-inside: avoid !important; }
+  .dn-print-table thead { display: table-header-group !important; }
+}
   .dn-print-area * { visibility: visible !important; }
   
   .dn-print-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 10px; border-bottom: 2.5px solid #000; margin-bottom: 14px; }
@@ -95,4 +133,13 @@
   .dn-stats { grid-template-columns: repeat(2, 1fr); }
   .dn-toolbar { flex-direction: column; }
   .dn-form-grid-2, .dn-form-grid-3 { grid-template-columns: 1fr; }
+}
+
+/* Import modal spinner */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 0.8s linear infinite;
 }

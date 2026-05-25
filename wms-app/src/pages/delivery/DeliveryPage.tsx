@@ -1,12 +1,15 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./DeliveryPage.css";
 import { useStore } from "../../store/useStore";
 import { getT } from "../../theme/tokens";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
-import { Printer, Edit, Trash2, Plus, ArrowLeft, Package, MapPin, ChevronDown, X } from "lucide-react";
+import { Printer, Edit, Trash2, Plus, ArrowLeft, Package, MapPin, ChevronDown, X, FileUp } from "lucide-react";
 import TokkiLogo from "../../assets/tokki-logo.png";
+import { ModalImportDelivery } from "../../components/modals/ModalImportDelivery";
+import { ModalImportAddress } from "../../components/modals/ModalImportAddress";
 
 const CATS = { FNG: "Finish Good", DLV: "Sub Vendor", STW: "Site Work", ETC: "Lain-lain" };
 const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Kg", "Liter", "m", "cm"];
@@ -18,6 +21,8 @@ export function DeliveryPage() {
   const [notes, setNotes] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [view, setView] = useState("list"); // list | form | addr
+  const [showImport, setShowImport] = useState(false);
+  const [showImportAddr, setShowImportAddr] = useState(false);
   const [editId, setEditId] = useState(null);
   const [catFilter, setCatFilter] = useState("ALL");
   const [searchQ, setSearchQ] = useState("");
@@ -28,6 +33,8 @@ export function DeliveryPage() {
 
   // Address form state
   const [addrForm, setAddrForm] = useState(false);
+  const [addrSearch, setAddrSearch] = useState("");
+  const [addrEditId, setAddrEditId] = useState(null);
   const [newDest, setNewDest] = useState("");
   const [newAddr, setNewAddr] = useState("");
   const [newAttn, setNewAttn] = useState("");
@@ -48,8 +55,73 @@ export function DeliveryPage() {
 
   const fetchNotes = async () => {
     const { supabase } = await import("../../lib/supabase");
-    const { data } = await supabase.from("delivery_notes").select("*").order("created_at", { ascending: false });
-    setNotes(data || []);
+    let all: any[] = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data } = await supabase
+        .from("delivery_notes")
+        .select("*")
+        .range(from, from + PAGE - 1);
+      if (!data || data.length === 0) break;
+      all = all.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+
+    // Sort: by batch number descending (FNG013 → FNG001), same number → by date desc
+    const sorted = [...all].sort((a, b) => {
+      const catA = (a.batch || "").replace(/\d+$/, "");
+      const catB = (b.batch || "").replace(/\d+$/, "");
+      if (catA !== catB) return catA.localeCompare(catB);
+      const numA = parseInt((a.batch || "").match(/\d+$/)?.[0] || "0", 10);
+      const numB = parseInt((b.batch || "").match(/\d+$/)?.[0] || "0", 10);
+      if (numB !== numA) return numB - numA;
+      return (b.date || "").localeCompare(a.date || "");
+    });
+
+    setNotes(sorted);
+  };
+
+  const removeDuplicates = async () => {
+    if (!confirm("Hapus semua data duplikat? Hanya 1 data per batch yang dipertahankan (yang paling lama/pertama diinput).")) return;
+    const { supabase } = await import("../../lib/supabase");
+
+    // Ambil semua dengan pagination
+    let all: any[] = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data } = await supabase
+        .from("delivery_notes")
+        .select("id, batch")
+        .order("created_at", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (!data || data.length === 0) break;
+      all = all.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+
+    const seen = new Set<string>();
+    const toDelete: number[] = [];
+    for (const row of all) {
+      const key = String(row.batch || "").trim();
+      if (seen.has(key)) {
+        toDelete.push(row.id);
+      } else {
+        seen.add(key);
+      }
+    }
+
+    if (!toDelete.length) { setToast("Tidak ada duplikat ditemukan ✓"); return; }
+
+    const CHUNK = 100;
+    for (let i = 0; i < toDelete.length; i += CHUNK) {
+      await supabase.from("delivery_notes").delete().in("id", toDelete.slice(i, i + CHUNK));
+    }
+    setToast(`${toDelete.length} data duplikat berhasil dihapus ✓`);
+    fetchNotes();
   };
 
   const fetchAddresses = async () => {
@@ -69,7 +141,7 @@ export function DeliveryPage() {
     else if (cat === "ETC") baseStart = 3;
 
     const next = nums.length && Math.max(...nums) >= baseStart ? Math.max(...nums) + 1 : baseStart;
-    return cat + String(next).padStart(3, "0");
+    return cat + String(next).padStart(4, "0");
   };
 
   const openNew = () => {
@@ -160,6 +232,7 @@ export function DeliveryPage() {
     setTimeout(() => {
       window.print();
       document.title = oldTitle;
+      setTimeout(() => setPrintData(null), 1000);
     }, 500);
   };
 
@@ -200,11 +273,27 @@ export function DeliveryPage() {
     const handleSaveAddr = async () => {
       if (!newDest.trim()) { setToast("Destination wajib diisi!", "err"); return; }
       const { supabase } = await import("../../lib/supabase");
-      const { error } = await supabase.from("shipping_addresses").insert([{ destination: newDest, full_address: newAddr, attn: newAttn, contact: newContact }]);
-      if (error) { setToast(error.message, "err"); return; }
-      setToast("Alamat berhasil ditambahkan \u2713");
-      setAddrForm(false); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact("");
+      if (addrEditId) {
+        const { error } = await supabase.from("shipping_addresses").update({ destination: newDest, full_address: newAddr, attn: newAttn, contact: newContact }).eq("id", addrEditId);
+        if (error) { setToast(error.message, "err"); return; }
+        setToast("Alamat berhasil diperbarui ✓");
+      } else {
+        const { error } = await supabase.from("shipping_addresses").insert([{ destination: newDest, full_address: newAddr, attn: newAttn, contact: newContact }]);
+        if (error) { setToast(error.message, "err"); return; }
+        setToast("Alamat berhasil ditambahkan ✓");
+      }
+      setAddrForm(false); setAddrEditId(null);
+      setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact("");
       fetchAddresses();
+    };
+
+    const openEditAddr = (a) => {
+      setAddrEditId(a.id);
+      setNewDest(a.destination || "");
+      setNewAddr(a.full_address || "");
+      setNewAttn(a.attn || "");
+      setNewContact(a.contact || "");
+      setAddrForm(true);
     };
 
     const handleDeleteAddr = async (id) => {
@@ -216,15 +305,24 @@ export function DeliveryPage() {
     };
     return (
       <div style={{ maxWidth: 820 }}>
+        {showImportAddr && (
+          <ModalImportAddress
+            onClose={() => setShowImportAddr(false)}
+            onSuccess={() => { fetchAddresses(); setShowImportAddr(false); }}
+          />
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1rem" }}>
           <BtnG onClick={() => setView("list")} style={{ padding: "6px 12px", fontSize: 12 }}><ArrowLeft size={14} /> Kembali</BtnG>
           <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>Kelola Shipping Address</span>
-          <BtnP onClick={() => setAddrForm(true)} style={{ marginLeft: "auto", padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            <BtnG onClick={() => setShowImportAddr(true)} style={{ padding: "7px 14px", fontSize: 12 }}><FileUp size={14} /> Import Excel</BtnG>
+            <BtnP onClick={() => { setAddrEditId(null); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact(""); setAddrForm(true); }} style={{ padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>
+          </div>
         </div>
 
         {addrForm && (
           <div className="dn-form-section" style={{ background: T.surface, border: `1px solid ${T.primary}`, marginBottom: "1rem" }}>
-            <div className="dn-form-title" style={{ color: T.primary }}>Tambah Alamat Baru</div>
+            <div className="dn-form-title" style={{ color: T.primary }}>{addrEditId ? "Edit Alamat" : "Tambah Alamat Baru"}</div>
             <div className="dn-form-grid dn-form-grid-2">
               <div className="dn-form-group" style={{ gridColumn: "1/-1" }}>
                 <label style={{ color: T.muted }}>Destination (Nama Customer) *</label>
@@ -244,32 +342,56 @@ export function DeliveryPage() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 10 }}>
-              <BtnG onClick={() => setAddrForm(false)} style={{ fontSize: 12, padding: "6px 12px" }}>Batal</BtnG>
-              <BtnP onClick={handleSaveAddr} style={{ fontSize: 12, padding: "6px 14px" }}>Simpan</BtnP>
+              <BtnG onClick={() => { setAddrForm(false); setAddrEditId(null); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact(""); }} style={{ fontSize: 12, padding: "6px 12px" }}>Batal</BtnG>
+              <BtnP onClick={handleSaveAddr} style={{ fontSize: 12, padding: "6px 14px" }}>{addrEditId ? "Update" : "Simpan"}</BtnP>
             </div>
           </div>
         )}
+
+        <input
+          className="ifield"
+          placeholder="Cari destination, alamat, attn..."
+          value={addrSearch}
+          onChange={e => setAddrSearch(e.target.value)}
+          style={{ marginBottom: "0.75rem", width: "100%", boxSizing: "border-box" }}
+        />
 
         <table className="dn-table" style={{ background: T.card, borderRadius: 12, overflow: "hidden" }}>
           <thead><tr style={{ background: T.surface }}>
             <th style={{ color: T.muted }}>Destination</th>
             <th style={{ color: T.muted }}>Full Address</th>
             <th style={{ color: T.muted }}>Attn</th>
-            <th style={{ color: T.muted, width: 60 }}>Aksi</th>
+            <th style={{ color: T.muted, width: 80 }}>Aksi</th>
           </tr></thead>
           <tbody>
-            {addresses.length === 0 ? (
-              <tr><td colSpan={4} style={{ textAlign: "center", padding: "2rem", color: T.muted }}>Belum ada alamat tersimpan</td></tr>
-            ) : addresses.map(a => (
-              <tr key={a.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                <td style={{ fontWeight: 500, color: T.text }}>{a.destination}</td>
-                <td style={{ color: T.muted, fontSize: 11 }}>{a.full_address || "-"}</td>
-                <td style={{ color: T.muted }}>{a.attn || "-"}</td>
-                <td>
-                  <button className="dn-act-btn" onClick={() => handleDeleteAddr(a.id)} style={{ color: T.red }}><Trash2 size={14} /></button>
-                </td>
-              </tr>
-            ))}
+            {(() => {
+              const q = addrSearch.toLowerCase();
+              const filtered = addrSearch
+                ? addresses.filter(a =>
+                    (a.destination || "").toLowerCase().includes(q) ||
+                    (a.full_address || "").toLowerCase().includes(q) ||
+                    (a.attn || "").toLowerCase().includes(q)
+                  )
+                : addresses;
+              if (filtered.length === 0) return (
+                <tr><td colSpan={4} style={{ textAlign: "center", padding: "2rem", color: T.muted }}>
+                  {addresses.length === 0 ? "Belum ada alamat tersimpan" : "Tidak ada hasil pencarian"}
+                </td></tr>
+              );
+              return filtered.map(a => (
+                <tr key={a.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                  <td style={{ fontWeight: 500, color: T.text }}>{a.destination}</td>
+                  <td style={{ color: T.muted, fontSize: 11 }}>{a.full_address || "-"}</td>
+                  <td style={{ color: T.muted }}>{a.attn || "-"}</td>
+                  <td>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="dn-act-btn" onClick={() => openEditAddr(a)} title="Edit" style={{ color: T.text }}><Edit size={14} /></button>
+                      <button className="dn-act-btn" onClick={() => handleDeleteAddr(a.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ));
+            })()}
           </tbody>
         </table>
       </div>
@@ -402,12 +524,20 @@ export function DeliveryPage() {
   // ─── LIST VIEW ───
   return (
     <div>
+      {/* Import Modal */}
+      {showImport && (
+        <ModalImportDelivery
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { fetchNotes(); setShowImport(false); }}
+        />
+      )}
+
       {/* Preload logo for printing */}
       <img src={TokkiLogo} style={{ display: "none" }} alt="" />
 
-      {/* Print area (hidden, shown only during print) */}
-      {printData && (
-        <div className="dn-print-area" ref={printRef}>
+      {/* Print area - rendered via portal directly to body */}
+      {printData && createPortal(
+        <div className="dn-print-area" ref={printRef} id="dn-print-content">
           <div className="dn-print-header">
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <tbody>
@@ -494,7 +624,7 @@ export function DeliveryPage() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: 10 }}>
@@ -503,6 +633,8 @@ export function DeliveryPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <BtnG onClick={() => setView("addr")} style={{ fontSize: 12, padding: "8px 14px" }}><MapPin size={14} /> Kelola Alamat</BtnG>
+          <BtnG onClick={() => setShowImport(true)} style={{ fontSize: 12, padding: "8px 14px" }}><FileUp size={14} /> Import Excel</BtnG>
+          <BtnG onClick={removeDuplicates} style={{ fontSize: 12, padding: "8px 14px", color: "#ef4444", borderColor: "#ef444440" }}>Hapus Duplikat</BtnG>
           <BtnP onClick={openNew} style={{ fontSize: 12, padding: "8px 14px" }}><Plus size={14} /> Buat Surat Jalan</BtnP>
         </div>
       </div>
