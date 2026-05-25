@@ -17,6 +17,7 @@ const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "
 export function DeliveryPage() {
   const { dark, user, setToast } = useStore();
   const T = getT(dark);
+  const isGuest = (user?.role || "").toLowerCase() === "guest";
 
   const [notes, setNotes] = useState([]);
   const [addresses, setAddresses] = useState([]);
@@ -638,8 +639,8 @@ export function DeliveryPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <BtnG onClick={() => setView("addr")} style={{ fontSize: 12, padding: "8px 14px" }}><MapPin size={14} /> Kelola Alamat</BtnG>
-          <BtnG onClick={() => setShowImport(true)} style={{ fontSize: 12, padding: "8px 14px" }}><FileUp size={14} /> Import Excel</BtnG>
-          <BtnG onClick={removeDuplicates} style={{ fontSize: 12, padding: "8px 14px", color: "#ef4444", borderColor: "#ef444440" }}>Hapus Duplikat</BtnG>
+          {!isGuest && <BtnG onClick={() => setShowImport(true)} style={{ fontSize: 12, padding: "8px 14px" }}><FileUp size={14} /> Import Excel</BtnG>}
+          {!isGuest && <BtnG onClick={removeDuplicates} style={{ fontSize: 12, padding: "8px 14px", color: "#ef4444", borderColor: "#ef444440" }}>Hapus Duplikat</BtnG>}
           <BtnP onClick={openNew} style={{ fontSize: 12, padding: "8px 14px" }}><Plus size={14} /> Buat Surat Jalan</BtnP>
         </div>
       </div>
@@ -706,8 +707,8 @@ export function DeliveryPage() {
               <td>
                 <div className="dn-actions">
                   <button className="dn-act-btn" onClick={() => handlePrint(n)} title="Cetak" style={{ color: T.text }}><Printer size={15} /></button>
-                  <button className="dn-act-btn" onClick={() => openEdit(n)} title="Edit / Lihat Detail" style={{ color: T.text }}><Edit size={15} /></button>
-                  <button className="dn-act-btn" onClick={() => handleDelete(n.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={15} /></button>
+                  {!isGuest && <button className="dn-act-btn" onClick={() => openEdit(n)} title="Edit / Lihat Detail" style={{ color: T.text }}><Edit size={15} /></button>}
+                  {!isGuest && <button className="dn-act-btn" onClick={() => handleDelete(n.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={15} /></button>}
                 </div>
               </td>
             </tr>

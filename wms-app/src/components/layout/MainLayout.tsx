@@ -50,6 +50,7 @@ export const MainLayout = () => {
 
   useEffect(() => {
     if (!loggedIn) navigate("/login");
+    else if (isGuest && location.pathname !== "/delivery") navigate("/delivery");
   }, [loggedIn, navigate]);
 
   useEffect(() => {
@@ -90,7 +91,14 @@ export const MainLayout = () => {
 
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const isOperator = (user?.role || "").toLowerCase() === "operator";
-  const visibleTabs = (isAdmin || isOperator) ? TABS : TABS.filter(t => t.id !== "history");
+  const isGuest = (user?.role || "").toLowerCase() === "guest";
+
+  // Guest: hanya bisa akses Surat Jalan
+  const visibleTabs = isGuest
+    ? TABS.filter(t => t.id === "delivery")
+    : (isAdmin || isOperator)
+      ? TABS
+      : TABS.filter(t => t.id !== "history");
 
   const lowStock = items.filter(i => i.stock <= i.minStock);
   const approvedOutTrx = trx.filter(isApprovedOutTrx);
