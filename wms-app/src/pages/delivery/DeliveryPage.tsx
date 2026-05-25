@@ -618,7 +618,7 @@ export function DeliveryPage() {
                 <tr key={i}>
                   <td style={{ textAlign: "center", paddingLeft: 10 }}>
                     <span>{it.qty}</span>
-                    <span style={{ marginLeft: 4 }}>{it.uom}</span>
+                    <span style={{ marginLeft: 8 }}>{it.uom}</span>
                   </td>
                   <td>{it.description}</td>
                 </tr>
@@ -636,15 +636,15 @@ export function DeliveryPage() {
           <div className="dn-print-sigs">
             <div className="dn-print-sig-col">
               <div className="dn-print-sig-role">Penerima,</div>
-              <div className="dn-print-sig-line">(<span className="dn-print-sig-inner"></span>)</div>
+              <div className="dn-print-sig-line">(__________________)</div>
             </div>
             <div className="dn-print-sig-col">
               <div className="dn-print-sig-role">Diserahkan Oleh,</div>
-              <div className="dn-print-sig-line">(<span className="dn-print-sig-inner"></span>)</div>
+              <div className="dn-print-sig-line">(__________________)</div>
             </div>
             <div className="dn-print-sig-col">
               <div className="dn-print-sig-role">Hormat Kami,</div>
-              <div className="dn-print-sig-line">(<span className="dn-print-sig-inner"></span>)</div>
+              <div className="dn-print-sig-line">(__________________)</div>
             </div>
           </div>
         </div>

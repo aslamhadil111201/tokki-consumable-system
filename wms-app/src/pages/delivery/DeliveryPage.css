@@ -141,8 +141,7 @@
   .dn-print-sigs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 6px; text-align: center; }
   .dn-print-sig-col { display: flex; flex-direction: column; align-items: center; }
   .dn-print-sig-role { font-size: 9pt; margin-bottom: 50px; }
-  .dn-print-sig-line { font-size: 9pt; display: flex; align-items: center; gap: 2px; }
-  .dn-print-sig-inner { display: inline-block; width: 120px; border-bottom: 1px solid #333; margin-bottom: 3px; }
+  .dn-print-sig-line { font-size: 9pt; display: inline-flex; align-items: center; gap: 2px; }
 }
 
 @media (max-width: 860px) {
