@@ -128,7 +128,7 @@ export function LoginPage() {
             borderRadius: 12, padding: "12px 16px", marginBottom: 12,
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: T.primary, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-              👤 Akun Tamu (Surat Jalan)
+              👤 Delivery Access
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.8 }}>
