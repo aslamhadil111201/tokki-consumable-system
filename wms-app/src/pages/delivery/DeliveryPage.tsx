@@ -607,10 +607,29 @@ export function DeliveryPage() {
           </div>
           <div className="dn-print-greet">dengan ini kami mengirimkan barang-barang berikut di bawah ini :</div>
           <table className="dn-print-table">
-            <thead><tr><th style={{ width: 80 }}>Quantity</th><th>Description of Goods</th></tr></thead>
+            <thead>
+              <tr>
+                <th style={{ width: 110, textAlign: "center" }}>Quantity</th>
+                <th>Description of Goods</th>
+              </tr>
+            </thead>
             <tbody>
               {(printData.items || []).map((it, i) => (
-                <tr key={i}><td>{it.qty} {it.uom}</td><td>{it.description}</td></tr>
+                <tr key={i}>
+                  <td style={{ textAlign: "left", paddingLeft: 10 }}>
+                    <span style={{ display: "inline-block", width: 16, color: "#888", fontSize: "8.5pt" }}>{i + 1}</span>
+                    <span style={{ fontWeight: 600 }}>{it.qty}</span>
+                    <span style={{ marginLeft: 4, color: "#555" }}>{it.uom}</span>
+                  </td>
+                  <td>{it.description}</td>
+                </tr>
+              ))}
+              {/* Baris kosong padding sampai minimal 10 baris */}
+              {Array.from({ length: Math.max(0, 10 - (printData.items || []).length) }).map((_, i) => (
+                <tr key={`empty-${i}`}>
+                  <td style={{ height: 22 }}>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </tr>
               ))}
             </tbody>
           </table>
