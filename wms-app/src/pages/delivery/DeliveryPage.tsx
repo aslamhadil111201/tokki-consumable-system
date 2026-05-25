@@ -264,9 +264,9 @@ export function DeliveryPage() {
     filtered = filtered.filter(n => (n.batch || "").toLowerCase().includes(q) || (n.destination || "").toLowerCase().includes(q) || (n.project_no || "").toLowerCase().includes(q) || (n.items || []).some(i => (i.description || "").toLowerCase().includes(q)));
   }
 
-  // Sort: Semua → by created_at terbaru di atas; per kategori → by batch number descending
+  // Sort: Semua → by tanggal SJ terbaru di atas; per kategori → by batch number descending
   if (catFilter === "ALL") {
-    filtered.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+    filtered.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   } else {
     filtered.sort((a, b) => {
       const numA = parseInt((a.batch || "").match(/\d+$/)?.[0] || "0", 10);
