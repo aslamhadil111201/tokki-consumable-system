@@ -122,6 +122,32 @@ export function LoginPage() {
             <span style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>atau</span>
           </div>
 
+          {/* Guest login info */}
+          <div style={{
+            background: T.surface, border: `1px solid ${T.border}`,
+            borderRadius: 12, padding: "12px 16px", marginBottom: 12,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.primary, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+              👤 Akun Tamu (Surat Jalan)
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.8 }}>
+                <div><span style={{ color: T.text, fontWeight: 600 }}>Username:</span> guest</div>
+                <div><span style={{ color: T.text, fontWeight: 600 }}>Password:</span> guest123456</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLoginForm({ username: "guest", password: "guest123456" })}
+                style={{
+                  background: T.primary, color: "white", border: "none",
+                  borderRadius: 8, padding: "7px 14px", fontSize: 12,
+                  fontWeight: 700, cursor: "pointer",
+                }}>
+                Isi Otomatis
+              </button>
+            </div>
+          </div>
+
           <div style={{ textAlign: "center", fontSize: 12, color: T.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 500 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.primary }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
             Gunakan akun yang telah diberikan
