@@ -74,6 +74,8 @@ export function DeliveryPage() {
 
     // Sort: by batch number descending (FNG013 → FNG001), same number → by date desc
     const sorted = [...all].sort((a, b) => {
+      // Kalau filter Semua → urut by tanggal terbaru
+      // (ini dipakai saat fetch, filter per kategori dihandle di frontend)
       const catA = (a.batch || "").replace(/\d+$/, "");
       const catB = (b.batch || "").replace(/\d+$/, "");
       if (catA !== catB) return catA.localeCompare(catB);
@@ -260,6 +262,18 @@ export function DeliveryPage() {
   if (searchQ) {
     const q = searchQ.toLowerCase();
     filtered = filtered.filter(n => (n.batch || "").toLowerCase().includes(q) || (n.destination || "").toLowerCase().includes(q) || (n.project_no || "").toLowerCase().includes(q) || (n.items || []).some(i => (i.description || "").toLowerCase().includes(q)));
+  }
+
+  // Sort: Semua → by tanggal terbaru; per kategori → by batch number descending
+  if (catFilter === "ALL") {
+    filtered.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  } else {
+    filtered.sort((a, b) => {
+      const numA = parseInt((a.batch || "").match(/\d+$/)?.[0] || "0", 10);
+      const numB = parseInt((b.batch || "").match(/\d+$/)?.[0] || "0", 10);
+      if (numB !== numA) return numB - numA;
+      return (b.date || "").localeCompare(a.date || "");
+    });
   }
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
