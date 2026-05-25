@@ -617,7 +617,6 @@ export function DeliveryPage() {
               {(printData.items || []).map((it, i) => (
                 <tr key={i}>
                   <td style={{ textAlign: "left", paddingLeft: 10 }}>
-                    <span style={{ display: "inline-block", width: 16, color: "#888", fontSize: "8.5pt" }}>{i + 1}</span>
                     <span style={{ fontWeight: 600 }}>{it.qty}</span>
                     <span style={{ marginLeft: 4, color: "#555" }}>{it.uom}</span>
                   </td>

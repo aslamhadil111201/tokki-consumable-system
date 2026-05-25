@@ -103,7 +103,10 @@
   .dn-print-table thead { display: table-header-group; }
   .dn-print-table tr { page-break-inside: avoid; }
   .dn-print-table th { 
-    border: 1px solid #ccc; 
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    border-left: none;
+    border-right: none;
     padding: 6px 10px; 
     background: #e8e8e8 !important; 
     font-weight: 700; 
@@ -114,8 +117,6 @@
   }
   .dn-print-table td { 
     border: none;
-    border-left: 1px solid #ccc;
-    border-right: 1px solid #ccc;
     padding: 5px 10px; 
     line-height: 1.5; 
     font-size: 9pt; 
@@ -134,10 +135,7 @@
   .dn-print-table tbody tr:last-child td {
     border-bottom: 1px solid #ccc;
   }
-  .dn-print-table td:first-child { 
-    text-align: left;
-    border-left: 1px solid #ccc;
-  }
+  .dn-print-table td:first-child { text-align: left; }
   .dn-print-note { font-size: 8.5pt; margin-top: 30px; margin-bottom: 10px; }
   .dn-print-sigs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 6px; text-align: center; }
   .dn-print-sig-col { display: flex; flex-direction: column; align-items: center; }
