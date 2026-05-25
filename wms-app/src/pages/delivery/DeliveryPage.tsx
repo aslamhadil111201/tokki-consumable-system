@@ -636,15 +636,15 @@ export function DeliveryPage() {
           <div className="dn-print-sigs">
             <div className="dn-print-sig-col">
               <div className="dn-print-sig-role">Penerima,</div>
-              <div className="dn-print-sig-line"></div>
+              <div className="dn-print-sig-line">(<span className="dn-print-sig-inner"></span>)</div>
             </div>
             <div className="dn-print-sig-col">
               <div className="dn-print-sig-role">Diserahkan Oleh,</div>
-              <div className="dn-print-sig-line"></div>
+              <div className="dn-print-sig-line">(<span className="dn-print-sig-inner"></span>)</div>
             </div>
             <div className="dn-print-sig-col">
               <div className="dn-print-sig-role">Hormat Kami,</div>
-              <div className="dn-print-sig-line"></div>
+              <div className="dn-print-sig-line">(<span className="dn-print-sig-inner"></span>)</div>
             </div>
           </div>
         </div>
