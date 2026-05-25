@@ -616,9 +616,9 @@ export function DeliveryPage() {
             <tbody>
               {(printData.items || []).map((it, i) => (
                 <tr key={i}>
-                  <td style={{ textAlign: "left", paddingLeft: 10 }}>
-                    <span style={{ fontWeight: 600 }}>{it.qty}</span>
-                    <span style={{ marginLeft: 4, color: "#555" }}>{it.uom}</span>
+                  <td style={{ textAlign: "center", paddingLeft: 10 }}>
+                    <span>{it.qty}</span>
+                    <span style={{ marginLeft: 4 }}>{it.uom}</span>
                   </td>
                   <td>{it.description}</td>
                 </tr>
