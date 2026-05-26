@@ -12,7 +12,7 @@ import { ModalImportDelivery } from "../../components/modals/ModalImportDelivery
 import { ModalImportAddress } from "../../components/modals/ModalImportAddress";
 
 const CATS = { FNG: "Finish Good", DLV: "Sub Vendor", STW: "Site Work", ETC: "Lain-lain" };
-const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "Plastic", "Lusin", "Pair", "Lembar", "Batang", "Lonjor", "Kg", "Ton", "Liter", "m", "cm", "mm", "m²", "m³"];
+const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "Plastic", "Lusin", "Pair", "Lembar", "Batang", "Btg", "Lonjor", "Kg", "Ton", "Liter", "m", "cm", "mm", "m²", "m³"];
 
 export function DeliveryPage() {
   const { dark, user, setToast } = useStore();
