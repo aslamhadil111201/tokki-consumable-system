@@ -12,7 +12,7 @@ import { ModalImportDelivery } from "../../components/modals/ModalImportDelivery
 import { ModalImportAddress } from "../../components/modals/ModalImportAddress";
 
 const CATS = { FNG: "Finish Good", DLV: "Sub Vendor", STW: "Site Work", ETC: "Lain-lain" };
-const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "Plastic", "Lusin", "Pair", "Lembar", "Batang", "Btg", "Lonjor", "Kg", "Ton", "Liter", "m", "cm", "mm", "m²", "m³"];
+const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "Plastic", "Lusin", "Pair", "Lembar", "Btg", "Lonjor", "Kg", "Ton", "Liter", "m", "cm", "mm", "m²", "m³"];
 
 export function DeliveryPage() {
   const { dark, user, setToast } = useStore();
@@ -753,7 +753,7 @@ export function DeliveryPage() {
               <td>
                 <div className="dn-actions">
                   <button className="dn-act-btn" onClick={() => handlePrint(n)} title="Cetak" style={{ color: T.text }}><Printer size={15} /></button>
-                  {!isGuest && <button className="dn-act-btn" onClick={() => openEdit(n)} title="Edit / Lihat Detail" style={{ color: T.text }}><Edit size={15} /></button>}
+                  <button className="dn-act-btn" onClick={() => openEdit(n)} title="Edit / Lihat Detail" style={{ color: T.text }}><Edit size={15} /></button>
                   {!isGuest && <button className="dn-act-btn" onClick={() => handleDelete(n.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={15} /></button>}
                 </div>
               </td>
