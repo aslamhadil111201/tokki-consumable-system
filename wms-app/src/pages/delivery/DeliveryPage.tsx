@@ -652,7 +652,7 @@ export function DeliveryPage() {
                 </tr>
               ))}
               {/* Baris kosong padding sampai minimal 10 baris */}
-              {Array.from({ length: Math.max(0, 10 - (printData.items || []).length) }).map((_, i) => (
+              {Array.from({ length: Math.max(0, 5 - (printData.items || []).length) }).map((_, i) => (
                 <tr key={`empty-${i}`}>
                   <td style={{ height: 22 }}>&nbsp;</td>
                   <td>&nbsp;</td>
