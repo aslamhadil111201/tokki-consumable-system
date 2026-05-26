@@ -231,14 +231,28 @@ export function DeliveryPage() {
   };
 
   const handlePrint = (note) => {
-    setPrintData(note);
-    const oldTitle = document.title;
-    document.title = "Official Delivery Document";
+    // Reset dulu kalau ada data sebelumnya, tunggu React clear, baru set baru
+    setPrintData(null);
     setTimeout(() => {
-      window.print();
-      document.title = oldTitle;
-      setTimeout(() => setPrintData(null), 1000);
-    }, 500);
+      setPrintData(note);
+      const oldTitle = document.title;
+      document.title = "Official Delivery Document";
+      const tryPrint = (attempts = 0) => {
+        const el = document.querySelector(".dn-print-area");
+        if (el && el.innerHTML.length > 100) {
+          window.print();
+          document.title = oldTitle;
+          setTimeout(() => setPrintData(null), 1500);
+        } else if (attempts < 30) {
+          setTimeout(() => tryPrint(attempts + 1), 100);
+        } else {
+          window.print();
+          document.title = oldTitle;
+          setTimeout(() => setPrintData(null), 1500);
+        }
+      };
+      setTimeout(() => tryPrint(), 150);
+    }, 100);
   };
 
   const onCatChange = (c) => {
