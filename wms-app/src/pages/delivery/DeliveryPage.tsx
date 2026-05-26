@@ -236,7 +236,7 @@ export function DeliveryPage() {
     setTimeout(() => {
       setPrintData(note);
       const oldTitle = document.title;
-      document.title = "Official Delivery Document";
+      document.title = "Warehouse Management System";
       const tryPrint = (attempts = 0) => {
         const el = document.querySelector(".dn-print-area");
         if (el && el.innerHTML.length > 100) {
