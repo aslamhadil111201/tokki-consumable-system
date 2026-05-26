@@ -349,8 +349,8 @@ export function DeliveryPage() {
           <BtnG onClick={() => setView("list")} style={{ padding: "6px 12px", fontSize: 12 }}><ArrowLeft size={14} /> Kembali</BtnG>
           <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>Kelola Shipping Address</span>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <BtnG onClick={() => setShowImportAddr(true)} style={{ padding: "7px 14px", fontSize: 12 }}><FileUp size={14} /> Import Excel</BtnG>
-            <BtnP onClick={() => { setAddrEditId(null); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact(""); setAddrForm(true); }} style={{ padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>
+            {!isGuest && <BtnG onClick={() => setShowImportAddr(true)} style={{ padding: "7px 14px", fontSize: 12 }}><FileUp size={14} /> Import Excel</BtnG>}
+            {!isGuest && <BtnP onClick={() => { setAddrEditId(null); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact(""); setAddrForm(true); }} style={{ padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>}
           </div>
         </div>
 
@@ -419,8 +419,8 @@ export function DeliveryPage() {
                   <td style={{ color: T.muted }}>{a.attn || "-"}</td>
                   <td>
                     <div style={{ display: "flex", gap: 4 }}>
-                      <button className="dn-act-btn" onClick={() => openEditAddr(a)} title="Edit" style={{ color: T.text }}><Edit size={14} /></button>
-                      <button className="dn-act-btn" onClick={() => handleDeleteAddr(a.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={14} /></button>
+                      {!isGuest && <button className="dn-act-btn" onClick={() => openEditAddr(a)} title="Edit" style={{ color: T.text }}><Edit size={14} /></button>}
+                      {!isGuest && <button className="dn-act-btn" onClick={() => handleDeleteAddr(a.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={14} /></button>}
                     </div>
                   </td>
                 </tr>
