@@ -419,7 +419,7 @@ export function DeliveryPage() {
                   <td style={{ color: T.muted }}>{a.attn || "-"}</td>
                   <td>
                     <div style={{ display: "flex", gap: 4 }}>
-                      {!isGuest && <button className="dn-act-btn" onClick={() => openEditAddr(a)} title="Edit" style={{ color: T.text }}><Edit size={14} /></button>}
+                      <button className="dn-act-btn" onClick={() => openEditAddr(a)} title="Edit" style={{ color: T.text }}><Edit size={14} /></button>
                       {!isGuest && <button className="dn-act-btn" onClick={() => handleDeleteAddr(a.id)} title="Hapus" style={{ color: T.red }}><Trash2 size={14} /></button>}
                     </div>
                   </td>
