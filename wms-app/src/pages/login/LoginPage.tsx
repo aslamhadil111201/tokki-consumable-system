@@ -126,34 +126,23 @@ export function LoginPage() {
           <div style={{
             background: `linear-gradient(135deg, ${T.surface} 0%, ${dark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.05)"} 100%)`,
             border: `1px solid ${T.primary}40`,
-            borderRadius: 14, padding: "14px 16px", marginBottom: 12,
+            borderRadius: 14, padding: "12px 16px", marginBottom: 12,
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
           }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.primary}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🚚</div>
-                <span style={{ fontSize: 12, fontWeight: 800, color: T.primary, letterSpacing: ".04em" }}>Delivery Access</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLoginForm({ username: "delivery", password: "tokki2026" })}
-                style={{
-                  background: T.primary, color: "white", border: "none",
-                  borderRadius: 8, padding: "6px 14px", fontSize: 11,
-                  fontWeight: 700, cursor: "pointer", letterSpacing: ".02em",
-                }}>
-                Gunakan →
-              </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.primary}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🚚</div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Akun Delivery Access</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
-              <div style={{ background: T.card, borderRadius: 8, padding: "6px 10px" }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 2 }}>Username</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: T.text, fontFamily: "monospace" }}>delivery</div>
-              </div>
-              <div style={{ background: T.card, borderRadius: 8, padding: "6px 10px" }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 2 }}>Password</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: T.text, fontFamily: "monospace" }}>tokki2026</div>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setLoginForm({ username: "delivery", password: "tokki2026" })}
+              style={{
+                background: T.primary, color: "white", border: "none",
+                borderRadius: 8, padding: "7px 16px", fontSize: 12,
+                fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+              }}>
+              Gunakan →
+            </button>
           </div>
 
           <div style={{ textAlign: "center", fontSize: 12, color: T.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 500 }}>
