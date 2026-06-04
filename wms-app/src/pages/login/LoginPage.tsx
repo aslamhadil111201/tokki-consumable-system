@@ -66,26 +66,26 @@ export function LoginPage() {
             {dark ? "☀️" : "🌙"}
           </button>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
-            <img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ height: dark ? 46 : 56, objectFit: "contain" }} />
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+            <img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ height: dark ? 46 : 54, objectFit: "contain" }} />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 20, padding: "5px 14px", fontSize: 11, fontWeight: 800, color: T.navActiveText }}>
               🛡️ Warehouse Management System
             </div>
           </div>
 
-          <div style={{ fontSize: 30, fontWeight: 900, lineHeight: 1.15, marginBottom: 6 }}>
+          <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.15, marginBottom: 4 }}>
             <span style={{ color: T.text }}>Selamat </span>
             <span style={{ color: T.primary }}>Datang</span>
           </div>
-          <div style={{ fontSize: 13, color: T.muted, marginBottom: 20, fontWeight: 500, lineHeight: 1.65 }}>
+          <div style={{ fontSize: 12, color: T.muted, marginBottom: 16, fontWeight: 500, lineHeight: 1.65 }}>
             Masuk untuk mengelola inventaris barang gudang
           </div>
 
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: T.primary, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 6 }}>Username</div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: T.primary, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 5 }}>Username</div>
             <div className="login-ifield-wrap">
               <span className="login-ifield-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
@@ -96,8 +96,8 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: T.primary, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 6 }}>Password</div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: T.primary, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 5 }}>Password</div>
             <div className="login-ifield-wrap" style={{ position: "relative" }}>
               <span className="login-ifield-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
