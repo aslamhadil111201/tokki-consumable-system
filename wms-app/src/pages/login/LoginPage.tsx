@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { getT } from "../../theme/tokens";
@@ -13,6 +13,15 @@ export function LoginPage() {
   
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.add("login-page-active");
+    document.body.classList.add("login-page-active");
+    return () => {
+      document.documentElement.classList.remove("login-page-active");
+      document.body.classList.remove("login-page-active");
+    };
+  }, []);
 
   const login = async () => {
     if (!loginForm.username || !loginForm.password) { setToast("Username dan password wajib diisi", "err"); return; }

@@ -250,9 +250,15 @@ export const GlobalStyle = () => {
     @media(max-width:660px){.bottom-nav{display:block}.body-area{padding-bottom:72px !important}}
 
     /* LOGIN */
+    .login-page-active,
+    .login-page-active #root {
+      overflow: auto !important;
+      height: auto !important;
+      min-height: 100vh;
+    }
     .login-bg{position:fixed;inset:0;background:linear-gradient(135deg,rgba(0,12,5,0.82) 0%,rgba(0,10,4,0.66) 40%,rgba(0,8,3,0.74) 100%),url('/login-bg-new.png');background-size:cover;background-position:center;background-repeat:no-repeat}
     .login-bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,${dark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.12)"} 1px,transparent 1px);background-size:26px 26px}
-    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;position:relative;z-index:1}
+    .login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;position:relative;z-index:1;box-sizing:border-box}
     .login-card{
       background:${dark ? "rgba(3,14,7,0.88)" : "rgba(255,255,255,0.93)"};
       border:1px solid ${dark ? "rgba(16,185,129,0.22)" : "rgba(16,185,129,0.3)"};
@@ -279,7 +285,7 @@ export const GlobalStyle = () => {
     .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:${T.border}}
     @media(max-width:480px){
       .login-card{padding:36px 20px;border-radius:18px}
-      .login-wrap{padding:12px;align-items:flex-start;padding-top:28px}
+      .login-wrap{padding:24px 12px}
     }
 
     @media(max-width:1100px){
