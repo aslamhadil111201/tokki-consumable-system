@@ -66,21 +66,21 @@ export function LoginPage() {
             {dark ? "☀️" : "🌙"}
           </button>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
-            <img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ height: dark ? 54 : 66, objectFit: "contain" }} />
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+            <img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ height: dark ? 46 : 56, objectFit: "contain" }} />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 20, padding: "5px 14px", fontSize: 11, fontWeight: 800, color: T.navActiveText }}>
               🛡️ Warehouse Management System
             </div>
           </div>
 
-          <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1.15, marginBottom: 8 }}>
+          <div style={{ fontSize: 30, fontWeight: 900, lineHeight: 1.15, marginBottom: 6 }}>
             <span style={{ color: T.text }}>Selamat </span>
             <span style={{ color: T.primary }}>Datang</span>
           </div>
-          <div style={{ fontSize: 13, color: T.muted, marginBottom: 28, fontWeight: 500, lineHeight: 1.65 }}>
+          <div style={{ fontSize: 13, color: T.muted, marginBottom: 20, fontWeight: 500, lineHeight: 1.65 }}>
             Masuk untuk mengelola inventaris barang gudang
           </div>
 
