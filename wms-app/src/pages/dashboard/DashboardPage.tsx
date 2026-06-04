@@ -6,6 +6,7 @@ import { Badge } from "../../components/ui/Badge";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
 import { Prog } from "../../components/ui/Prog";
+import { DashboardSkeleton } from "../../components/ui/Skeleton";
 import { stockStatus } from "../../utils/stockHelpers";
 import { fmtMoney, fmtDate, todayFmt, isoDate, todayStr } from "../../utils/formatters";
 import { trxApprovalStatus, isApprovedOutTrx } from "../../utils/helpers";
@@ -14,7 +15,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { useNavigate } from "react-router-dom";
 
 export function DashboardPage() {
-  const { dark, items, trx, receives, user, setToast } = useStore();
+  const { dark, items, trx, receives, user, setToast, dataReady } = useStore();
   const navigate = useNavigate();
 
   const [dashDonutSegIdx, setDashDonutSegIdx] = useState(-1);
@@ -74,6 +75,11 @@ export function DashboardPage() {
 
   return (
     <div>
+      {/* Skeleton loading – shown while Supabase fetch hasn't completed */}
+      {!dataReady && <DashboardSkeleton />}
+
+      {/* Real content – shown after data is ready */}
+      {dataReady && (<>
       <div className="dash-hero">
         <div className="dash-hero-content">
           <div className="dash-hero-copy">
@@ -402,6 +408,7 @@ export function DashboardPage() {
       </div>
 
       <TransactionModal open={showModal} onClose={() => setShowModal(false)} />
+      </>)}
     </div>
   );
 }

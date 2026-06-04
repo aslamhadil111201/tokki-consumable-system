@@ -6,6 +6,7 @@ import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
 import { UIIcon } from "../../components/ui/UIIcon";
 import { ProgBlocks } from "../../components/ui/Prog";
+import { StockSkeleton } from "../../components/ui/Skeleton";
 import { fmtMoney } from "../../utils/formatters";
 import { stockStatus, stockStatusKey, stockStatusIcon, catColor } from "../../utils/stockHelpers";
 import { CATS } from "../../constants/index";
@@ -17,7 +18,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { getT } from "../../theme/tokens";
 
 export function StockPage() {
-  const { items, user, dark } = useStore();
+  const { items, user, dark, dataReady } = useStore();
   const T = getT(dark);
   
   const [catF, setCatF] = useState("Semua");
@@ -74,6 +75,8 @@ export function StockPage() {
 
   return (
     <div>
+      {!dataReady && <StockSkeleton />}
+      {dataReady && (<>
       {/* ── Filter bar (with action buttons) ── */}
       <div className="stock-filter-container">
         <div className="stock-filter-top">
@@ -276,6 +279,7 @@ export function StockPage() {
       <AddStockModal initialItem={quickInItem} open={showAdd} onClose={() => { setShowAdd(false); setQuickInItem(null); }} />
       <EditItemModal item={editItem} open={showEdit} onClose={() => { setShowEdit(false); setEditItem(null); }} />
       <TransactionModal initialItem={quickOutItem} open={showQuickOut} onClose={() => { setShowQuickOut(false); setQuickOutItem(null); }} />
+      </>)}
     </div>
   );
 }

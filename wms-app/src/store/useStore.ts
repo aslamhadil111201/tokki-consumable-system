@@ -38,6 +38,7 @@ interface StoreState {
   loadingCount: number;
   loadingText: string;
   toastMessage: { msg: string; type: 'ok' | 'err' } | null;
+  dataReady: boolean;
   setToast: (msg: string, type?: 'ok' | 'err') => void;
   withLoading: <T>(task: () => Promise<T>, message?: string) => Promise<T>;
   
@@ -124,6 +125,7 @@ export const useStore = create<StoreState>((set, get) => {
     loadingCount: 0,
     loadingText: "Sedang memproses data",
     toastMessage: null,
+    dataReady: false,
     setToast: (msg, type = 'ok') => {
       set({ toastMessage: { msg, type } });
       setTimeout(() => set({ toastMessage: null }), 3200);
@@ -180,7 +182,7 @@ export const useStore = create<StoreState>((set, get) => {
         const trx = trxRes.data || [];
         const map: Record<number, any> = {};
         items.forEach((i: any) => { map[Number(i.id)] = i; });
-        set({ items, trx, itemMap: map });
+        set({ items, trx, itemMap: map, dataReady: true });
 
         // Fetch others async
         supabase.from('admins').select('*').then(({ data }) => set({ admins: data || [] }));

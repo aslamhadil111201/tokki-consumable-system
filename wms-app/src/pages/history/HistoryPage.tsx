@@ -5,6 +5,7 @@ import { getT } from "../../theme/tokens";
 import { Badge } from "../../components/ui/Badge";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
+import { TablePageSkeleton } from "../../components/ui/Skeleton";
 import { fmtMoney, fmtDate, fmtDateExcel, todayStr } from "../../utils/formatters";
 import { trxApprovalStatus, isApprovedOutTrx, toSafeRows, csvEscape, csvText, triggerDownload } from "../../utils/helpers";
 import { EXCEL_ICON, PDF_ICON } from "../../constants/index";
@@ -15,7 +16,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { AddStockModal } from "../../components/modals/AddStockModal";
 
 export function HistoryPage() {
-  const { dark, user, trx, receives, items, setToast, withLoading, fetchAll } = useStore();
+  const { dark, user, trx, receives, items, setToast, withLoading, fetchAll, dataReady } = useStore();
   const T = getT(dark);
 
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
@@ -299,6 +300,8 @@ export function HistoryPage() {
 
   return (
     <div>
+      {!dataReady && <TablePageSkeleton rows={6} statCount={5} showTabs />}
+      {dataReady && (<>
       {/* Sub-tab toggle + actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 4, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
@@ -961,9 +964,9 @@ export function HistoryPage() {
         </div>
       )}
 
-      {/* Render Modals */}
       <TransactionModal open={showModal} onClose={() => setShowModal(false)} />
       <AddStockModal open={showAdd} onClose={() => setShowAdd(false)} />
+      </>)}
     </div>
   );
 }

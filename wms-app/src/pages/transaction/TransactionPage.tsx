@@ -5,6 +5,7 @@ import "./TransactionPage.css";
 import { Badge } from "../../components/ui/Badge";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
+import { TablePageSkeleton } from "../../components/ui/Skeleton";
 import { fmtDate, todayStr, nowTime, fmtDateExcel } from "../../utils/formatters";
 import { avatarColor, initials, csvText, csvEscape, triggerDownload, toSafeRows } from "../../utils/helpers";
 import { EXCEL_ICON, PDF_ICON } from "../../constants/index";
@@ -16,7 +17,7 @@ import autoTable from "jspdf-autotable";
 import { getT } from "../../theme/tokens";
 
 export function TransactionPage() {
-  const { trx, returns, itemMap, user, withLoading, setToast, fetchAll, dark } = useStore();
+  const { trx, returns, itemMap, user, withLoading, setToast, fetchAll, dark, dataReady } = useStore();
   const T = getT(dark);
   
   const [returSubTab, setReturSubTab] = useState("log");
@@ -148,6 +149,8 @@ export function TransactionPage() {
 
   return (
     <div>
+      {!dataReady && <TablePageSkeleton rows={6} statCount={4} showTabs />}
+      {dataReady && (<>
       {/* ── Panel header ── */}
       <div className="trx-panel-header">
         <div className="trx-panel-title-wrap">
@@ -376,6 +379,7 @@ export function TransactionPage() {
       {/* Render Modals isolated */}
       <TransactionModal open={showModal} onClose={() => setShowModal(false)} />
       <ReturModal open={showRetur} onClose={() => setShowRetur(false)} />
+      </>)}
     </div>
   );
 }

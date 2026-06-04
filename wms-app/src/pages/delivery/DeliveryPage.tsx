@@ -6,6 +6,7 @@ import { useStore } from "../../store/useStore";
 import { getT } from "../../theme/tokens";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
+import { DeliverySkeleton } from "../../components/ui/Skeleton";
 import { Printer, Edit, Trash2, Plus, ArrowLeft, Package, MapPin, ChevronDown, X, FileUp } from "lucide-react";
 import TokkiLogo from "../../assets/tokki-logo.png";
 import { ModalImportDelivery } from "../../components/modals/ModalImportDelivery";
@@ -21,6 +22,7 @@ export function DeliveryPage() {
 
   const [notes, setNotes] = useState([]);
   const [addresses, setAddresses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState("list"); // list | form | addr
   const [showImport, setShowImport] = useState(false);
   const [showImportAddr, setShowImportAddr] = useState(false);
@@ -86,6 +88,7 @@ export function DeliveryPage() {
     });
 
     setNotes(sorted);
+    setLoading(false);
   };
 
   const removeDuplicates = async () => {
@@ -301,6 +304,9 @@ export function DeliveryPage() {
   };
 
   // ─── RENDER ───
+
+  // Show skeleton while initial fetch is running
+  if (loading) return <DeliverySkeleton />;
 
   // Address management view
   if (view === "addr") {

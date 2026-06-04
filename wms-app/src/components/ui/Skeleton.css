@@ -1,0 +1,302 @@
+/* ─── Skeleton Shimmer ─────────────────────────────────── */
+
+.skel-box {
+  background: linear-gradient(
+    90deg,
+    var(--t-border) 25%,
+    rgba(16, 185, 129, 0.1) 50%,
+    var(--t-border) 75%
+  );
+  background-size: 400% 100%;
+  animation: skel-shimmer 1.6s ease-in-out infinite;
+  display: block;
+  flex-shrink: 0;
+}
+
+@keyframes skel-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ─── Dashboard Skeleton ──────────────────────────────── */
+
+.skel-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.skel-hero {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 24px;
+  padding: 18px 26px;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.skel-charts-g {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.skel-chart-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 20px;
+  padding: 22px 24px;
+}
+
+.skel-tables-g {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.skel-table-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 20px;
+  padding: 22px 24px;
+}
+
+.skel-row-hdr {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--t-border);
+}
+
+.skel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--t-border);
+}
+
+.skel-row:last-child { border-bottom: none; }
+
+.skel-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 18px;
+  padding: 20px 22px;
+}
+
+.skel-footer-g {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+/* ─── Delivery Skeleton ───────────────────────────────── */
+
+.skel-delivery {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skel-delivery-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.skel-dn-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.skel-dn-stat {
+  flex: 1;
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.skel-dn-table {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.skel-dn-thead {
+  display: grid;
+  grid-template-columns: 100px 80px 90px 1fr 100px 1fr 70px;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--t-surface);
+  border-bottom: 1px solid var(--t-border);
+}
+
+.skel-dn-row {
+  display: grid;
+  grid-template-columns: 100px 80px 90px 1fr 100px 1fr 70px;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--t-border);
+  align-items: center;
+}
+
+.skel-dn-row:last-child { border-bottom: none; }
+
+.skel-tr td { padding: 10px 14px; }
+
+/* ─── Stock Skeleton ─────────────────────────────── */
+
+.skel-stock { display: flex; flex-direction: column; gap: 14px; }
+
+.skel-stock-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.skel-stock-summary {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 14px;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.skel-stock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.skel-stock-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+/* ─── TablePage Skeleton ─────────────────────────── */
+
+.skel-table-page { display: flex; flex-direction: column; gap: 14px; }
+
+.skel-tp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 20px;
+  padding: 18px 22px;
+}
+
+.skel-tp-stats {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.skel-tp-stat-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.skel-tp-list {
+  background: var(--t-card);
+  border: 1px solid var(--t-border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.skel-tp-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--t-border);
+  border-left: 4px solid var(--t-border);
+}
+
+.skel-tp-row:last-child { border-bottom: none; }
+
+.skel-tp-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.skel-tp-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.skel-tp-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+/* ─── Responsive ─────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .skel-charts-g { grid-template-columns: 1fr 1fr; }
+  .skel-stock-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .skel-tp-stats { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 860px) {
+  .skel-charts-g { grid-template-columns: 1fr; }
+  .skel-tables-g { grid-template-columns: 1fr; }
+  .skel-footer-g { grid-template-columns: 1fr 1fr; }
+  .skel-dn-thead,
+  .skel-dn-row {
+    grid-template-columns: 90px 70px 1fr 1fr 70px;
+  }
+  .skel-dn-thead > :nth-child(5),
+  .skel-dn-row > :nth-child(5),
+  .skel-dn-thead > :nth-child(6),
+  .skel-dn-row > :nth-child(6) { display: none; }
+  .skel-tp-meta:last-child { display: none; }
+}
+
+@media (max-width: 660px) {
+  .skel-charts-g { grid-template-columns: 1fr; }
+  .skel-footer-g { grid-template-columns: 1fr; }
+  .skel-dn-stats { flex-wrap: wrap; }
+  .skel-dn-stat { flex: 1 1 calc(50% - 6px); }
+  .skel-dn-thead,
+  .skel-dn-row { grid-template-columns: 80px 1fr 70px; }
+  .skel-dn-thead > :nth-child(2),
+  .skel-dn-row > :nth-child(2),
+  .skel-dn-thead > :nth-child(3),
+  .skel-dn-row > :nth-child(3),
+  .skel-dn-thead > :nth-child(5),
+  .skel-dn-row > :nth-child(5) { display: none; }
+  .skel-tp-stats { grid-template-columns: repeat(2, 1fr) !important; }
+  .skel-stock-grid { grid-template-columns: repeat(2, 1fr); }
+  .skel-tp-meta { display: none; }
+}
+

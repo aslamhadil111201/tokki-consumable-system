@@ -2,6 +2,7 @@
 import { useState } from "react";
 import "./ReportPage.css";
 import { BtnG } from "../../components/ui/BtnG";
+import { TablePageSkeleton } from "../../components/ui/Skeleton";
 import { fmtMoney, fmtDate, isoDate, todayStr, todayFmt, nowTime } from "../../utils/formatters";
 import { clamp01, isApprovedOutTrx, toSafeRows, csvEscape, triggerDownload } from "../../utils/helpers";
 import { EXCEL_ICON, PDF_ICON, ITEM_CATEGORIES } from "../../constants/index";
@@ -10,7 +11,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export function ReportPage() {
-  const { dark, trx, receives, items, setToast } = useStore();
+  const { dark, trx, receives, items, setToast, dataReady } = useStore();
 
   const [reportPeriod, setReportPeriod] = useState("month");
   const [reportProjectMode, setReportProjectMode] = useState<"unit" | "rp">("unit");
@@ -241,6 +242,8 @@ export function ReportPage() {
 
   return (
     <div>
+      {!dataReady && <TablePageSkeleton rows={4} statCount={4} showTabs={false} />}
+      {dataReady && (<>
       <div className="report-header">
         <div className="report-filters">
           <span className="report-filter-label">Periode</span>
@@ -441,6 +444,7 @@ export function ReportPage() {
           }
         </div>
       </div>
+      </>)}
     </div>
   );
 }
