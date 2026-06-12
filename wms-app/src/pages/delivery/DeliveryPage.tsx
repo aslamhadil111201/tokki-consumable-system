@@ -260,7 +260,7 @@ export function DeliveryPage() {
 
   const onCatChange = (c) => {
     setFormCat(c);
-    if (!editId) setFormBatch(genBatch(c));
+    setFormBatch(genBatch(c));
   };
 
   const onDestChange = (v) => {
