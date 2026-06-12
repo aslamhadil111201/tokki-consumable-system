@@ -5,6 +5,7 @@ import "./LoginPage.css";
 import { getT } from "../../theme/tokens";
 import { useStore } from "../../store/useStore";
 import { GlobalStyle } from "../../components/layout/GlobalStyle";
+import { ToastNotification } from "../../components/ui/ToastNotification";
 
 export function LoginPage() {
   const { dark, toggleTheme, login: storeLogin, setToast, withLoading } = useStore();
@@ -64,6 +65,7 @@ export function LoginPage() {
   return (
     <div style={{ position: "relative", minHeight: "100vh" }}>
       <GlobalStyle />
+      <ToastNotification />
       <div className="login-bg" />
       <div style={{ position: "fixed", right: "-6%", top: "50%", transform: "translateY(-50%)", width: "min(520px,52vw)", opacity: dark ? 0.05 : 0.07, pointerEvents: "none", zIndex: 0 }}>
         <img src="/LOGO TOKKI-FAVICON.png" alt="" style={{ width: "100%", objectFit: "contain" }} />

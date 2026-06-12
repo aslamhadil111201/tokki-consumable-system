@@ -8,6 +8,7 @@ import { todayStr, todayFmt } from "../../utils/formatters";
 import { triggerDownload, trxApprovalStatus, isApprovedOutTrx } from "../../utils/helpers";
 import { stockStatus, stockStatusIcon } from "../../utils/stockHelpers";
 import { GlobalStyle } from "./GlobalStyle";
+import { ToastNotification } from "../ui/ToastNotification";
 
 const Blobs = () => {
   const dark = useStore(s => s.dark);
@@ -261,6 +262,7 @@ export const MainLayout = () => {
   return (
     <>
       <GlobalStyle />
+      <ToastNotification />
       <Blobs />
       <div className="shell">
         {sidebar && <div className="backdrop-mob" onClick={() => setSidebar(false)} />}
