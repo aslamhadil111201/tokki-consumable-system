@@ -13,7 +13,7 @@ import { ModalImportDelivery } from "../../components/modals/ModalImportDelivery
 import { ModalImportAddress } from "../../components/modals/ModalImportAddress";
 
 const CATS = { FNG: "Finish Good", DLV: "Sub Vendor", STW: "Site Work", ETC: "Lain-lain" };
-const UOMS = ["Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "Plastic", "Lusin", "Pair", "Lembar", "Btg", "Lonjor", "Kg", "Ton", "Liter", "m", "cm", "mm", "m²", "m³"];
+const UOMS = ["", "Pcs", "Set", "Unit", "Ea", "Box", "Roll", "Pack", "Bag", "Rit", "Plastic", "Lusin", "Pair", "Lembar", "Btg", "Lonjor", "Kg", "Ton", "Liter", "m", "cm", "mm", "m²", "m³"];
 
 export function DeliveryPage() {
   const { dark, user, setToast } = useStore();
@@ -31,7 +31,7 @@ export function DeliveryPage() {
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
-  const [formItems, setFormItems] = useState([{ id: "1", qty: "1", uom: "Pcs", desc: "" }]);
+  const [formItems, setFormItems] = useState([{ id: "1", qty: "", uom: "", desc: "" }]);
   const [printData, setPrintData] = useState(null);
   const [destOpen, setDestOpen] = useState(false);
   const printRef = useRef(null);
@@ -160,7 +160,7 @@ export function DeliveryPage() {
     setFormProject("");
     setFormPoNumber("");
     setFormKendaraan(""); setFormDest(""); setFormAttn(""); setFormAddr("");
-    setFormItems([{ id: Date.now().toString(), qty: "1", uom: "Pcs", desc: "" }]);
+    setFormItems([{ id: Date.now().toString(), qty: "", uom: "", desc: "" }]);
     setView("form");
   };
 
@@ -184,8 +184,8 @@ export function DeliveryPage() {
     setFormDest(note.destination || "");
     setFormAttn(note.attn || "");
     setFormAddr(note.full_address || "");
-    const items = (note.items || []).map((it, i) => ({ id: String(i), qty: String(it.qty || "1"), uom: it.uom || "Pcs", desc: it.description || "" }));
-    setFormItems(items.length ? items : [{ id: "1", qty: "1", uom: "Pcs", desc: "" }]);
+    const items = (note.items || []).map((it, i) => ({ id: String(i), qty: String(it.qty ?? ""), uom: it.uom ?? "", desc: it.description || "" }));
+    setFormItems(items.length ? items : [{ id: "1", qty: "", uom: "", desc: "" }]);
     setView("form");
   };
 
@@ -269,7 +269,7 @@ export function DeliveryPage() {
     if (a) { setFormAttn(a.attn || ""); setFormAddr(a.full_address || ""); }
   };
 
-  const addItem = () => setFormItems([...formItems, { id: Date.now().toString(), qty: "1", uom: "Pcs", desc: "" }]);
+  const addItem = () => setFormItems([...formItems, { id: Date.now().toString(), qty: "", uom: "", desc: "" }]);
   const removeItem = (id) => setFormItems(formItems.filter(i => i.id !== id));
   const updateItem = (id, field, val) => setFormItems(formItems.map(i => i.id === id ? { ...i, [field]: val } : i));
 
@@ -356,7 +356,7 @@ export function DeliveryPage() {
           <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>Kelola Shipping Address</span>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             {!isGuest && <BtnG onClick={() => setShowImportAddr(true)} style={{ padding: "7px 14px", fontSize: 12 }}><FileUp size={14} /> Import Excel</BtnG>}
-            {!isGuest && <BtnP onClick={() => { setAddrEditId(null); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact(""); setAddrForm(true); }} style={{ padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>}
+            <BtnP onClick={() => { setAddrEditId(null); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact(""); setAddrForm(true); }} style={{ padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>
           </div>
         </div>
 
@@ -539,13 +539,13 @@ export function DeliveryPage() {
           <BtnG onClick={addItem} style={{ padding: "5px 10px", fontSize: 11 }}><Plus size={13} /> Tambah Baris</BtnG>
         </div>
         <table className="dn-items-table">
-          <thead><tr><th style={{ width: 28 }}>No</th><th style={{ width: 70 }}>Qty</th><th style={{ width: 80 }}>UoM</th><th>Description of Goods</th><th style={{ width: 34 }}></th></tr></thead>
+          <thead><tr><th style={{ width: 28 }}>No</th><th style={{ width: 70, textAlign: "center" }}>Qty</th><th style={{ width: 80, textAlign: "center" }}>UoM</th><th>Description of Goods</th><th style={{ width: 34 }}></th></tr></thead>
           <tbody>
             {formItems.map((it, i) => (
               <tr key={it.id}>
                 <td style={{ textAlign: "center", color: T.muted, fontSize: 11 }}>{i + 1}</td>
-                <td><input type="number" value={it.qty} min="0.01" step="any" onChange={e => updateItem(it.id, "qty", e.target.value)} style={{ textAlign: "center" }} /></td>
-                <td><select value={it.uom} onChange={e => updateItem(it.id, "uom", e.target.value)}>{UOMS.map(u => <option key={u} value={u}>{u}</option>)}</select></td>
+                <td style={{ textAlign: "center" }}><input type="number" value={it.qty} min="0" step="any" onChange={e => updateItem(it.id, "qty", e.target.value)} style={{ textAlign: "center" }} /></td>
+                <td style={{ textAlign: "center" }}><select value={it.uom} onChange={e => updateItem(it.id, "uom", e.target.value)} style={{ textAlign: "center", textAlignLast: "center" }}>{UOMS.map(u => <option key={u} value={u}>{u || "—"}</option>)}</select></td>
                 <td><input type="text" value={it.desc} onChange={e => updateItem(it.id, "desc", e.target.value)} placeholder="Description of goods..." /></td>
                 <td><button className="dn-act-btn" onClick={() => removeItem(it.id)} style={{ color: T.red }}><Trash2 size={14} /></button></td>
               </tr>
@@ -644,15 +644,15 @@ export function DeliveryPage() {
             <thead>
               <tr>
                 <th style={{ width: 110, textAlign: "center" }}>Quantity</th>
-                <th>Description of Goods</th>
+                <th style={{ textAlign: "center" }}>Description of Goods</th>
               </tr>
             </thead>
             <tbody>
               {(printData.items || []).map((it, i) => (
                 <tr key={i}>
                   <td style={{ textAlign: "center", paddingLeft: 10 }}>
-                    <span>{it.qty}</span>
-                    <span style={{ marginLeft: 8 }}>{it.uom}</span>
+                    <span>{it.qty || ""}</span>
+                    {it.qty && it.uom ? <span style={{ marginLeft: 8 }}>{it.uom}</span> : it.uom ? <span>{it.uom}</span> : null}
                   </td>
                   <td>{it.description}</td>
                 </tr>
