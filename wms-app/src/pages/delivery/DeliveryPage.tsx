@@ -57,21 +57,7 @@ export function DeliveryPage() {
   const [formAttn, setFormAttn] = useState("");
   const [formAddr, setFormAddr] = useState("");
 
-  useEffect(() => { fetchNotes(); fetchAddresses(); fetchCounts(); }, []);
-
-  const fetchCounts = async () => {
-    const { supabase } = await import("../../lib/supabase");
-    const cats = ["DLV", "FNG", "STW", "ETC"];
-    const result: Record<string, number> = {};
-    for (const cat of cats) {
-      const { count } = await supabase
-        .from("delivery_notes")
-        .select("*", { count: "exact", head: true })
-        .eq("category", cat);
-      result[cat] = count || 0;
-    }
-    setCounts(result as any);
-  };
+  useEffect(() => { fetchNotes(); fetchAddresses(); }, []);
 
   const fetchNotes = async () => {
     const { supabase } = await import("../../lib/supabase");
@@ -88,6 +74,24 @@ export function DeliveryPage() {
       if (data.length < PAGE) break;
       from += PAGE;
     }
+
+    // Hitung batch number tertinggi per kategori untuk statistik
+    const result = { DLV: 0, FNG: 0, STW: 0, ETC: 0 };
+    const bases = { DLV: 976, FNG: 13, STW: 361, ETC: 2 }; // default jika kosong
+    
+    ["DLV", "FNG", "STW", "ETC"].forEach(cat => {
+      const existing = all.filter(n => n.category === cat);
+      if (existing.length > 0) {
+        const nums = existing.map(n => {
+          const m = n.batch?.match(/\d+$/);
+          return m ? parseInt(m[0], 10) : 0;
+        });
+        result[cat] = Math.max(...nums);
+      } else {
+        result[cat] = bases[cat];
+      }
+    });
+    setCounts(result);
 
     // Sort: by batch number descending (FNG013 → FNG001), same number → by date desc
     const sorted = [...all].sort((a, b) => {
