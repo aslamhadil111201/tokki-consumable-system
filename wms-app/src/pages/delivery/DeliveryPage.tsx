@@ -138,12 +138,9 @@ export function DeliveryPage() {
     setAddresses(data || []);
   };
 
-  const genBatch = async (cat) => {
-    const { supabase } = await import("../../lib/supabase");
-    const { count } = await supabase
-      .from("delivery_notes")
-      .select("*", { count: "exact", head: true })
-      .eq("category", cat);
+  const genBatch = (cat) => {
+    const existing = notes.filter(n => n.category === cat);
+    const nums = existing.map(n => { const m = n.batch?.match(/\d+$/); return m ? +m[0] : 0; });
 
     let baseStart = 1;
     if (cat === "DLV") baseStart = 977;
@@ -151,14 +148,17 @@ export function DeliveryPage() {
     else if (cat === "STW") baseStart = 362;
     else if (cat === "ETC") baseStart = 3;
 
-    const next = baseStart + (count || 0);
+    const next = nums.length > 0 
+      ? Math.max(...nums) + 1
+      : baseStart;
+
     return cat + String(next).padStart(4, "0");
   };
 
-  const openNew = async () => {
+  const openNew = () => {
     setEditId(null);
     setFormCat("FNG");
-    setFormBatch(await genBatch("FNG"));
+    setFormBatch(genBatch("FNG"));
     setFormDate(new Date().toISOString().split("T")[0]);
     setFormProject("");
     setFormPoNumber("");
@@ -261,9 +261,9 @@ export function DeliveryPage() {
     }, 100);
   };
 
-  const onCatChange = async (c) => {
+  const onCatChange = (c) => {
     setFormCat(c);
-    setFormBatch(await genBatch(c));
+    setFormBatch(genBatch(c));
   };
 
   const onDestChange = (v) => {
