@@ -22,6 +22,7 @@ export function DeliveryPage() {
 
   const [notes, setNotes] = useState([]);
   const [addresses, setAddresses] = useState([]);
+  const [counts, setCounts] = useState({ DLV: 0, FNG: 0, STW: 0, ETC: 0 });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("list"); // list | form | addr
   const [showImport, setShowImport] = useState(false);
@@ -56,7 +57,21 @@ export function DeliveryPage() {
   const [formAttn, setFormAttn] = useState("");
   const [formAddr, setFormAddr] = useState("");
 
-  useEffect(() => { fetchNotes(); fetchAddresses(); }, []);
+  useEffect(() => { fetchNotes(); fetchAddresses(); fetchCounts(); }, []);
+
+  const fetchCounts = async () => {
+    const { supabase } = await import("../../lib/supabase");
+    const cats = ["DLV", "FNG", "STW", "ETC"];
+    const result: Record<string, number> = {};
+    for (const cat of cats) {
+      const { count } = await supabase
+        .from("delivery_notes")
+        .select("*", { count: "exact", head: true })
+        .eq("category", cat);
+      result[cat] = count || 0;
+    }
+    setCounts(result as any);
+  };
 
   const fetchNotes = async () => {
     const { supabase } = await import("../../lib/supabase");
@@ -703,11 +718,11 @@ export function DeliveryPage() {
       {/* Stats */}
       <div className="dn-stats">
         {[
-          { label: "SEMUA SJ", val: notes.length, sub: "Semua Kategori", color: T.primary },
-          { label: "FINISH GOOD", val: notes.filter(n => n.category === "FNG").length, sub: "Kirim ke Customer", color: "#10b981" },
-          { label: "SUB VENDOR", val: notes.filter(n => n.category === "DLV").length, sub: "Pekerjaan Luar", color: "#3b82f6" },
-          { label: "SITE WORK", val: notes.filter(n => n.category === "STW").length, sub: "Proyek Lapangan", color: "#f59e0b" },
-          { label: "LAIN-LAIN", val: notes.filter(n => n.category === "ETC").length, sub: "Umum / Operasional", color: "#6b7280" },
+          { label: "SEMUA SJ", val: counts.DLV + counts.FNG + counts.STW + counts.ETC, sub: "Semua Kategori", color: T.primary },
+          { label: "FINISH GOOD", val: counts.FNG, sub: "Kirim ke Customer", color: "#10b981" },
+          { label: "SUB VENDOR", val: counts.DLV, sub: "Pekerjaan Luar", color: "#3b82f6" },
+          { label: "SITE WORK", val: counts.STW, sub: "Proyek Lapangan", color: "#f59e0b" },
+          { label: "LAIN-LAIN", val: counts.ETC, sub: "Umum / Operasional", color: "#6b7280" },
         ].map((s, i) => (
           <div key={i} className="dn-stat" style={{ background: T.card, border: `1px solid ${T.border}` }}>
             <div className="dn-stat-lbl" style={{ color: T.muted }}>{s.label}</div>
