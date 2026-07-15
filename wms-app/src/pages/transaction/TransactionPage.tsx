@@ -17,7 +17,7 @@ import autoTable from "jspdf-autotable";
 import { getT } from "../../theme/tokens";
 
 export function TransactionPage() {
-  const { trx, returns, itemMap, user, withLoading, setToast, fetchAll, dark, dataReady } = useStore();
+  const { trx, returns, itemMap, user, withLoading, setToast, fetchAll, dark, dataReady, deleteReturn } = useStore();
   const T = getT(dark);
   
   const [returSubTab, setReturSubTab] = useState("log");
@@ -340,6 +340,13 @@ export function TransactionPage() {
                           }, "Memperbarui...");
                         }} className="retur-btn-terima">✅ Terima</button>
                       )}
+                      <button onClick={async () => {
+                        if (confirm(`Apakah Anda yakin ingin menghapus data retur dari "${r.employee}"?`)) {
+                          await withLoading(async () => {
+                            await deleteReturn(r.id);
+                          }, "Menghapus...");
+                        }
+                      }} className="retur-btn-hapus">❌ Hapus</button>
                     </div>
                   )}
                 </div>

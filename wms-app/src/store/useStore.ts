@@ -53,6 +53,7 @@ interface StoreState {
   saveShippingAddress: (address: any) => Promise<any>;
   deleteShippingAddress: (id: string | number) => Promise<any>;
   deleteItem: (id: string | number) => Promise<any>;
+  deleteReturn: (id: string | number) => Promise<any>;
 }
 
 export const useStore = create<StoreState>((set, get) => {
@@ -303,6 +304,21 @@ export const useStore = create<StoreState>((set, get) => {
         return { ok: true };
       } catch (e: any) {
         setToast(e.message || "Gagal menghapus barang", "err");
+        return { ok: false, error: e };
+      }
+    },
+
+    deleteReturn: async (id: string | number) => {
+      const { fetchAll, setToast } = get();
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { error } = await supabase.from('returns').delete().eq('id', id);
+        if (error) throw error;
+        setToast("Data retur berhasil dihapus ✓", "ok");
+        await fetchAll();
+        return { ok: true };
+      } catch (e: any) {
+        setToast(e.message || "Gagal menghapus data retur", "err");
         return { ok: false, error: e };
       }
     }
