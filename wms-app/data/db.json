@@ -31,43 +31,75 @@
   "departments": [
     {
       "id": 1,
-      "name": "Warehouse"
+      "name": "ACCOUNTING"
     },
     {
       "id": 2,
-      "name": "Administrasi"
+      "name": "BOD"
     },
     {
       "id": 3,
-      "name": "HSE"
+      "name": "COST CONTROL"
     },
     {
       "id": 4,
-      "name": "Factory Control"
+      "name": "CUSTOM LOGISTIC"
     },
     {
       "id": 5,
-      "name": "Engineering"
+      "name": "DESIGN"
     },
     {
       "id": 6,
-      "name": "Project Control"
+      "name": "PRODUCTION"
     },
     {
       "id": 7,
-      "name": "Quality Control"
+      "name": "EXECUTIVE OPERATING OFFICER FABRICATION - PLANT MANAGER CIKARANG"
     },
     {
       "id": 8,
-      "name": "Production - Fitter"
+      "name": "EXECUTIVE OPERATING OFFICER IBSC"
     },
     {
       "id": 9,
-      "name": "Production - Welder"
+      "name": "FACTORY CONTROL"
     },
     {
       "id": 10,
-      "name": "Tech Development"
+      "name": "HRGA"
+    },
+    {
+      "id": 11,
+      "name": "HSE"
+    },
+    {
+      "id": 12,
+      "name": "MARKETING"
+    },
+    {
+      "id": 13,
+      "name": "PROCUREMENT DIVISION / PURCHASING"
+    },
+    {
+      "id": 14,
+      "name": "PROJECT CONTROL"
+    },
+    {
+      "id": 15,
+      "name": "QUALITY ASSURANCE"
+    },
+    {
+      "id": 16,
+      "name": "QUALITY CONTROL"
+    },
+    {
+      "id": 17,
+      "name": "SALES"
+    },
+    {
+      "id": 18,
+      "name": "TS Solution"
     }
   ],
   "employees": [
