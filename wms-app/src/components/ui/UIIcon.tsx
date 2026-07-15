@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Search, Plus, PackageOpen, Filter, Check, ShieldCheck, Clock, AlertTriangle, XCircle, Boxes, RotateCcw } from "lucide-react";
+import { Search, Plus, PackageOpen, Filter, Check, ShieldCheck, Clock, AlertTriangle, XCircle, Boxes, RotateCcw, Trash2 } from "lucide-react";
 
 const iconMap = {
   search: Search,
@@ -13,6 +13,7 @@ const iconMap = {
   x: XCircle,
   boxes: Boxes,
   rotate: RotateCcw,
+  trash: Trash2,
 };
 
 export const UIIcon = ({ name, size = 14, color = "currentColor" }) => {

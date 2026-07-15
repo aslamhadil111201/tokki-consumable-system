@@ -18,7 +18,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { getT } from "../../theme/tokens";
 
 export function StockPage() {
-  const { items, user, dark, dataReady } = useStore();
+  const { items, user, dark, dataReady, deleteItem } = useStore();
   const T = getT(dark);
   
   const [catF, setCatF] = useState("Semua");
@@ -71,6 +71,12 @@ export function StockPage() {
   const openQuickOut = (item: any) => {
     setQuickOutItem(item);
     setShowQuickOut(true);
+  };
+
+  const handleDeleteItem = async (it: any) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus barang "${it.name}"?`)) {
+      await deleteItem(it.id);
+    }
   };
 
   return (
@@ -169,7 +175,12 @@ export function StockPage() {
           return (
             <div key={it.id} className="stk-card" style={{ border: `2px solid ${cardBorder}`, gap: 0 }}>
               {isAdmin && (
-                <button onClick={e => { e.stopPropagation(); setEditItem({ ...it }); setShowEdit(true); }} className="stk-menu-btn">⋮</button>
+                <>
+                  <button onClick={e => { e.stopPropagation(); handleDeleteItem(it); }} className="stk-delete-btn" title="Hapus Barang">
+                    <UIIcon name="trash" size={14} />
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); setEditItem({ ...it }); setShowEdit(true); }} className="stk-menu-btn" title="Edit Barang">⋮</button>
+                </>
               )}
 
               <div className="stk-photo-box">
@@ -179,7 +190,7 @@ export function StockPage() {
                 }
               </div>
 
-              <div className="stk-name" style={{ paddingRight: isAdmin ? 24 : 0 }}>{it.name}</div>
+              <div className="stk-name" style={{ paddingRight: isAdmin ? 76 : 0 }}>{it.name}</div>
               {it.itemCode && <div className="stk-code" style={{ color: cc.dot }}>Kode: {it.itemCode}</div>}
               
               <div className="stk-cat-row">
