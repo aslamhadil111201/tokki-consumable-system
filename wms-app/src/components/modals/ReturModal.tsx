@@ -61,10 +61,12 @@ export const ReturModal = ({
         </div>
         <div className="sect-box">
           <div className="sect-lbl">📦 Barang yang Diretur</div>
-          <select className="ifield" style={{ width: "100%" }} value={returForm.itemId} onChange={e => setReturForm(p => ({ ...p, itemId: e.target.value }))}>
-            <option value="">-- Pilih barang --</option>
-            {items.map(it => <option key={it.id} value={it.id}>{it.name} (Stok: {it.stock} {it.unit})</option>)}
-          </select>
+          <SearchSelect
+            options={items.map(it => ({ value: String(it.id), label: `${it.name} (Stok: ${it.stock} ${it.unit})` }))}
+            value={returForm.itemId ? String(returForm.itemId) : ""}
+            onChange={v => setReturForm(p => ({ ...p, itemId: v }))}
+            placeholder="— Cari/pilih barang —"
+          />
         </div>
         <div className="sect-box">
           <div className="sect-lbl">🔢 Jumlah Dikembalikan</div>

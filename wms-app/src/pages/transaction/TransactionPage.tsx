@@ -44,7 +44,7 @@ export function TransactionPage() {
 
   const totalReturPages = Math.ceil(returns.length / Math.max(1, returPageSize));
   const currentReturPage = returPage > totalReturPages ? 1 : returPage;
-  const pagedReturns = [...returns].reverse().slice((currentReturPage - 1) * returPageSize, currentReturPage * returPageSize);
+  const pagedReturns = [...returns].slice((currentReturPage - 1) * returPageSize, currentReturPage * returPageSize);
 
   const deleteTransaction = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus transaksi", "err"); return; }
