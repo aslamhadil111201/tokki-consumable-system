@@ -332,9 +332,21 @@ export function TransactionPage() {
                           await withLoading(async () => {
                             try {
                               const { supabase } = await import("../../lib/supabase");
+                              
+                              // 1. Update status retur di database
                               const { error } = await supabase.from("returns").update({ status: "Diterima" }).eq("id", r.id);
                               if (error) throw new Error(error.message || "Gagal update status");
-                              setToast("Status retur diperbarui ✓");
+
+                              // 2. Tambahkan kembali barang ke stok jika itemId valid
+                              if (r.itemId) {
+                                const { data: itemData } = await supabase.from("items").select("stock").eq("id", r.itemId).single();
+                                if (itemData) {
+                                  const newStock = (itemData.stock || 0) + Number(r.qty || 0);
+                                  await supabase.from("items").update({ stock: newStock }).eq("id", r.itemId);
+                                }
+                              }
+
+                              setToast("Status retur diperbarui & stok ditambahkan ✓");
                               fetchAll();
                             } catch (e: any) { setToast(e?.message || "Gagal update status", "err"); }
                           }, "Memperbarui...");
