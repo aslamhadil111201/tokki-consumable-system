@@ -39,12 +39,8 @@ export const ReturModal = ({
           note: String(returForm.note || "").trim(), date: todayStr(), time: nowTime()
         }]);
         if (error) throw new Error(error.message || "Gagal menyimpan retur");
-        // Update item stock (add back)
-        if (it) {
-          const newStock = (it.stock || 0) + qty;
-          await supabase.from("items").update({ stock: newStock }).eq("id", itemId);
-        }
-        setToast("Retur berhasil dicatat, stok telah diperbarui");
+        
+        setToast("Retur berhasil dicatat, menunggu konfirmasi Admin ✓");
         onClose();
         setReturForm(emptyReturForm());
         fetchAll();
@@ -56,7 +52,7 @@ export const ReturModal = ({
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div style={{ fontSize: 20, fontWeight: 900, ...gText(), marginBottom: 4 }}>↩ Catat Retur Barang</div>
-        <div style={{ fontSize: 12, color: T.muted, marginBottom: 18 }}>Barang yang diretur akan otomatis menambah stok kembali.</div>
+        <div style={{ fontSize: 12, color: T.muted, marginBottom: 18 }}>Barang yang diretur akan menambah stok setelah disetujui Admin.</div>
         <div className="sect-box">
           <div className="sect-lbl">👤 Data Pengembali</div>
           <div><FL>Nama Pengembali *</FL>
