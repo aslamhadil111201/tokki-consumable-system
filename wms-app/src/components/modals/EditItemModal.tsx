@@ -38,8 +38,18 @@ export const EditItemModal = ({
     await withLoading(async () => {
       try {
         const { supabase } = await import("../../lib/supabase");
+        const avgCost = Number(editItem.averageCost || 0);
+        const newStock = Number(editItem.stock) || 0;
+        const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
+
         const { error } = await supabase.from("items").update({
-          name: editItem.name, category: editItem.category, photo: editItem.photo || null
+          name: editItem.name, 
+          category: editItem.category, 
+          photo: editItem.photo || null,
+          stock: newStock,
+          minStock: Number(editItem.minStock) || 0,
+          unit: String(editItem.unit || "").trim(),
+          totalValue: newTotalValue
         }).eq("id", editItem.id);
         if (error) throw new Error(error.message || "Gagal memperbarui item");
         onClose();
@@ -53,7 +63,7 @@ export const EditItemModal = ({
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div style={{ fontSize: 22, fontWeight: 900, ...gText(), marginBottom: 4 }}>✏️ Edit Barang</div>
-        <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Perbarui nama, kategori, dan foto barang</div>
+        <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Perbarui nama, kategori, stok, satuan, dan foto barang</div>
         <div className="sect-box">
           <div className="sect-lbl">📷 Foto Barang</div>
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
@@ -81,6 +91,37 @@ export const EditItemModal = ({
               <select className="ifield" value={editItem.category} onChange={e => setEditItem((p: any) => ({ ...p, category: e.target.value }))}>
                 {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <FL>Stok Saat Ini *</FL>
+                <input 
+                  className="ifield" 
+                  type="number" 
+                  value={editItem.stock} 
+                  onChange={e => setEditItem((p: any) => ({ ...p, stock: Number(e.target.value) || 0 }))} 
+                  placeholder="Stok..." 
+                />
+              </div>
+              <div>
+                <FL>Min. Stok *</FL>
+                <input 
+                  className="ifield" 
+                  type="number" 
+                  value={editItem.minStock} 
+                  onChange={e => setEditItem((p: any) => ({ ...p, minStock: Number(e.target.value) || 0 }))} 
+                  placeholder="Min..." 
+                />
+              </div>
+            </div>
+            <div>
+              <FL>Satuan *</FL>
+              <input 
+                className="ifield" 
+                value={editItem.unit} 
+                onChange={e => setEditItem((p: any) => ({ ...p, unit: e.target.value }))} 
+                placeholder="Pcs, unit, dll..." 
+              />
             </div>
           </div>
         </div>
