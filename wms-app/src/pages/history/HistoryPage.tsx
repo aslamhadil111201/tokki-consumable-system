@@ -16,7 +16,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { AddStockModal } from "../../components/modals/AddStockModal";
 
 export function HistoryPage() {
-  const { dark, user, trx, receives, items, setToast, withLoading, fetchAll, dataReady } = useStore();
+  const { dark, user, trx, receives, returns, deliveryNotes, items, setToast, withLoading, fetchAll, dataReady } = useStore();
   const T = getT(dark);
 
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
@@ -298,6 +298,112 @@ export function HistoryPage() {
     dlPdf(`audit-${todayStr()}.pdf`, "Laporan Audit Trail", ["ID", "Waktu", "Aksi", "Actor", "Role", "Target"], rows);
   };
 
+  const exportAllReportsExcel = async () => {
+    await withLoading(async () => {
+      try {
+        const XLSX = await import("xlsx");
+        const wb = XLSX.utils.book_new();
+
+        // 1. Sheet Stok Barang
+        const stokRows = items.map(it => ({
+          "ID": it.id,
+          "Kode Barang": it.itemCode || "-",
+          "Nama Barang": it.name,
+          "Kategori": it.category,
+          "Stok": it.stock,
+          "Satuan": it.unit,
+          "Min. Stok": it.minStock,
+          "Average Cost": it.averageCost || 0,
+          "Last Price": it.lastPrice || 0,
+          "Total Value": it.totalValue || 0
+        }));
+        const wsStok = XLSX.utils.json_to_sheet(stokRows);
+        XLSX.utils.book_append_sheet(wb, wsStok, "Stok Barang");
+
+        // 2. Sheet Pengambilan
+        const outRows = trx.flatMap((t: any) => 
+          toSafeRows(t.items).map((it: any) => ({
+            "ID Transaksi": t.id,
+            "Tanggal": t.date,
+            "Waktu": t.time || "-",
+            "Nama Pengambil": t.taker || "-",
+            "Section": t.dept || "-",
+            "Project": t.workOrder || "-",
+            "Admin": t.admin || "-",
+            "Nama Barang": it.itemName || "-",
+            "Qty": it.qty,
+            "Unit": it.unit || "pcs",
+            "Status": trxApprovalStatus(t).toUpperCase(),
+            "Keterangan": t.note || "-"
+          }))
+        );
+        const wsOut = XLSX.utils.json_to_sheet(outRows);
+        XLSX.utils.book_append_sheet(wb, wsOut, "Pengambilan");
+
+        // 3. Sheet Penerimaan
+        const inRows = receives.map((r: any) => ({
+          "ID Penerimaan": r.id,
+          "Tanggal": r.date,
+          "Waktu": r.time || "-",
+          "Admin": r.admin || "-",
+          "Nama Barang": r.itemName || "-",
+          "Qty": r.qty,
+          "Unit": r.unit || "pcs",
+          "Harga Satuan": r.buyPrice || 0,
+          "Total Harga": (r.buyPrice || 0) * (r.qty || 0),
+          "No. PO": r.poNumber || "-",
+          "No. DO": r.doNumber || "-",
+          "Supplier": r.supplier || "-"
+        }));
+        const wsIn = XLSX.utils.json_to_sheet(inRows);
+        XLSX.utils.book_append_sheet(wb, wsIn, "Penerimaan");
+
+        // 4. Sheet Retur Barang
+        const returRows = returns.map((r: any) => {
+          const it = itemMap[Number(r.itemId)];
+          return {
+            "ID Retur": r.id,
+            "Tanggal": r.date,
+            "Waktu": r.time || "-",
+            "Karyawan": r.employee || "-",
+            "Nama Barang": it?.name || r.itemName || `Item #${r.itemId}`,
+            "Qty": r.qty,
+            "Unit": it?.unit || "pcs",
+            "Alasan": r.reason || "-",
+            "Catatan": r.note || "-"
+          };
+        });
+        const wsRetur = XLSX.utils.json_to_sheet(returRows);
+        XLSX.utils.book_append_sheet(wb, wsRetur, "Retur Barang");
+
+        // 5. Sheet Surat Jalan
+        const sjRows = deliveryNotes.flatMap((n: any) => 
+          toSafeRows(n.items).map((it: any) => ({
+            "ID Surat Jalan": n.id,
+            "No. Batch": n.batch || "-",
+            "Kategori": n.category || "-",
+            "Tanggal": n.date || "-",
+            "No. Project": n.project_no || "-",
+            "No. Kendaraan": n.no_kendaraan || "-",
+            "Tujuan": n.destination || "-",
+            "Penerima / Attn": n.attn || "-",
+            "Alamat": n.full_address || "-",
+            "Deskripsi Barang": it.description || "-",
+            "Qty": it.qty || 0,
+            "UoM": it.uom || "-"
+          }))
+        );
+        const wsSj = XLSX.utils.json_to_sheet(sjRows);
+        XLSX.utils.book_append_sheet(wb, wsSj, "Surat Jalan");
+
+        XLSX.writeFile(wb, `Laporan_WMS_Lengkap_${todayStr()}.xlsx`);
+        setToast("Export Semua Laporan (Excel) berhasil ✓", "ok");
+      } catch (e: any) {
+        setToast(e.message || "Gagal export laporan", "err");
+      }
+    }, "Mengekspor semua laporan...");
+  };
+
   return (
     <div>
       {!dataReady && <TablePageSkeleton rows={6} statCount={5} showTabs />}
@@ -324,8 +430,13 @@ export function HistoryPage() {
           })()}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          {isAdmin && historyTab !== "audit" && historyTab !== "approval" && <BtnG onClick={historyTab === "in" ? exportReceivesExcel : exportTransactionsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>}
-          {isAdmin && historyTab !== "audit" && historyTab !== "approval" && <BtnG onClick={historyTab === "in" ? exportReceivesPdf : exportTransactionsPdf} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>}
+          {isAdmin && historyTab === "all" && (
+            <button onClick={exportAllReportsExcel} style={{ fontWeight: 800, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: "var(--t-primary)", color: "white", border: "none", borderRadius: 9, cursor: "pointer", transition: "all .2s", boxShadow: `0 4px 12px ${T.primaryGlow}` }}>
+              📊 Export Semua Laporan (Excel)
+            </button>
+          )}
+          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && <BtnG onClick={historyTab === "in" ? exportReceivesExcel : exportTransactionsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>}
+          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && <BtnG onClick={historyTab === "in" ? exportReceivesPdf : exportTransactionsPdf} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>}
           {isAdmin && historyTab === "audit" && <BtnG onClick={exportAuditExcel} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>}
           {isAdmin && historyTab === "audit" && <BtnG onClick={exportAuditPdf} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>}
           {isAdmin && historyTab !== "in" && historyTab !== "audit" && historyTab !== "approval" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>}
