@@ -36,7 +36,7 @@ export function TransactionPage() {
   }, [trxDate]);
 
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
-  const filtTrx = [...trx].reverse().filter((t: any) => !trxDate || t.date === trxDate);
+  const filtTrx = [...trx].filter((t: any) => !trxDate || t.date === trxDate);
 
   const totalPages = Math.ceil(filtTrx.length / Math.max(1, trxPageSize));
   const currentTrxPage = trxPage > totalPages ? 1 : trxPage;
