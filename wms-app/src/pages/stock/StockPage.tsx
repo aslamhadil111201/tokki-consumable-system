@@ -8,7 +8,7 @@ import { UIIcon } from "../../components/ui/UIIcon";
 import { ProgBlocks } from "../../components/ui/Prog";
 import { StockSkeleton } from "../../components/ui/Skeleton";
 import { fmtMoney } from "../../utils/formatters";
-import { stockStatus, stockStatusKey, stockStatusIcon, catColor } from "../../utils/stockHelpers";
+import { stockStatus, stockStatusKey, stockStatusIcon } from "../../utils/stockHelpers";
 import { CATS } from "../../constants/index";
 import { useStore } from "../../store/useStore";
 import { NewItemModal } from "../../components/modals/NewItemModal";
@@ -170,8 +170,8 @@ export function StockPage() {
           </div>
         )}
         {pagedItems.map(it => {
-          const s = stockStatus(it, dark); const cc = catColor(it.category, dark); const pct = it.minStock ? Math.min(100, it.stock / it.minStock * 100) : 100;
-          const cardBorder = s.label === "Aman" ? cc.dot : s.dot;
+          const s = stockStatus(it, dark); const pct = it.minStock ? Math.min(100, it.stock / it.minStock * 100) : 100;
+          const cardBorder = s.dot;
           return (
             <div key={it.id} className="stk-card" style={{ border: `2px solid ${cardBorder}`, gap: 0 }}>
               {isAdmin && (
@@ -186,16 +186,16 @@ export function StockPage() {
               <div className="stk-photo-box">
                 {it.photo
                   ? <img src={it.photo} alt={it.name} className="stk-photo-img" />
-                  : <div className="stk-photo-placeholder" style={{ background: cc.bg }}>📷</div>
+                  : <div className="stk-photo-placeholder" style={{ background: s.bg, color: s.dot }}>📷</div>
                 }
               </div>
 
               <div className="stk-name" style={{ paddingRight: isAdmin ? 76 : 0 }}>{it.name}</div>
-              {it.itemCode && <div className="stk-code" style={{ color: cc.dot }}>Kode: {it.itemCode}</div>}
+              {it.itemCode && <div className="stk-code" style={{ color: s.dot }}>Kode: {it.itemCode}</div>}
               
               <div className="stk-cat-row">
-                <span className="stk-cat-dot" style={{ background: cc.dot }} />
-                <span className="stk-cat-text" style={{ color: cc.text }}>{it.category}</span>
+                <span className="stk-cat-dot" style={{ background: s.dot }} />
+                <span className="stk-cat-text" style={{ color: T.muted }}>{it.category}</span>
               </div>
 
               <div className="stk-divider" />
