@@ -649,9 +649,14 @@ export function HistoryPage() {
                     const itemsArr: any[] = row.items || [];
                     const totalUnits = isRetur ? (Number(row.qty) || 0) : isIn ? (Number(row.qty) || 0) : itemsArr.reduce((a: number, i: any) => a + Number(i.qty || 0), 0);
                     const jenis = (isRetur || isIn) ? 1 : itemsArr.length;
-                    const totalCost = isIn
-                      ? Number(row.totalCostIn ?? ((Number(row.qty) || 0) * (Number(row.buyPrice) || 0)))
-                      : Number(row.totalCostOut ?? 0);
+                    const totalCost = isRetur
+                      ? (Number(row.qty) || 0) * Number(itemMap[Number(row.itemId)]?.averageCost ?? 0)
+                      : isIn
+                      ? (Number(row.qty) || 0) * Number(row.buyPrice ?? itemMap[Number(row.itemId)]?.lastPrice ?? itemMap[Number(row.itemId)]?.averageCost ?? 0)
+                      : itemsArr.reduce((acc: number, it: any) => {
+                          const avg = Number(it.averageCost ?? itemMap[Number(it.itemId)]?.averageCost ?? 0);
+                          return acc + (Number(it.qty || 0) * avg);
+                        }, 0);
                     return (
                       <div key={`${row.type || "x"}-${row.id}`} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${accentColor}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", transition: "box-shadow .2s", boxShadow: T.shadowSm }}>
                         {/* Avatar */}
@@ -743,7 +748,7 @@ export function HistoryPage() {
                           {/* Total */}
                           <div className="trx-col-total" style={{ paddingRight: isAdmin ? 14 : 0 }}>
                             <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 3, textTransform: "uppercase", letterSpacing: ".05em" }}>Total</div>
-                            <div style={{ fontSize: 14, fontWeight: 900, color: accentColor }}>{isRetur ? "-" : fmtMoney(totalCost)}</div>
+                            <div style={{ fontSize: 14, fontWeight: 900, color: accentColor }}>{fmtMoney(totalCost)}</div>
                           </div>
                           {/* Hapus */}
                           {isAdmin && (
