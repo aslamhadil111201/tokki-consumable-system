@@ -144,8 +144,8 @@ export function HistoryPage() {
       const { error } = await supabase.from("transactions").update(updateData).eq("id", id);
       if (error) throw new Error(error.message || `Gagal ${act} transaksi`);
 
-      // Jika approve, kurangi stok
-      if (act === "approve") {
+      // Jika reject, kembalikan stok barang ke gudang
+      if (act === "reject") {
         const trxData = trx.find(t => t.id === id);
         if (trxData && Array.isArray(trxData.items)) {
           for (const line of trxData.items) {
@@ -154,8 +154,13 @@ export function HistoryPage() {
             if (itemId && qty > 0) {
               const item = items.find(i => Number(i.id) === itemId);
               if (item) {
-                const newStock = Math.max(0, (item.stock || 0) - qty);
-                await supabase.from("items").update({ stock: newStock }).eq("id", itemId);
+                const newStock = (item.stock || 0) + qty;
+                const avgCost = Number(item.averageCost || 0);
+                const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
+                await supabase.from("items").update({ 
+                  stock: newStock,
+                  totalValue: newTotalValue
+                }).eq("id", itemId);
               }
             }
           }
@@ -176,7 +181,7 @@ export function HistoryPage() {
 
   const deleteTransaction = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus transaksi", "err"); return; }
-    if (!window.confirm("Hapus transaksi ini? Stok barang yang sudah disetujui akan dikembalikan ke gudang.")) return;
+    if (!window.confirm("Hapus transaksi ini? Stok barang akan dikembalikan ke gudang.")) return;
     await withLoading(async () => {
       try {
         const { supabase } = await import("../../lib/supabase");
@@ -184,8 +189,8 @@ export function HistoryPage() {
         // 1. Ambil data transaksi terlebih dahulu
         const trxData = trx.find(t => t.id === id);
         
-        // 2. Jika transaksi ini sudah disetujui (approved), kembalikan stok barang
-        if (trxData && trxApprovalStatus(trxData) === "approved" && Array.isArray(trxData.items)) {
+        // 2. Selalu kembalikan stok barang ke gudang jika transaksi dihapus
+        if (trxData && Array.isArray(trxData.items)) {
           for (const line of trxData.items) {
             const itemId = Number(line.itemId);
             const qty = Number(line.qty || 0);
@@ -211,7 +216,7 @@ export function HistoryPage() {
           actor: { username: user?.username, role: user?.role },
           target: `Transaction #${id}`
         }]);
-        setToast("Transaksi dihapus & stok barang telah dikembalikan ✓");
+        setToast("Transaksi dihapus & stok barang telah bertambah kembali ✓");
         await fetchAll();
       } catch (e: any) { setToast(e?.message || "Gagal menghapus", "err"); }
     }, "Sedang menghapus...");

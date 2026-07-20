@@ -89,18 +89,24 @@ export const TransactionModal = ({
           target: `Transaction for ${form.taker}`
         }]);
         
-        // Jika langsung approved, kurangi stok
-        if (approvalStatus === "approved") {
-          for (const c of form.cart) {
-            const it = items.find(i => i.id === c.itemId);
-            if (it) {
-              const newStock = Math.max(0, it.stock - c.qty);
-              await supabase.from("items").update({ stock: newStock }).eq("id", it.id);
-            }
+        // Selalu kurangi stok barang saat pengambilan dicatat
+        for (const c of form.cart) {
+          const it = items.find(i => i.id === c.itemId);
+          if (it) {
+            const newStock = Math.max(0, Number(it.stock || 0) - Number(c.qty || 0));
+            const avgCost = Number(it.averageCost || 0);
+            const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
+            await supabase.from("items").update({ 
+              stock: newStock,
+              totalValue: newTotalValue
+            }).eq("id", it.id);
           }
-          setToast(`Transaksi ${form.taker} tercatat, stok diperbarui`);
+        }
+        
+        if (approvalStatus === "approved") {
+          setToast(`Transaksi ${form.taker} tercatat, stok diperbarui ✓`);
         } else {
-          setToast(`Transaksi ${form.taker} masuk antrian approval admin`);
+          setToast(`Transaksi ${form.taker} tercatat & stok dikurangi (menunggu konfirmasi) ✓`);
         }
         
         setForm(emptyForm()); setPickerItem(""); setPickerQty(""); onClose();

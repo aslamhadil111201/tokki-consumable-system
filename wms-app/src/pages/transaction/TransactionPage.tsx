@@ -48,7 +48,7 @@ export function TransactionPage() {
 
   const deleteTransaction = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus transaksi", "err"); return; }
-    if (!window.confirm("Hapus transaksi ini? Stok barang yang sudah disetujui akan dikembalikan ke gudang.")) return;
+    if (!window.confirm("Hapus transaksi ini? Stok barang akan dikembalikan ke gudang.")) return;
     await withLoading(async () => {
       try {
         const { supabase } = await import("../../lib/supabase");
@@ -56,8 +56,8 @@ export function TransactionPage() {
         // 1. Ambil data transaksi terlebih dahulu
         const trxData = trx.find(t => t.id === id);
         
-        // 2. Jika transaksi ini sudah disetujui (approved), kembalikan stok barang
-        if (trxData && trxApprovalStatus(trxData) === "approved" && Array.isArray(trxData.items)) {
+        // 2. Selalu kembalikan stok barang ke gudang
+        if (trxData && Array.isArray(trxData.items)) {
           for (const line of trxData.items) {
             const itemId = Number(line.itemId);
             const qty = Number(line.qty || 0);
@@ -80,7 +80,7 @@ export function TransactionPage() {
         const { error } = await supabase.from("transactions").delete().eq("id", id);
         if (error) throw new Error(error.message || "Gagal menghapus transaksi");
 
-        setToast("Transaksi dihapus & stok barang telah dikembalikan ✓");
+        setToast("Transaksi dihapus & stok barang telah bertambah kembali ✓");
         await fetchAll();
       } catch (e: any) { setToast(e?.message || "Gagal menghapus transaksi", "err"); }
     }, "Sedang menghapus transaksi...");
