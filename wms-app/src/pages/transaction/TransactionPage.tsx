@@ -7,7 +7,7 @@ import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
 import { TablePageSkeleton } from "../../components/ui/Skeleton";
 import { fmtDate, todayStr, nowTime, fmtDateExcel } from "../../utils/formatters";
-import { avatarColor, initials, csvText, csvEscape, triggerDownload, toSafeRows } from "../../utils/helpers";
+import { avatarColor, initials, csvText, csvEscape, triggerDownload, toSafeRows, trxApprovalStatus } from "../../utils/helpers";
 import { EXCEL_ICON, PDF_ICON } from "../../constants/index";
 import { useStore } from "../../store/useStore";
 import { TransactionModal } from "../../components/modals/TransactionModal";
@@ -48,16 +48,42 @@ export function TransactionPage() {
 
   const deleteTransaction = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus transaksi", "err"); return; }
-    if (!window.confirm("Hapus transaksi ini?")) return;
+    if (!window.confirm("Hapus transaksi ini? Stok barang yang sudah disetujui akan dikembalikan ke gudang.")) return;
     await withLoading(async () => {
       try {
         const { supabase } = await import("../../lib/supabase");
+        
+        // 1. Ambil data transaksi terlebih dahulu
+        const trxData = trx.find(t => t.id === id);
+        
+        // 2. Jika transaksi ini sudah disetujui (approved), kembalikan stok barang
+        if (trxData && trxApprovalStatus(trxData) === "approved" && Array.isArray(trxData.items)) {
+          for (const line of trxData.items) {
+            const itemId = Number(line.itemId);
+            const qty = Number(line.qty || 0);
+            if (itemId && qty > 0) {
+              const { data: itemData } = await supabase.from("items").select("stock, averageCost").eq("id", itemId).single();
+              if (itemData) {
+                const newStock = (itemData.stock || 0) + qty;
+                const avgCost = Number(itemData.averageCost || 0);
+                const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
+                await supabase.from("items").update({ 
+                  stock: newStock,
+                  totalValue: newTotalValue
+                }).eq("id", itemId);
+              }
+            }
+          }
+        }
+
+        // 3. Hapus data transaksi
         const { error } = await supabase.from("transactions").delete().eq("id", id);
         if (error) throw new Error(error.message || "Gagal menghapus transaksi");
-        setToast("Transaksi dihapus");
+
+        setToast("Transaksi dihapus & stok barang telah dikembalikan ✓");
         await fetchAll();
       } catch (e: any) { setToast(e?.message || "Gagal menghapus transaksi", "err"); }
-    }, "Sedang menghapus transaksi");
+    }, "Sedang menghapus transaksi...");
   };
 
   const exportTransactionsExcel = () => {

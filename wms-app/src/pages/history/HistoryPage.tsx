@@ -176,10 +176,34 @@ export function HistoryPage() {
 
   const deleteTransaction = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus transaksi", "err"); return; }
-    if (!window.confirm("Hapus transaksi ini?")) return;
+    if (!window.confirm("Hapus transaksi ini? Stok barang yang sudah disetujui akan dikembalikan ke gudang.")) return;
     await withLoading(async () => {
       try {
         const { supabase } = await import("../../lib/supabase");
+        
+        // 1. Ambil data transaksi terlebih dahulu
+        const trxData = trx.find(t => t.id === id);
+        
+        // 2. Jika transaksi ini sudah disetujui (approved), kembalikan stok barang
+        if (trxData && trxApprovalStatus(trxData) === "approved" && Array.isArray(trxData.items)) {
+          for (const line of trxData.items) {
+            const itemId = Number(line.itemId);
+            const qty = Number(line.qty || 0);
+            if (itemId && qty > 0) {
+              const { data: itemData } = await supabase.from("items").select("stock, averageCost").eq("id", itemId).single();
+              if (itemData) {
+                const newStock = (itemData.stock || 0) + qty;
+                const avgCost = Number(itemData.averageCost || 0);
+                const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
+                await supabase.from("items").update({ 
+                  stock: newStock,
+                  totalValue: newTotalValue
+                }).eq("id", itemId);
+              }
+            }
+          }
+        }
+
         const { error } = await supabase.from("transactions").delete().eq("id", id);
         if (error) throw new Error(error.message || "Gagal menghapus transaksi");
         await supabase.from("audit_logs").insert([{
@@ -187,7 +211,7 @@ export function HistoryPage() {
           actor: { username: user?.username, role: user?.role },
           target: `Transaction #${id}`
         }]);
-        setToast("Transaksi dihapus");
+        setToast("Transaksi dihapus & stok barang telah dikembalikan ✓");
         await fetchAll();
       } catch (e: any) { setToast(e?.message || "Gagal menghapus", "err"); }
     }, "Sedang menghapus...");
@@ -195,13 +219,35 @@ export function HistoryPage() {
 
   const deleteReceive = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus", "err"); return; }
-    if (!window.confirm("Hapus penerimaan ini?")) return;
+    if (!window.confirm("Hapus penerimaan ini? Stok barang akan dikurangi kembali.")) return;
     await withLoading(async () => {
       try {
         const { supabase } = await import("../../lib/supabase");
+
+        // 1. Ambil data penerimaan
+        const recData = receives.find(r => r.id === id);
+        
+        // 2. Kurangi kembali stok barang yang sempat ditambahkan saat penerimaan
+        if (recData && recData.itemId) {
+          const itemId = Number(recData.itemId);
+          const qty = Number(recData.qty || 0);
+          if (itemId && qty > 0) {
+            const { data: itemData } = await supabase.from("items").select("stock, averageCost").eq("id", itemId).single();
+            if (itemData) {
+              const newStock = Math.max(0, (itemData.stock || 0) - qty);
+              const avgCost = Number(itemData.averageCost || 0);
+              const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
+              await supabase.from("items").update({ 
+                stock: newStock,
+                totalValue: newTotalValue 
+              }).eq("id", itemId);
+            }
+          }
+        }
+
         const { error } = await supabase.from("receives").delete().eq("id", id);
         if (error) throw new Error(error.message || "Gagal menghapus penerimaan");
-        setToast("Penerimaan dihapus");
+        setToast("Penerimaan dihapus & stok disesuaikan ✓");
         await fetchAll();
       } catch (e: any) { setToast(e?.message || "Gagal menghapus", "err"); }
     }, "Sedang menghapus...");

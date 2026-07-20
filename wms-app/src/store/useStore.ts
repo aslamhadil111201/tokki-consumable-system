@@ -309,12 +309,32 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     deleteReturn: async (id: string | number) => {
-      const { fetchAll, setToast } = get();
+      const { fetchAll, setToast, returns } = get();
       try {
         const { supabase } = await import('../lib/supabase');
+        
+        // Jika retur ini sempat berstatus "Diterima", kurangi kembali stoknya saat data retur dihapus
+        const retData = returns.find((r: any) => r.id === Number(id));
+        if (retData && retData.status === "Diterima" && retData.itemId) {
+          const itemId = Number(retData.itemId);
+          const qty = Number(retData.qty || 0);
+          if (itemId && qty > 0) {
+            const { data: itemData } = await supabase.from('items').select('stock, averageCost').eq('id', itemId).single();
+            if (itemData) {
+              const newStock = Math.max(0, (itemData.stock || 0) - qty);
+              const avgCost = Number(itemData.averageCost || 0);
+              const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
+              await supabase.from('items').update({
+                stock: newStock,
+                totalValue: newTotalValue
+              }).eq('id', itemId);
+            }
+          }
+        }
+
         const { error } = await supabase.from('returns').delete().eq('id', id);
         if (error) throw error;
-        setToast("Data retur berhasil dihapus ✓", "ok");
+        setToast("Data retur dihapus & stok disesuaikan ✓", "ok");
         await fetchAll();
         return { ok: true };
       } catch (e: any) {
