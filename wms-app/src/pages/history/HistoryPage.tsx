@@ -16,7 +16,7 @@ import { TransactionModal } from "../../components/modals/TransactionModal";
 import { AddStockModal } from "../../components/modals/AddStockModal";
 
 export function HistoryPage() {
-  const { dark, user, trx, receives, returns, deliveryNotes, items, setToast, withLoading, fetchAll, dataReady } = useStore();
+  const { dark, user, trx, receives, returns, deliveryNotes, items, setToast, withLoading, fetchAll, dataReady, deleteReturn } = useStore();
   const T = getT(dark);
 
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
@@ -31,6 +31,7 @@ export function HistoryPage() {
   const [historyPageSize, setHistoryPageSize] = useState(6);
   const [historyOutPage, setHistoryOutPage] = useState(1);
   const [historyInPage, setHistoryInPage] = useState(1);
+  const [historyReturPage, setHistoryReturPage] = useState(1);
   
   const [approvalBusyKey, setApprovalBusyKey] = useState<string | null>(null);
   const [slaTick, setSlaTick] = useState(0);
@@ -85,8 +86,12 @@ export function HistoryPage() {
   const pendingApprovalCount = trx.filter(t => trxApprovalStatus(t) === "pending").length;
 
   const allHistory = [
-    ...trx.map(t => ({ ...t, type: "out", _ts: t.date + "T" + t.time })),
-    ...receives.map(r => ({ ...r, type: "in", _ts: r.date + "T" + (r.time || "00:00") }))
+    ...trx.map(t => ({ ...t, type: "out", _ts: t.date + "T" + (t.time || "00:00") })),
+    ...receives.map(r => ({ ...r, type: "in", _ts: r.date + "T" + (r.time || "00:00") })),
+    ...returns.map(r => {
+      const it = itemMap[Number(r.itemId)];
+      return { ...r, type: "retur", taker: r.employee, itemName: it?.name || r.itemName || `Item #${r.itemId}`, unit: it?.unit || "pcs", _ts: r.date + "T" + (r.time || "00:00") };
+    })
   ].sort((a, b) => b._ts.localeCompare(a._ts));
 
   const filterFn = (item: any) => {
@@ -94,7 +99,7 @@ export function HistoryPage() {
     if (historyTo && item.date > historyTo) return false;
     if (historyQuery) {
       const q = historyQuery.toLowerCase();
-      const fields = [item.taker, item.admin, item.poNumber, item.doNumber, item.workOrder, item.note, item.approvalReason].filter(Boolean).map(String);
+      const fields = [item.taker, item.employee, item.admin, item.poNumber, item.doNumber, item.workOrder, item.note, item.reason, item.approvalReason].filter(Boolean).map(String);
       const itemsMatch = toSafeRows(item.items).some(i => (i.itemName || "").toLowerCase().includes(q));
       if (!fields.some(f => f.toLowerCase().includes(q)) && !itemsMatch && !(item.itemName || "").toLowerCase().includes(q)) return false;
     }
@@ -104,17 +109,23 @@ export function HistoryPage() {
   const filteredAll = allHistory.filter(filterFn);
   const filteredOut = trx.filter(filterFn);
   const filteredIn = receives.filter(filterFn);
+  const filteredReturns = returns.map((r: any) => {
+    const it = itemMap[Number(r.itemId)];
+    return { ...r, taker: r.employee, itemName: it?.name || r.itemName || `Item #${r.itemId}`, unit: it?.unit || "pcs" };
+  }).filter(filterFn);
 
   const filteredOutByApproval = filteredOut.filter(t => historyApprovalStatus === "all" || trxApprovalStatus(t) === historyApprovalStatus);
   const filteredPending = trx.filter(t => trxApprovalStatus(t) === "pending").filter(filterFn);
 
   const outTotalPages = Math.ceil(filteredOutByApproval.length / Math.max(1, historyPageSize));
   const inTotalPages = Math.ceil(filteredIn.length / Math.max(1, historyPageSize));
+  const returTotalPages = Math.ceil(filteredReturns.length / Math.max(1, historyPageSize));
   const allTotalPages = Math.ceil(filteredAll.length / Math.max(1, historyPageSize));
   const auditTotalPages = Math.ceil(auditTotal / Math.max(1, auditPageSize));
 
   const pagedOut = filteredOutByApproval.slice((historyOutPage - 1) * historyPageSize, historyOutPage * historyPageSize);
   const pagedIn = filteredIn.slice((historyInPage - 1) * historyPageSize, historyInPage * historyPageSize);
+  const pagedReturns = filteredReturns.slice((historyReturPage - 1) * historyPageSize, historyReturPage * historyPageSize);
   const pagedAll = filteredAll.slice((historyOutPage - 1) * historyPageSize, historyOutPage * historyPageSize);
 
   const totalOut = approvedOutTrx.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => b + Number(i.qty || 0), 0), 0);
@@ -333,6 +344,25 @@ export function HistoryPage() {
     dlPdf(`penerimaan-${todayStr()}.pdf`, "Riwayat Penerimaan", ["ID", "Tanggal", "Waktu", "Admin", "Item", "Qty", "Harga Satuan", "Total Harga", "PO", "DO"], rows);
   };
 
+  const exportReturnsExcel = () => {
+    const rows = [
+      ["Warehouse Management System"], ["Laporan Retur Barang"], [],
+      ["ID", "Tanggal", "Waktu", "Karyawan", "Item", "Qty", "Satuan", "Alasan", "Catatan", "Status"],
+      ...filteredReturns.map((r: any) => [
+        csvText(r.id), fmtDateExcel(r.date), r.time || "", r.employee,
+        r.itemName, r.qty, r.unit || "pcs", r.reason, r.note || "", r.status || "Menunggu"
+      ])
+    ];
+    const csv = "\uFEFF" + rows.map(r => r.map(v => typeof v === "string" ? csvEscape(v) : v).join(",")).join("\n");
+    triggerDownload(`retur-${todayStr()}.csv`, csv, "text/csv;charset=utf-8;");
+    setToast("Export Excel (CSV) retur berhasil ✓");
+  };
+
+  const exportReturnsPdf = () => {
+    const rows = filteredReturns.map((r: any) => [r.id, r.date, r.time || "", r.employee, r.itemName, `${r.qty} ${r.unit || "pcs"}`, r.reason, r.note || "", r.status || "Menunggu"]);
+    dlPdf(`retur-${todayStr()}.pdf`, "Laporan Retur Barang", ["ID", "Tanggal", "Waktu", "Karyawan", "Item", "Qty", "Alasan", "Catatan", "Status"], rows);
+  };
+
   const exportAuditExcel = () => {
     const rows = [
       ["Warehouse Management System"], ["Laporan Audit Trail"], [],
@@ -472,6 +502,7 @@ export function HistoryPage() {
               { id: "all", icon: "🧾", label: `Semua (${allHistory.length})` },
               { id: "out", icon: "📤", label: `Pengambilan (${trx.length})` },
               { id: "in", icon: "📋", label: `Penerimaan (${receives.length})` },
+              { id: "retur", icon: "↩", label: `Retur (${returns.length})` },
               ...(isAdmin ? [{ id: "approval", icon: "⏳", label: `Approval (${pendingApprovalCount})` }] : []),
               ...(isAdmin ? [{ id: "audit", icon: detectiveIcon, label: `Audit (${auditTotal})` }] : []),
             ];
@@ -486,11 +517,15 @@ export function HistoryPage() {
               📊 Export Semua Laporan (Excel)
             </button>
           )}
-          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && <BtnG onClick={historyTab === "in" ? exportReceivesExcel : exportTransactionsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>}
-          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && <BtnG onClick={historyTab === "in" ? exportReceivesPdf : exportTransactionsPdf} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>}
+          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && (
+            <BtnG onClick={historyTab === "in" ? exportReceivesExcel : historyTab === "retur" ? exportReturnsExcel : exportTransactionsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>
+          )}
+          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && (
+            <BtnG onClick={historyTab === "in" ? exportReceivesPdf : historyTab === "retur" ? exportReturnsPdf : exportTransactionsPdf} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>
+          )}
           {isAdmin && historyTab === "audit" && <BtnG onClick={exportAuditExcel} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>}
           {isAdmin && historyTab === "audit" && <BtnG onClick={exportAuditPdf} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>}
-          {isAdmin && historyTab !== "in" && historyTab !== "audit" && historyTab !== "approval" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>}
+          {isAdmin && historyTab !== "in" && historyTab !== "audit" && historyTab !== "approval" && historyTab !== "retur" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>}
           {canManage && historyTab === "in" && <BtnP onClick={() => setShowAdd(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Penerimaan</BtnP>}
         </div>
       </div>
@@ -515,7 +550,7 @@ export function HistoryPage() {
           </select>
           <BtnG style={{ fontSize: 11.5, padding: "7px 12px" }} onClick={() => { setHistoryQuery(""); setHistoryFrom(""); setHistoryTo(""); setHistoryApprovalStatus("all"); }}>✕ Reset</BtnG>
           <span style={{ marginLeft: "auto", fontSize: 11.5, color: T.muted, fontWeight: 600, whiteSpace: "nowrap" }}>
-            {historyTab === "all" ? filteredAll.length : historyTab === "out" ? filteredOutByApproval.length : historyTab === "approval" ? filteredPending.length : filteredIn.length} transaksi ditemukan
+            {historyTab === "all" ? filteredAll.length : historyTab === "out" ? filteredOutByApproval.length : historyTab === "approval" ? filteredPending.length : historyTab === "retur" ? filteredReturns.length : filteredIn.length} transaksi ditemukan
           </span>
         </div>
       )}
@@ -606,12 +641,14 @@ export function HistoryPage() {
                     <span style={{ fontSize: 12, fontWeight: 900, color: T.primary, letterSpacing: ".1em" }}>{fmtDG(date)}</span>
                   </div>
                   {grouped[date].map((row: any) => {
+                    const isRetur = String(row.type || "").toLowerCase() === "retur";
                     const isIn = String(row.type || "").toLowerCase() === "in";
-                    const accentColor = isIn ? T.green : T.red;
-                    const accentBg = isIn ? T.greenBg : T.redBg;
+                    const isDiterima = row.status === "Diterima";
+                    const accentColor = isRetur ? T.amber : isIn ? T.green : T.red;
+                    const accentBg = isRetur ? T.amberBg : isIn ? T.greenBg : T.redBg;
                     const itemsArr: any[] = row.items || [];
-                    const totalUnits = isIn ? (Number(row.qty) || 0) : itemsArr.reduce((a: number, i: any) => a + Number(i.qty || 0), 0);
-                    const jenis = isIn ? 1 : itemsArr.length;
+                    const totalUnits = isRetur ? (Number(row.qty) || 0) : isIn ? (Number(row.qty) || 0) : itemsArr.reduce((a: number, i: any) => a + Number(i.qty || 0), 0);
+                    const jenis = (isRetur || isIn) ? 1 : itemsArr.length;
                     const totalCost = isIn
                       ? Number(row.totalCostIn ?? ((Number(row.qty) || 0) * (Number(row.buyPrice) || 0)))
                       : Number(row.totalCostOut ?? 0);
@@ -620,18 +657,25 @@ export function HistoryPage() {
                         {/* Avatar */}
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 12px", gap: 5, minWidth: 70, flexShrink: 0 }}>
                           <div style={{ width: 48, height: 48, borderRadius: "50%", background: accentBg, border: `2px solid ${accentColor}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, lineHeight: 1 }}>
-                            {isIn ? "↙" : "↗"}
+                            {isRetur ? "↩" : isIn ? "↙" : "↗"}
                           </div>
-                          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".07em", color: accentColor, textTransform: "uppercase" }}>{isIn ? "MASUK" : "KELUAR"}</span>
+                          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".07em", color: accentColor, textTransform: "uppercase" }}>{isRetur ? "RETUR" : isIn ? "MASUK" : "KELUAR"}</span>
                         </div>
                         {/* Content */}
                         <div className="trx-row-inner">
                           {/* Name + dept */}
                           <div className="trx-col-name">
-                            <div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{isIn ? (row.itemName || itemsArr[0]?.itemName || "-") : (row.taker || "-")}</div>
-                            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{isIn ? `Admin: ${row.admin || "-"}` : (row.dept || "-")}</div>
-                            {!isIn && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>Admin: {row.admin || "-"}</div>}
-                            {!isIn && (
+                            <div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{isRetur ? (row.employee || row.taker || "-") : isIn ? (row.itemName || itemsArr[0]?.itemName || "-") : (row.taker || "-")}</div>
+                            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{isRetur ? "Retur Karyawan" : isIn ? `Admin: ${row.admin || "-"}` : (row.dept || "-")}</div>
+                            {!isIn && !isRetur && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>Admin: {row.admin || "-"}</div>}
+                            {isRetur && (
+                              <div style={{ marginTop: 4 }}>
+                                <Badge bg={isDiterima ? T.greenBg : T.amberBg} color={isDiterima ? T.greenText : T.amberText} border={isDiterima ? T.greenBorder : T.amberBorder}>
+                                  {isDiterima ? "✅ Diterima" : "⏳ Menunggu"}
+                                </Badge>
+                              </div>
+                            )}
+                            {!isIn && !isRetur && (
                               <div style={{ marginTop: 4 }}>
                                 {(() => {
                                   const status = trxApprovalStatus(row);
@@ -650,7 +694,19 @@ export function HistoryPage() {
                           </div>
                           {/* Items */}
                           <div className="trx-col-items">
-                            {isIn
+                            {isRetur
+                              ? <>
+                                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4, flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: 12 }}>📦</span>
+                                  <span style={{ fontSize: 12.5, fontWeight: 700, color: T.text }}>{row.itemName || "-"}</span>
+                                  <span style={{ fontSize: 10.5, fontWeight: 800, color: T.amberText, background: T.amberBg, padding: "1px 8px", borderRadius: 5, border: `1px solid ${T.amberBorder}`, flexShrink: 0 }}>+{row.qty} {row.unit || "pcs"}</span>
+                                </div>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                  {row.reason && <span style={{ fontSize: 10, fontWeight: 700, color: T.navActiveText, background: T.navActive, padding: "2px 8px", borderRadius: 5, border: `1px solid ${T.navActiveBorder}` }}>📋 {row.reason}</span>}
+                                  {row.note && <span style={{ fontSize: 10, fontWeight: 600, color: T.muted, background: T.surface, padding: "2px 8px", borderRadius: 5, border: `1px solid ${T.border}` }}>📝 {row.note}</span>}
+                                </div>
+                              </>
+                              : isIn
                               ? <>
                                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4, flexWrap: "wrap" }}>
                                   <span style={{ fontSize: 12 }}>📦</span>
@@ -671,7 +727,7 @@ export function HistoryPage() {
                                 </div>
                               ))
                             }
-                            {!isIn && itemsArr.length > 3 && <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>+{itemsArr.length - 3} item lainnya</div>}
+                            {!isIn && !isRetur && itemsArr.length > 3 && <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>+{itemsArr.length - 3} item lainnya</div>}
                           </div>
                           {/* Jenis + Unit */}
                           <div className="trx-col-count" style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -687,12 +743,12 @@ export function HistoryPage() {
                           {/* Total */}
                           <div className="trx-col-total" style={{ paddingRight: isAdmin ? 14 : 0 }}>
                             <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 3, textTransform: "uppercase", letterSpacing: ".05em" }}>Total</div>
-                            <div style={{ fontSize: 14, fontWeight: 900, color: accentColor }}>{fmtMoney(totalCost)}</div>
+                            <div style={{ fontSize: 14, fontWeight: 900, color: accentColor }}>{isRetur ? "-" : fmtMoney(totalCost)}</div>
                           </div>
                           {/* Hapus */}
                           {isAdmin && (
                             <button
-                              onClick={() => isIn ? deleteReceive(row.receiveId ?? row.id) : deleteTransaction(row.id)}
+                              onClick={() => isRetur ? deleteReturn(row.id) : isIn ? deleteReceive(row.receiveId ?? row.id) : deleteTransaction(row.id)}
                               style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, color: T.redText, borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
                               🗑 Hapus
                             </button>
@@ -976,6 +1032,126 @@ export function HistoryPage() {
                 ))}
                 <button onClick={() => setHistoryInPage(p => Math.min(inTotalPages, p + 1))} disabled={historyInPage >= inTotalPages}
                   style={{ padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: historyInPage >= inTotalPages ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: historyInPage >= inTotalPages ? "default" : "pointer", opacity: historyInPage >= inTotalPages ? 0.5 : 1, transition: "all .18s" }}>
+                  Next →
+                </button>
+              </div>
+              <select value={historyPageSize} onChange={e => setHistoryPageSize(Number(e.target.value) || 6)}
+                style={{ padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", outline: "none" }}>
+                {[6, 10, 15, 20].map(n => <option key={n} value={n}>{n} / halaman</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─ TAB RETUR BARANG ─ */}
+      {historyTab === "retur" && (
+        <div>
+          {/* Stats 4 columns */}
+          <div className="stat5-g">
+            {(() => {
+              const totalUnitRetur = returns.reduce((acc, r) => acc + Number(r.qty || 0), 0);
+              const totalDiterima = returns.filter(r => r.status === "Diterima").length;
+              const totalMenunggu = returns.filter(r => r.status !== "Diterima").length;
+              return [
+                { label: "Total Retur", sub: "catatan retur", val: returns.length, icon: "↩", dot: T.primary },
+                { label: "Unit Dikembalikan", sub: "unit barang", val: totalUnitRetur, icon: "📦", dot: T.green },
+                { label: "Diterima", sub: "sudah disetujui", val: totalDiterima, icon: "✅", dot: "#10b981" },
+                { label: "Menunggu", sub: "belum disetujui", val: totalMenunggu, icon: "⏳", dot: T.amber },
+              ];
+            })().map((s, i) => (
+              <div key={i} className="stat-card" style={{ display: "flex", flexDirection: "column", padding: "16px 14px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400, background: dark ? "rgba(16,185,129,0.13)" : "rgba(16,185,129,0.09)", border: `1px solid ${T.navActiveBorder}`, flexShrink: 0, color: s.dot }}>{s.icon}</div>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
+                </div>
+                <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 4, lineHeight: 1.3 }}>{s.label}</div>
+                <div className="stat-val" style={{ fontSize: "clamp(15px,3.5vw,28px)", fontWeight: 900, lineHeight: 1.2, color: s.dot, marginBottom: 4 }}>{s.val}</div>
+                <div style={{ fontSize: 10, color: T.muted, fontWeight: 500 }}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {filteredReturns.length === 0
+            ? <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}><div style={{ fontSize: 36, marginBottom: 12 }}>↩</div>Belum ada riwayat retur barang</div>
+            : pagedReturns.map((r: any) => {
+              const isDiterima = r.status === "Diterima";
+              return (
+                <div key={r.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${isDiterima ? T.green : T.amber}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", boxShadow: T.shadowSm, transition: "box-shadow .2s" }}>
+                  {/* Avatar */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 12px", gap: 5, minWidth: 70, flexShrink: 0 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: isDiterima ? T.greenBg : T.amberBg, border: `2px solid ${isDiterima ? T.green : T.amber}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, lineHeight: 1 }}>↩</div>
+                    <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".07em", color: isDiterima ? T.green : T.amber, textTransform: "uppercase" }}>RETUR</span>
+                  </div>
+                  {/* Content */}
+                  <div className="trx-row-inner">
+                    {/* Name */}
+                    <div className="trx-col-name">
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{r.employee || "-"}</div>
+                      <div style={{ marginTop: 4 }}>
+                        <Badge bg={isDiterima ? T.greenBg : T.amberBg} color={isDiterima ? T.greenText : T.amberText} border={isDiterima ? T.greenBorder : T.amberBorder}>
+                          {isDiterima ? "✅ Diterima" : "⏳ Menunggu"}
+                        </Badge>
+                      </div>
+                    </div>
+                    {/* Time */}
+                    <div className="trx-col-time">
+                      <div style={{ fontSize: 16, fontWeight: 900, color: T.text, lineHeight: 1 }}>{r.time || "-"}</div>
+                      <div style={{ fontSize: 10.5, color: T.muted, marginTop: 3 }}>{fmtDate(r.date)}</div>
+                    </div>
+                    {/* Items */}
+                    <div className="trx-col-items">
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12 }}>📦</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: T.text }}>{r.itemName || "-"}</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: T.amberText, background: T.amberBg, padding: "1px 8px", borderRadius: 5, border: `1px solid ${T.amberBorder}`, flexShrink: 0 }}>+{r.qty} {r.unit || "pcs"}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {r.reason && <span style={{ fontSize: 10, fontWeight: 700, color: T.navActiveText, background: T.navActive, padding: "2px 8px", borderRadius: 5, border: `1px solid ${T.navActiveBorder}` }}>📋 {r.reason}</span>}
+                        {r.note && <span style={{ fontSize: 10, fontWeight: 600, color: T.muted, background: T.surface, padding: "2px 8px", borderRadius: 5, border: `1px solid ${T.border}` }}>📝 {r.note}</span>}
+                      </div>
+                    </div>
+                    {/* Jenis + Unit */}
+                    <div className="trx-col-count" style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                        <span style={{ fontSize: 16, fontWeight: 900, color: T.text, lineHeight: 1 }}>1</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 600, color: T.muted }}>jenis</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                        <span style={{ fontSize: 16, fontWeight: 900, color: T.text, lineHeight: 1 }}>{Number(r.qty) || 0}</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 600, color: T.muted }}>unit</span>
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    {isAdmin && (
+                      <button onClick={() => deleteReturn(r.id)}
+                        style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, color: T.redText, borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                        🗑 Hapus
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          }
+
+          {/* Pagination */}
+          {filteredReturns.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>Menampilkan {(historyReturPage - 1) * historyPageSize + 1}-{Math.min(historyReturPage * historyPageSize, filteredReturns.length)} dari {filteredReturns.length} retur</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => setHistoryReturPage(p => Math.max(1, p - 1))} disabled={historyReturPage <= 1}
+                  style={{ padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: historyReturPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: historyReturPage <= 1 ? "default" : "pointer", opacity: historyReturPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
+                  ← Prev
+                </button>
+                {Array.from({ length: returTotalPages }).map((_, i) => (
+                  <button key={i} onClick={() => setHistoryReturPage(i + 1)}
+                    style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${historyReturPage === i + 1 ? T.primary : T.border}`, background: historyReturPage === i + 1 ? T.primary : T.surface, color: historyReturPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
+                    {i + 1}
+                  </button>
+                ))}
+                <button onClick={() => setHistoryReturPage(p => Math.min(returTotalPages, p + 1))} disabled={historyReturPage >= returTotalPages}
+                  style={{ padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: historyReturPage >= returTotalPages ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: historyReturPage >= returTotalPages ? "default" : "pointer", opacity: historyReturPage >= returTotalPages ? 0.5 : 1, transition: "all .18s" }}>
                   Next →
                 </button>
               </div>
