@@ -56,8 +56,21 @@ export const AddStockModal = ({
         }]);
         // Update item stock
         if (it) {
-          const newStock = (it.stock || 0) + (+addForm.qty);
-          await supabase.from("items").update({ stock: newStock, lastPrice: effectiveBuyPrice }).eq("id", it.id);
+          const oldStock = Number(it.stock || 0);
+          const oldAvgCost = Number(it.averageCost || 0);
+          const qtyReceived = Number(addForm.qty);
+          const newStock = oldStock + qtyReceived;
+          
+          // Weighted average cost calculation
+          const newAvgCost = newStock > 0 ? (oldStock * oldAvgCost + qtyReceived * effectiveBuyPrice) / newStock : 0;
+          const newTotalValue = Math.round(newStock * newAvgCost * 100) / 100;
+
+          await supabase.from("items").update({
+            stock: newStock,
+            averageCost: Math.round(newAvgCost * 100) / 100,
+            lastPrice: effectiveBuyPrice,
+            totalValue: newTotalValue
+          }).eq("id", it.id);
         }
         setAddForm(emptyAddForm()); onClose();
         setToast("Stok berhasil ditambahkan \u2713");
