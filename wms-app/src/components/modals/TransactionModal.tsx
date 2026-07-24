@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
-import { T, gText } from "../../theme/tokens";
+import { T, gText, getT } from "../../theme/tokens";
 import { emptyForm } from "../../utils/formDefaults";
 import { todayStr, nowTime } from "../../utils/formatters";
 import { FL } from "../ui/FL";
@@ -21,6 +21,42 @@ export const TransactionModal = ({
   initialItem?: any;
 }) => {
   const { items, employees, departments, admins, workOrders, withLoading, setToast, fetchAll, dark, user } = useStore();
+  const T = getT(dark);
+  
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [newProjectCode, setNewProjectCode] = useState("");
+  const [newProjectName, setNewProjectName] = useState("");
+
+  const handleCreateProject = async () => {
+    const code = newProjectCode.trim();
+    const name = newProjectName.trim();
+    if (!code || !name) { setToast("Kode dan Nama Project harus diisi", "err"); return; }
+    if (workOrders.some(w => w.code.toLowerCase() === code.toLowerCase())) { setToast("Kode Project sudah terdaftar", "err"); return; }
+
+    await withLoading(async () => {
+      try {
+        const { supabase } = await import("../../lib/supabase");
+        // Get max id from workOrders
+        const nextId = workOrders.length > 0 ? Math.max(...workOrders.map(w => Number(w.id || 0))) + 1 : 1;
+        
+        const { error } = await supabase.from("workOrders").insert([{
+          id: nextId,
+          code,
+          project: name
+        }]);
+        if (error) throw error;
+        
+        setToast(`Project ${code} berhasil ditambahkan ✓`);
+        setForm(p => ({ ...p, workOrder: code })); // Auto select
+        setShowAddProject(false);
+        setNewProjectCode("");
+        setNewProjectName("");
+        await fetchAll();
+      } catch (e: any) {
+        setToast(e.message || "Gagal menambahkan project", "err");
+      }
+    }, "Menyimpan project baru...");
+  };
   
   const [form, setForm] = useState(() => emptyForm({
     cart: initialItem ? [{ itemId: Number(initialItem.id), qty: 1 }] : []
@@ -133,7 +169,17 @@ export const TransactionModal = ({
             <div><FL>Admin Warehouse *</FL>
               <SearchSelect options={admins.map(a => ({ value: a.name, label: a.name }))} value={form.admin} onChange={v => setForm({ ...form, admin: v })} placeholder="— Cari/pilih admin —" />
             </div>
-            <div className="mspan"><FL>No. Project</FL>
+            <div className="mspan">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <FL>No. Project</FL>
+                <button
+                  type="button"
+                  onClick={() => setShowAddProject(true)}
+                  style={{ background: "none", border: "none", color: "var(--t-primary-light)", fontSize: "11px", fontWeight: "700", cursor: "pointer", padding: "0 0 4px 0", textDecoration: "underline" }}
+                >
+                  ＋ Tambah Project Baru
+                </button>
+              </div>
               <SearchSelect options={workOrders.map(w => ({ value: w.code, label: `${w.code} — ${w.project}` }))} value={form.workOrder} onChange={v => setForm({ ...form, workOrder: v })} placeholder="— Cari/pilih project (opsional) —" />
             </div>
             <div className="mspan"><FL>Keterangan</FL><input className="ifield" placeholder="Keperluan pengambilan..." value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} /></div>
@@ -182,6 +228,44 @@ export const TransactionModal = ({
           <BtnG onClick={() => { onClose(); setPickerItem(""); setPickerQty(""); }}>Batal</BtnG>
         </div>
       </div>
+
+      {showAddProject && (
+        <div className="overlay" style={{ zIndex: 1100 }} onClick={() => setShowAddProject(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
+            <div style={{ fontSize: 18, fontWeight: 900, ...gText(), marginBottom: 4 }}>＋ Tambah Project Baru</div>
+            <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Tambahkan nomor proyek baru ke database</div>
+            
+            <div className="sect-box" style={{ marginBottom: 12 }}>
+              <div>
+                <FL>Kode Project (No. Project) *</FL>
+                <input 
+                  className="ifield" 
+                  value={newProjectCode} 
+                  onChange={e => setNewProjectCode(e.target.value)} 
+                  placeholder="Contoh: C0577, E0082..." 
+                />
+              </div>
+            </div>
+            
+            <div className="sect-box" style={{ marginBottom: 20 }}>
+              <div>
+                <FL>Nama Project / Deskripsi *</FL>
+                <input 
+                  className="ifield" 
+                  value={newProjectName} 
+                  onChange={e => setNewProjectName(e.target.value)} 
+                  placeholder="Contoh: Installation Spool Pipeline..." 
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <BtnP onClick={handleCreateProject} style={{ flex: 1, padding: "11px", fontSize: 13, borderRadius: 10 }}>💾 Simpan Project</BtnP>
+              <BtnG onClick={() => { setShowAddProject(false); setNewProjectCode(""); setNewProjectName(""); }}>Batal</BtnG>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
