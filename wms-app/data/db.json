@@ -12,6 +12,13 @@
       "password": "operator123",
       "role": "operator",
       "name": "Operator"
+    },
+    {
+      "id": 3,
+      "username": "delivery",
+      "password": "tokki2026",
+      "role": "guest",
+      "name": "Delivery Access"
     }
   ],
   "admins": [
