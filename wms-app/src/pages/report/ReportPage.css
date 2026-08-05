@@ -145,7 +145,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: 220px;
+  min-height: 340px;
 }
 
 .report-chart-empty {
@@ -547,7 +547,7 @@
 /* Bar Chart Improvements */
 .chart-container-relative {
   position: relative;
-  height: 220px;
+  height: 340px;
   width: 100%;
   contain: layout paint;
 }

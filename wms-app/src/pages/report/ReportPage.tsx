@@ -144,21 +144,21 @@ export function ReportPage() {
   };
   const getY = (val: number) => {
     const maxVal = reportTxnMax || 1;
-    return 180 - (val / maxVal) * 140; // 180 is base y axis, 140 is height scale
+    return 300 - (val / maxVal) * 250; // 300 is base y axis, 250 is height scale
   };
 
   const pathOut = reportTxnSeries.length > 0
     ? reportTxnSeries.map((p, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(p.out)}`).join(" ")
     : "";
   const areaOut = pathOut
-    ? `${pathOut} L ${getX(reportTxnSeries.length - 1)} 180 L ${getX(0)} 180 Z`
+    ? `${pathOut} L ${getX(reportTxnSeries.length - 1)} 300 L ${getX(0)} 300 Z`
     : "";
 
   const pathIn = reportTxnSeries.length > 0
     ? reportTxnSeries.map((p, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(p.in)}`).join(" ")
     : "";
   const areaIn = pathIn
-    ? `${pathIn} L ${getX(reportTxnSeries.length - 1)} 180 L ${getX(0)} 180 Z`
+    ? `${pathIn} L ${getX(reportTxnSeries.length - 1)} 300 L ${getX(0)} 300 Z`
     : "";
 
   const reportTrendTitle = "Tren Penggunaan per Item";
@@ -383,12 +383,12 @@ export function ReportPage() {
               <span className="report-legend-item"><span className="report-legend-dot" style={{ background: "var(--t-green)" }} />Masuk</span>
             </div>
           </div>
-          <div className="report-chart-body" style={{ minHeight: "220px", position: "relative" }}>
+          <div className="report-chart-body" style={{ minHeight: "340px", position: "relative" }}>
             {reportTxnSeries.length === 0 || reportTxnSeries.every(s => s.out === 0 && s.in === 0)
               ? <EmptyState message="Belum ada transaksi pada periode ini" />
               : (
-                <div className="chart-container-relative" style={{ height: "220px", position: "relative" }}>
-                  <svg viewBox="0 0 600 220" width="100%" height="100%" style={{ overflow: "visible" }}>
+                <div className="chart-container-relative" style={{ height: "340px", position: "relative" }}>
+                  <svg viewBox="0 0 600 340" width="100%" height="100%" style={{ overflow: "visible" }}>
                     <defs>
                       <linearGradient id="grad-out" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="var(--t-red)" stopOpacity="0.22" />
@@ -401,7 +401,7 @@ export function ReportPage() {
                     </defs>
 
                     {/* Grid Lines */}
-                    {[30, 67.5, 105, 142.5, 180].map((y, idx) => (
+                    {[50, 112.5, 175, 237.5, 300].map((y, idx) => (
                       <line
                         key={idx}
                         x1="30"
@@ -432,7 +432,7 @@ export function ReportPage() {
                         <text
                           key={point.key}
                           x={getX(idx)}
-                          y={204}
+                          y={322}
                           textAnchor="middle"
                           fill="var(--t-muted)"
                           fontSize="9px"
@@ -450,7 +450,7 @@ export function ReportPage() {
                           x1={getX(hoveredIdx)}
                           y1={30}
                           x2={getX(hoveredIdx)}
-                          y2={180}
+                          y2={300}
                           stroke="var(--t-border)"
                           strokeWidth="1.5"
                           strokeDasharray="4 4"
@@ -503,7 +503,7 @@ export function ReportPage() {
                           x={getX(idx) - stepWidth / 2}
                           y={20}
                           width={stepWidth}
-                          height={170}
+                          height={280}
                           fill="transparent"
                           onMouseEnter={() => setHoveredIdx(idx)}
                           onMouseLeave={() => setHoveredIdx(null)}
@@ -520,7 +520,7 @@ export function ReportPage() {
                       style={{
                         left: `${getX(hoveredIdx) / 600 * 100}%`,
                         transform: getX(hoveredIdx) > 300 ? "translateX(-110%)" : "translateX(10px)",
-                        top: "20px"
+                        top: "30px"
                       }}
                     >
                       <div className="tooltip-date">{reportTxnSeries[hoveredIdx].label}</div>
