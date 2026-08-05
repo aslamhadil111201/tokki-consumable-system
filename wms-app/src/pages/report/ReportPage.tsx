@@ -178,7 +178,7 @@ export function ReportPage() {
   };
   const getY = (val: number) => {
     const maxVal = reportTxnMax || 1;
-    return 300 - (val / maxVal) * 250; // 300 is base y axis, 250 is height scale
+    return 300 - (val / maxVal) * 230; // 300 is base y axis, 230 is height scale (headroom = 70px)
   };
 
   const pathOut = reportTxnSeries.length > 0
@@ -532,10 +532,10 @@ export function ReportPage() {
                     {/* Y-Axis scale labels */}
                     {[
                       { y: 300, val: 0 },
-                      { y: 237.5, val: Math.round(reportTxnMax * 0.25) },
-                      { y: 175, val: Math.round(reportTxnMax * 0.5) },
-                      { y: 112.5, val: Math.round(reportTxnMax * 0.75) },
-                      { y: 50, val: reportTxnMax }
+                      { y: 242.5, val: Math.round(reportTxnMax * 0.25) },
+                      { y: 185, val: Math.round(reportTxnMax * 0.5) },
+                      { y: 127.5, val: Math.round(reportTxnMax * 0.75) },
+                      { y: 70, val: reportTxnMax }
                     ].map((tick, idx) => (
                       <text
                         key={idx}
@@ -551,7 +551,7 @@ export function ReportPage() {
                     ))}
                     <text
                       x="30"
-                      y="35"
+                      y="55"
                       textAnchor="end"
                       fill="var(--t-muted)"
                       fontSize="9px"
@@ -561,7 +561,7 @@ export function ReportPage() {
                     </text>
 
                     {/* Grid Lines */}
-                    {[50, 112.5, 175, 237.5, 300].map((y, idx) => (
+                    {[70, 127.5, 185, 242.5, 300].map((y, idx) => (
                       <line
                         key={idx}
                         x1="45"
