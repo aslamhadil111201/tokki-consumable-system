@@ -51,6 +51,41 @@ export function ReportPage() {
   const reportInValue = reportIn.reduce((a, r) => a + Number(r.totalCostIn ?? (Number(r.qty || 0) * Number(r.buyPrice || 0))), 0);
   const reportEstimatedValue = reportOutValue + reportInValue;
 
+  const reportRangeDays = (() => {
+    const start = new Date(reportRange.start); const end = new Date(reportRange.end);
+    return Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86400000) + 1);
+  })();
+
+  const reportPrevRange = (() => {
+    const start = new Date(reportRange.start);
+    const prevEnd = new Date(start); prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - (reportRangeDays - 1));
+    return { start: isoDate(prevStart), end: isoDate(prevEnd) };
+  })();
+
+  const inPrevReportRange = (d: string) => Boolean(d) && d >= reportPrevRange.start && d <= reportPrevRange.end;
+  const reportOutPrev = approvedOutTrx.filter(t => inPrevReportRange(t.date));
+  const reportInPrev = receives.filter(r => inPrevReportRange(r.date));
+
+  const reportTotalOutUnitsPrev = reportOutPrev.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => b + Number(i.qty || 0), 0), 0);
+  const reportTotalInUnitsPrev = reportInPrev.reduce((a, r) => a + Number(r.qty || 0), 0);
+
+  const reportOutValuePrev = reportOutPrev.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => {
+    const ref = itemMap[Number(i.itemId || 0)];
+    const estPrice = Number(ref?.averageCost || ref?.lastPrice || 0);
+    return b + Number(i.qty || 0) * estPrice;
+  }, 0), 0);
+  const reportInValuePrev = reportInPrev.reduce((a, r) => a + Number(r.totalCostIn ?? (Number(r.qty || 0) * Number(r.buyPrice || 0))), 0);
+  const reportEstimatedValuePrev = reportOutValuePrev + reportInValuePrev;
+
+  const getChangePct = (cur: number, prev: number) => {
+    if (prev === 0) return cur > 0 ? { label: "+100% vs lalu", color: "var(--t-green)" } : { label: "0% vs lalu", color: "var(--t-muted)" };
+    const diff = cur - prev;
+    const pct = Math.round((diff / prev) * 100);
+    const color = pct >= 0 ? "var(--t-green)" : "var(--t-red)";
+    return { label: `${pct >= 0 ? "+" : ""}${pct}% vs lalu`, color };
+  };
+
   const reportTxnSeries = (() => {
     const now = new Date();
     const outMap: any = {}; const inMap: any = {};
@@ -83,20 +118,7 @@ export function ReportPage() {
   const reportTrendPrevLabel = reportPeriod === "week" ? "7 Hari Sebelumnya" : reportPeriod === "month" ? "Bulan Sebelumnya" : "Tahun Sebelumnya";
   const reportTrendSubtitle = `${reportTrendCurrentLabel} vs ${reportTrendPrevLabel}`;
 
-  const reportRangeDays = (() => {
-    const start = new Date(reportRange.start); const end = new Date(reportRange.end);
-    return Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86400000) + 1);
-  })();
 
-  const reportPrevRange = (() => {
-    const start = new Date(reportRange.start);
-    const prevEnd = new Date(start); prevEnd.setDate(prevEnd.getDate() - 1);
-    const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - (reportRangeDays - 1));
-    return { start: isoDate(prevStart), end: isoDate(prevEnd) };
-  })();
-
-  const inPrevReportRange = (d: string) => Boolean(d) && d >= reportPrevRange.start && d <= reportPrevRange.end;
-  const reportOutPrev = approvedOutTrx.filter(t => inPrevReportRange(t.date));
 
   const reportMonthlyTrend = (() => {
     const curMap: any = {}; const prevMap: any = {};
@@ -247,16 +269,20 @@ export function ReportPage() {
       <div className="report-header">
         <div className="report-filters">
           <span className="report-filter-label">Periode</span>
-          {[
-            { id: "week", label: "Minggu" },
-            { id: "month", label: "Bulan" },
-            { id: "year", label: "Tahun" },
-          ].map(p => (
-            <button key={p.id} className={`cat-btn${reportPeriod === p.id ? " on" : ""}`} onClick={() => setReportPeriod(p.id)}>
-              {p.label}
-            </button>
-          ))}
-          <span className="report-filter-date">• {fmtDate(reportRange.start)} - {fmtDate(reportRange.end)}</span>
+          <div className="report-period-pill">
+            {[
+              { id: "week", label: "Minggu" },
+              { id: "month", label: "Bulan" },
+              { id: "year", label: "Tahun" },
+            ].map(p => (
+              <button key={p.id} className={`period-btn${reportPeriod === p.id ? " active" : ""}`} onClick={() => setReportPeriod(p.id)}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <span className="report-filter-date">
+            <span className="calendar-icon">📅</span> {fmtDate(reportRange.start)} - {fmtDate(reportRange.end)}
+          </span>
         </div>
         <div className="report-actions">
           <BtnG onClick={exportReportExcel} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Export Excel</BtnG>
@@ -266,17 +292,24 @@ export function ReportPage() {
 
       <div className="stats-g" style={{ marginBottom: 16 }}>
         {[
-          { label: "Total Keluar", value: `${reportTotalOutUnits.toLocaleString("id-ID")} unit`, sub: "Unit pengambilan", color: "var(--t-red)", bg: "var(--t-red-bg)", icon: "↗" },
-          { label: "Total Masuk", value: `${reportTotalInUnits.toLocaleString("id-ID")} unit`, sub: "Unit penerimaan", color: "var(--t-green)", bg: "var(--t-green-bg)", icon: "↙" },
-          { label: "Nilai Estimasi", value: fmtMoney(Math.round(reportEstimatedValue)), sub: "Keluar + masuk", color: "var(--t-primary)", bg: "var(--t-nav-active)", icon: "💰" },
-          { label: "Item Kritis", value: `${lowStock.length} item`, sub: "Stok <= minimum", color: "var(--t-amber)", bg: "var(--t-amber-bg)", icon: "⚠" },
+          { label: "Total Keluar", value: `${reportTotalOutUnits.toLocaleString("id-ID")} unit`, sub: "Unit pengambilan", color: "var(--t-red)", bg: "var(--t-red-bg)", icon: "↗", trend: getChangePct(reportTotalOutUnits, reportTotalOutUnitsPrev), glowClass: "glow-red" },
+          { label: "Total Masuk", value: `${reportTotalInUnits.toLocaleString("id-ID")} unit`, sub: "Unit penerimaan", color: "var(--t-green)", bg: "var(--t-green-bg)", icon: "↙", trend: getChangePct(reportTotalInUnits, reportTotalInUnitsPrev), glowClass: "glow-green" },
+          { label: "Nilai Estimasi", value: fmtMoney(Math.round(reportEstimatedValue)), sub: "Keluar + masuk", color: "var(--t-primary)", bg: "var(--t-nav-active)", icon: "💰", trend: getChangePct(reportEstimatedValue, reportEstimatedValuePrev), glowClass: "glow-primary" },
+          { label: "Item Kritis", value: `${lowStock.length} item`, sub: "Stok <= minimum", color: "var(--t-amber)", bg: "var(--t-amber-bg)", icon: "⚠", trend: { label: `${lowStock.length} item kritis`, color: "var(--t-amber)" }, glowClass: "glow-amber" },
         ].map((kpi, idx) => (
-          <div key={idx} className="stat-card report-kpi-card">
+          <div key={idx} className={`stat-card report-kpi-card ${kpi.glowClass}`}>
             <div className="report-kpi-inner">
               <div>
                 <div className="report-kpi-label">{kpi.label}</div>
                 <div className="report-kpi-val">{kpi.value}</div>
-                <div className="report-kpi-sub">{kpi.sub}</div>
+                <div className="report-kpi-sub" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                  <span>{kpi.sub}</span>
+                  {kpi.trend && (
+                    <span className="kpi-trend-badge" style={{ color: kpi.trend.color, fontSize: "10px", fontWeight: 800, background: `${kpi.trend.color}15`, padding: "1px 6px", borderRadius: 4 }}>
+                      {kpi.trend.label}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="report-kpi-icon" style={{ background: kpi.bg, color: kpi.color }}>
                 {kpi.icon}
@@ -299,16 +332,28 @@ export function ReportPage() {
             {reportTxnSeries.length === 0 || reportTxnSeries.every(s => s.out === 0 && s.in === 0)
               ? <div className="report-chart-empty">Belum ada transaksi</div>
               : (
-                <div className="report-bar-grid" style={{ gridTemplateColumns: `repeat(${reportTxnSeries.length}, minmax(0, 1fr))` }}>
-                  {reportTxnSeries.map(point => (
-                    <div key={point.key} className="report-bar-col">
-                      <div className="report-bar-bars">
-                        <div title={`Keluar: ${point.out}`} style={{ width: 8, height: `${Math.max(point.out > 0 ? 1.6 : 0.6, (point.out / reportTxnMax) * 55)}%`, background: "var(--t-red)", borderRadius: "5px 5px 0 0", opacity: 0.92 }} />
-                        <div title={`Masuk: ${point.in}`} style={{ width: 8, height: `${Math.max(point.in > 0 ? 1.6 : 0.6, (point.in / reportTxnMax) * 55)}%`, background: "var(--t-green)", borderRadius: "5px 5px 0 0", opacity: 0.92 }} />
+                <div className="chart-container-relative">
+                  <div className="chart-grid-lines">
+                    <div className="grid-line" />
+                    <div className="grid-line" />
+                    <div className="grid-line" />
+                    <div className="grid-line" />
+                  </div>
+                  <div className="report-bar-grid" style={{ gridTemplateColumns: `repeat(${reportTxnSeries.length}, minmax(0, 1fr))` }}>
+                    {reportTxnSeries.map(point => (
+                      <div key={point.key} className="report-bar-col">
+                        <div className="report-bar-bars">
+                          <div className="bar-wrapper" title={`Keluar: ${point.out}`}>
+                            <div className="custom-bar bar-out" style={{ height: `${Math.max(point.out > 0 ? 1.6 : 0.6, (point.out / reportTxnMax) * 100)}%` }} />
+                          </div>
+                          <div className="bar-wrapper" title={`Masuk: ${point.in}`}>
+                            <div className="custom-bar bar-in" style={{ height: `${Math.max(point.in > 0 ? 1.6 : 0.6, (point.in / reportTxnMax) * 100)}%` }} />
+                          </div>
+                        </div>
+                        <div className="report-bar-lbl">{point.label}</div>
                       </div>
-                      <div className="report-bar-lbl">{point.label}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )
             }
@@ -342,7 +387,7 @@ export function ReportPage() {
                   if (trendFilter === "cur") return r.cur > 0;
                   if (trendFilter === "prev") return r.prev > 0;
                   return true;
-                }).map(row => {
+                }).map((row, idx) => {
                   const pill = row.isSpike
                     ? { bg: "#fee2e2", c: "#dc2626", sign: "⚡" }
                     : row.pctChange > 8
@@ -350,10 +395,16 @@ export function ReportPage() {
                       : row.pctChange < 0
                         ? { bg: "#d1fae5", c: "#059669", sign: "▼" }
                         : { bg: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", c: "var(--t-muted)", sign: "→" };
+                  const isTopRank = idx < 3;
+                  const rankBadges = ["🥇", "🥈", "🥉"];
+                  const rankBadge = isTopRank ? rankBadges[idx] : `#${idx + 1}`;
                   return (
                     <div key={row.name} className="report-trend-item">
                       <div className="report-ti-hdr">
-                        <div className="report-ti-name">{row.name}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                          <span className={`rank-badge rank-${idx + 1}`}>{rankBadge}</span>
+                          <div className="report-ti-name">{row.name}</div>
+                        </div>
                         <div className="report-ti-stats">
                           <span className="report-ti-diff">{row.prev}→{row.cur}</span>
                           <span className="report-ti-badge" style={{ background: pill.bg, color: pill.c }}>{pill.sign} {row.pctChange === 999 ? "baru" : `${row.pctChange > 0 ? "+" : ""}${row.pctChange}%`}</span>
