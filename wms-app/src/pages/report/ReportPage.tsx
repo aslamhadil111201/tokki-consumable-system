@@ -16,6 +16,7 @@ export function ReportPage() {
   const [reportPeriod, setReportPeriod] = useState("month");
   const [reportProjectMode, setReportProjectMode] = useState<"unit" | "rp">("unit");
   const [trendFilter, setTrendFilter] = useState<"all" | "up" | "down" | "spike" | "cur" | "prev">("all");
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const approvedOutTrx = trx.filter(isApprovedOutTrx);
   const lowStock = items.filter(i => Number(i.stock) <= Number(i.minStock));
@@ -111,7 +112,30 @@ export function ReportPage() {
   })();
 
   const reportTxnMax = Math.max(1, ...reportTxnSeries.map(s => Math.max(s.out, s.in)));
-  const reportTxnTitle = reportPeriod === "week" ? "Bar Chart Transaksi Harian (7 Hari Terakhir)" : reportPeriod === "month" ? "Bar Chart Transaksi Harian (Bulan Berjalan)" : `Bar Chart Transaksi Bulanan (Tahun ${new Date().getFullYear()})`;
+  const reportTxnTitle = reportPeriod === "week" ? "Tren Transaksi Harian (7 Hari Terakhir)" : reportPeriod === "month" ? "Tren Transaksi Harian (Bulan Berjalan)" : `Tren Transaksi Bulanan (Tahun ${new Date().getFullYear()})`;
+
+  const getX = (index: number) => {
+    if (reportTxnSeries.length <= 1) return 30 + 270;
+    return 30 + (index / (reportTxnSeries.length - 1)) * 540;
+  };
+  const getY = (val: number) => {
+    const maxVal = reportTxnMax || 1;
+    return 180 - (val / maxVal) * 140; // 180 is base y axis, 140 is height scale
+  };
+
+  const pathOut = reportTxnSeries.length > 0
+    ? reportTxnSeries.map((p, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(p.out)}`).join(" ")
+    : "";
+  const areaOut = pathOut
+    ? `${pathOut} L ${getX(reportTxnSeries.length - 1)} 180 L ${getX(0)} 180 Z`
+    : "";
+
+  const pathIn = reportTxnSeries.length > 0
+    ? reportTxnSeries.map((p, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(p.in)}`).join(" ")
+    : "";
+  const areaIn = pathIn
+    ? `${pathIn} L ${getX(reportTxnSeries.length - 1)} 180 L ${getX(0)} 180 Z`
+    : "";
 
   const reportTrendTitle = "Tren Penggunaan per Item";
   const reportTrendCurrentLabel = reportPeriod === "week" ? "7 Hari Terakhir" : reportPeriod === "month" ? "Bulan Berjalan" : "Tahun Berjalan";
@@ -328,32 +352,151 @@ export function ReportPage() {
               <span className="report-legend-item"><span className="report-legend-dot" style={{ background: "var(--t-green)" }} />Masuk</span>
             </div>
           </div>
-          <div className="report-chart-body">
+          <div className="report-chart-body" style={{ minHeight: "220px", position: "relative" }}>
             {reportTxnSeries.length === 0 || reportTxnSeries.every(s => s.out === 0 && s.in === 0)
               ? <div className="report-chart-empty">Belum ada transaksi</div>
               : (
-                <div className="chart-container-relative">
-                  <div className="chart-grid-lines">
-                    <div className="grid-line" />
-                    <div className="grid-line" />
-                    <div className="grid-line" />
-                    <div className="grid-line" />
-                  </div>
-                  <div className="report-bar-grid" style={{ gridTemplateColumns: `repeat(${reportTxnSeries.length}, minmax(0, 1fr))` }}>
-                    {reportTxnSeries.map(point => (
-                      <div key={point.key} className="report-bar-col">
-                        <div className="report-bar-bars">
-                          <div className="bar-wrapper" title={`Keluar: ${point.out}`}>
-                            <div className="custom-bar bar-out" style={{ height: `${Math.max(point.out > 0 ? 1.6 : 0.6, (point.out / reportTxnMax) * 100)}%` }} />
-                          </div>
-                          <div className="bar-wrapper" title={`Masuk: ${point.in}`}>
-                            <div className="custom-bar bar-in" style={{ height: `${Math.max(point.in > 0 ? 1.6 : 0.6, (point.in / reportTxnMax) * 100)}%` }} />
-                          </div>
-                        </div>
-                        <div className="report-bar-lbl">{point.label}</div>
-                      </div>
+                <div className="chart-container-relative" style={{ height: "220px", position: "relative" }}>
+                  <svg viewBox="0 0 600 220" width="100%" height="100%" style={{ overflow: "visible" }}>
+                    <defs>
+                      <linearGradient id="grad-out" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--t-red)" stopOpacity="0.22" />
+                        <stop offset="100%" stopColor="var(--t-red)" stopOpacity="0.00" />
+                      </linearGradient>
+                      <linearGradient id="grad-in" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--t-green)" stopOpacity="0.22" />
+                        <stop offset="100%" stopColor="var(--t-green)" stopOpacity="0.00" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Grid Lines */}
+                    {[30, 67.5, 105, 142.5, 180].map((y, idx) => (
+                      <line
+                        key={idx}
+                        x1="30"
+                        y1={y}
+                        x2="570"
+                        y2={y}
+                        stroke="var(--t-border)"
+                        strokeOpacity="0.25"
+                        strokeWidth="1"
+                      />
                     ))}
-                  </div>
+
+                    {/* Fill Areas under lines */}
+                    <path d={areaOut} fill="url(#grad-out)" style={{ transition: "d 0.3s ease" }} />
+                    <path d={areaIn} fill="url(#grad-in)" style={{ transition: "d 0.3s ease" }} />
+
+                    {/* Paths */}
+                    <path d={pathOut} fill="none" stroke="var(--t-red)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "d 0.3s ease" }} />
+                    <path d={pathIn} fill="none" stroke="var(--t-green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "d 0.3s ease" }} />
+
+                    {/* X-Axis Labels */}
+                    {reportTxnSeries.map((point, idx) => {
+                      const showLabel = reportPeriod === "week"
+                        || (reportPeriod === "month" && idx % 4 === 0)
+                        || (reportPeriod === "year" && idx % 1 === 0);
+                      if (!showLabel) return null;
+                      return (
+                        <text
+                          key={point.key}
+                          x={getX(idx)}
+                          y={204}
+                          textAnchor="middle"
+                          fill="var(--t-muted)"
+                          fontSize="9px"
+                          fontWeight="700"
+                        >
+                          {point.label}
+                        </text>
+                      );
+                    })}
+
+                    {/* Interactive Hover Guides & Markers */}
+                    {hoveredIdx !== null && hoveredIdx < reportTxnSeries.length && (
+                      <>
+                        <line
+                          x1={getX(hoveredIdx)}
+                          y1={30}
+                          x2={getX(hoveredIdx)}
+                          y2={180}
+                          stroke="var(--t-border)"
+                          strokeWidth="1.5"
+                          strokeDasharray="4 4"
+                        />
+                        {/* Out Indicator */}
+                        <circle
+                          cx={getX(hoveredIdx)}
+                          cy={getY(reportTxnSeries[hoveredIdx].out)}
+                          r="5"
+                          fill="var(--t-red)"
+                          stroke={dark ? "#1a1b1e" : "#ffffff"}
+                          strokeWidth="2"
+                        />
+                        <circle
+                          cx={getX(hoveredIdx)}
+                          cy={getY(reportTxnSeries[hoveredIdx].out)}
+                          r="10"
+                          fill="none"
+                          stroke="var(--t-red)"
+                          strokeWidth="1.5"
+                          opacity="0.3"
+                        />
+                        {/* In Indicator */}
+                        <circle
+                          cx={getX(hoveredIdx)}
+                          cy={getY(reportTxnSeries[hoveredIdx].in)}
+                          r="5"
+                          fill="var(--t-green)"
+                          stroke={dark ? "#1a1b1e" : "#ffffff"}
+                          strokeWidth="2"
+                        />
+                        <circle
+                          cx={getX(hoveredIdx)}
+                          cy={getY(reportTxnSeries[hoveredIdx].in)}
+                          r="10"
+                          fill="none"
+                          stroke="var(--t-green)"
+                          strokeWidth="1.5"
+                          opacity="0.3"
+                        />
+                      </>
+                    )}
+
+                    {/* Invisible Hover Zones */}
+                    {reportTxnSeries.map((point, idx) => {
+                      const stepWidth = reportTxnSeries.length > 1 ? 540 / (reportTxnSeries.length - 1) : 540;
+                      return (
+                        <rect
+                          key={point.key}
+                          x={getX(idx) - stepWidth / 2}
+                          y={20}
+                          width={stepWidth}
+                          height={170}
+                          fill="transparent"
+                          onMouseEnter={() => setHoveredIdx(idx)}
+                          onMouseLeave={() => setHoveredIdx(null)}
+                          style={{ cursor: "pointer" }}
+                        />
+                      );
+                    })}
+                  </svg>
+
+                  {/* HTML Tooltip overlay */}
+                  {hoveredIdx !== null && hoveredIdx < reportTxnSeries.length && (
+                    <div
+                      className="chart-tooltip"
+                      style={{
+                        left: `${getX(hoveredIdx) / 600 * 100}%`,
+                        transform: getX(hoveredIdx) > 300 ? "translateX(-110%)" : "translateX(10px)",
+                        top: "20px"
+                      }}
+                    >
+                      <div className="tooltip-date">{reportTxnSeries[hoveredIdx].label}</div>
+                      <div className="tooltip-row"><span className="tooltip-dot out" /> Keluar: <strong>{reportTxnSeries[hoveredIdx].out} unit</strong></div>
+                      <div className="tooltip-row"><span className="tooltip-dot in" /> Masuk: <strong>{reportTxnSeries[hoveredIdx].in} unit</strong></div>
+                    </div>
+                  )}
                 </div>
               )
             }

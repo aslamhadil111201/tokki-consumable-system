@@ -603,3 +603,39 @@
   background: var(--t-border);
   color: var(--t-muted);
 }
+
+/* Tooltip styling for SVG Chart */
+.chart-tooltip {
+  position: absolute;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  z-index: 10;
+  min-width: 120px;
+  transition: left 0.15s ease-out, transform 0.15s ease-out;
+}
+.tooltip-date {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--t-text);
+  margin-bottom: 4px;
+}
+.tooltip-row {
+  font-size: 11px;
+  color: var(--t-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+.tooltip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.tooltip-dot.out { background: var(--t-red); }
+.tooltip-dot.in { background: var(--t-green); }
