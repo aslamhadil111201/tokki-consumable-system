@@ -476,10 +476,10 @@ export function ReportPage() {
 
       <div className="two-col" style={{ marginBottom: 16 }}>
         <div className="card report-chart-card">
-          <div className="report-chart-hdr" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 12 }}>
-            <div className="dash-panel-title">{reportTxnTitle}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div className="report-chart-legend" style={{ display: "flex", gap: 10, fontSize: "11px", color: "var(--t-muted)" }}>
+          <div className="report-chart-hdr" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 16, flexWrap: "nowrap" }}>
+            <div className="dash-panel-title" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{reportTxnTitle}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+              <div className="report-chart-legend" style={{ display: "flex", gap: 10, fontSize: "11px", color: "var(--t-muted)", whiteSpace: "nowrap" }}>
                 <span className="report-legend-item" style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="report-legend-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--t-red)", display: "inline-block" }} />Keluar (Unit)</span>
                 <span className="report-legend-item" style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="report-legend-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--t-green)", display: "inline-block" }} />Masuk (Unit)</span>
               </div>
@@ -488,7 +488,7 @@ export function ReportPage() {
                 value={selectedItemId}
                 onChange={(e) => setSelectedItemId(e.target.value)}
                 style={{
-                  padding: "4px 8px",
+                  padding: "5px 24px 5px 10px",
                   borderRadius: "8px",
                   border: "1px solid var(--t-border)",
                   background: "var(--t-surface)",
@@ -497,7 +497,11 @@ export function ReportPage() {
                   fontSize: "11.5px",
                   fontWeight: 700,
                   outline: "none",
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  width: "160px",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden"
                 }}
               >
                 <option value="all">Semua Item</option>
