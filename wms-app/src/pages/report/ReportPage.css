@@ -470,6 +470,8 @@
   border-radius: 20px;
   padding: 3px;
   gap: 0;
+  width: 220px;
+  flex-shrink: 0;
 }
 .pill-indicator {
   position: absolute;
