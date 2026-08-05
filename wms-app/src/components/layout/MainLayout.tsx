@@ -47,7 +47,6 @@ export const MainLayout = () => {
   });
 
   const notifRef = useRef(null);
-  const restoreInputRef = useRef(null);
 
   useEffect(() => {
     if (!loggedIn) navigate("/login");
@@ -107,157 +106,7 @@ export const MainLayout = () => {
   const pendingApprovalCount = trx.filter(t => trxApprovalStatus(t) === "pending").length;
   const currentTab = location.pathname.substring(1) || "dashboard";
 
-  // Tabel yang di-backup/restore (urutan penting: master data dulu, lalu transaksional)
-  const BACKUP_TABLES = [
-    "users", "admins", "departments", "employees", "workOrders",
-    "items", "transactions", "receives", "returns",
-    "delivery_notes", "shipping_addresses", "audit_logs",
-  ] as const;
 
-  // Helper: hapus semua baris dari sebuah tabel Supabase
-  // Menggunakan filter id >= 0 untuk integer id, atau neq id '' untuk uuid
-  const clearTable = async (supabase: any, table: string) => {
-    // Coba dengan id >= 0 (integer primary key)
-    const { error } = await supabase.from(table).delete().gte("id", 0);
-    if (error) {
-      // Fallback: filter dengan neq yang selalu true untuk semua tipe id
-      const { error: err2 } = await supabase.from(table).delete().not("id", "is", null);
-      if (err2) throw new Error(`Gagal hapus tabel ${table}: ${err2.message}`);
-    }
-  };
-
-  const downloadBackupData = async () => {
-    if (!isAdmin) { setToast("Hanya admin yang boleh backup data", "err"); return; }
-    await withLoading(async () => {
-      try {
-        const { supabase } = await import("../../lib/supabase");
-        const collections: Record<string, unknown[]> = {};
-
-        for (const table of BACKUP_TABLES) {
-          const { data, error } = await supabase.from(table).select("*");
-          if (error) throw new Error(`Gagal backup tabel ${table}: ${error.message}`);
-          collections[table] = data || [];
-        }
-
-        const backup = {
-          format: "tokki-wms-backup-v2-supabase",
-          generatedAt: new Date().toISOString(),
-          collections,
-        };
-
-        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-        triggerDownload(
-          `wms-backup-${stamp}.json`,
-          JSON.stringify(backup, null, 2),
-          "application/json;charset=utf-8;"
-        );
-
-        // Audit log — fire and forget, jangan throw kalau gagal
-        supabase.from("audit_logs").insert([{
-          action: "admin.backupExport",
-          actor: { username: user?.username, role: user?.role },
-          target: "system",
-        }]).catch(() => {});
-
-        setToast("Backup data berhasil diunduh ✓");
-      } catch (e: any) {
-        setToast(e?.message || "Gagal backup data", "err");
-      }
-    }, "Sedang menyiapkan file backup...");
-  };
-
-  const restoreBackupData = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isAdmin) { setToast("Hanya admin yang boleh restore data", "err"); return; }
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
-    let parsed: any;
-    try {
-      const txt = await file.text();
-      parsed = JSON.parse(txt);
-    } catch {
-      setToast("File backup tidak valid (JSON rusak)", "err");
-      return;
-    }
-
-    // Support format lama (MongoDB) dan baru (Supabase)
-    const collections = parsed?.collections ?? parsed;
-    if (!collections || typeof collections !== "object") {
-      setToast("Format file backup tidak dikenali", "err");
-      return;
-    }
-
-    if (!window.confirm("Restore backup akan MENIMPA semua data saat ini. Lanjutkan?")) return;
-
-    await withLoading(async () => {
-      try {
-        const { supabase } = await import("../../lib/supabase");
-
-        // Hapus data lama lalu insert baru, per tabel
-        for (const table of BACKUP_TABLES) {
-          const rows: unknown[] = Array.isArray(collections[table]) ? collections[table] : [];
-          await clearTable(supabase, table);
-          if (rows.length > 0) {
-            // Insert dalam batch 500 untuk menghindari payload terlalu besar
-            const BATCH = 500;
-            for (let i = 0; i < rows.length; i += BATCH) {
-              const { error } = await supabase.from(table).insert(rows.slice(i, i + BATCH));
-              if (error) throw new Error(`Gagal restore tabel ${table}: ${error.message}`);
-            }
-          }
-        }
-
-        // Audit log
-        await supabase.from("audit_logs").insert([{
-          action: "admin.restoreBackup",
-          actor: { username: user?.username, role: user?.role },
-          target: "system",
-        }]);
-
-        setToast("Restore backup berhasil ✓");
-        await fetchAll();
-      } catch (e: any) { setToast(e?.message || "Gagal restore backup", "err"); }
-    }, "Sedang memulihkan data backup...");
-  };
-
-  const resetDummyData = async () => {
-    if (!isAdmin) { setToast("Hanya admin yang boleh reset data dummy", "err"); return; }
-    if (!window.confirm("Reset data dummy akan menghapus semua transaksi & mereset stok item ke 0. Master data (karyawan, departemen, dll) tetap aman. Lanjutkan?")) return;
-
-    await withLoading(async () => {
-      try {
-        const { supabase } = await import("../../lib/supabase");
-
-        // Hanya hapus data transaksional — master data dipertahankan
-        const RESET_TABLES = [
-          "transactions", "receives", "returns",
-          "delivery_notes", "audit_logs",
-        ] as const;
-
-        for (const table of RESET_TABLES) {
-          await clearTable(supabase, table);
-        }
-
-        // Reset stok semua item ke 0
-        const { error: stockErr } = await supabase
-          .from("items")
-          .update({ stock: 0, averageCost: 0, lastPrice: 0, totalValue: 0 })
-          .gte("id", 0);
-        if (stockErr) throw new Error(`Gagal reset stok: ${stockErr.message}`);
-
-        // Audit log
-        await supabase.from("audit_logs").insert([{
-          action: "admin.resetDummy",
-          actor: { username: user?.username, role: user?.role },
-          target: "system",
-        }]);
-
-        setToast("Reset data berhasil ✓ — transaksi dihapus, stok direset ke 0");
-        await fetchAll();
-      } catch (e: any) { setToast(e?.message || "Gagal reset data", "err"); }
-    }, "Sedang mereset data...");
-  };
 
   return (
     <>
@@ -329,23 +178,6 @@ export const MainLayout = () => {
               <h1 className="page-title">{TABS.find(t => t.id === currentTab)?.label || "Dashboard"}</h1>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-              {isAdmin && (
-                <button className="tb-btn tb-backup" onClick={downloadBackupData} style={{ fontWeight: 700 }}>
-                  {"\u2B07"} Backup
-                </button>
-              )}
-              {isAdmin && (
-                <button className="tb-btn tb-restore" onClick={() => restoreInputRef.current?.click()} style={{ fontWeight: 700 }}>
-                  {"\u2934"} Restore
-                </button>
-              )}
-              {isAdmin && (
-                <button className="tb-btn tb-reset-dummy" onClick={resetDummyData} style={{ fontWeight: 700 }}>
-                  {"\u267B"} Reset Dummy
-                </button>
-              )}
-              <input ref={restoreInputRef} type="file" accept="application/json,.json" style={{ display: "none" }} onChange={restoreBackupData} />
-
               <Toggle />
 
               {/* NOTIF */}
