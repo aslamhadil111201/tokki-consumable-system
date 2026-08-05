@@ -46,12 +46,27 @@ export function LoginPage() {
 
         console.log("[LOGIN] Password match! Calling storeLogin...");
         storeLogin("supabase-session", { id: user.id, username: user.username, role: user.role });
+        
         // Log audit (fire and forget)
         await supabase.from("audit_logs").insert([{
           action: "auth.login",
           actor: { username: user.username, role: user.role },
           target: user.username
         }]);
+
+        // Auto-cleanup audit logs older than 30 days to prevent DB from filling up
+        try {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          await supabase
+            .from("audit_logs")
+            .delete()
+            .lt("createdAt", thirtyDaysAgo.toISOString());
+          console.log("[LOGIN] Auto-cleanup old audit logs completed.");
+        } catch (cleanupErr) {
+          console.error("[LOGIN] Failed to clean up old audit logs:", cleanupErr);
+        }
+
         console.log("[LOGIN] Success! Navigating to dashboard...");
         setToast(`Selamat datang, ${user.username} \u2713`);
         navigate("/dashboard", { replace: true });
