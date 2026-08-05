@@ -476,9 +476,9 @@ export function ReportPage() {
 
       <div className="two-col" style={{ marginBottom: 16 }}>
         <div className="card report-chart-card">
-          <div className="report-chart-hdr" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 16, flexWrap: "nowrap" }}>
+          <div className="report-chart-hdr" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 10, flexWrap: "wrap" }}>
             <div className="dash-panel-title" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{reportTxnTitle}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
               <div className="report-chart-legend" style={{ display: "flex", gap: 10, fontSize: "11px", color: "var(--t-muted)", whiteSpace: "nowrap" }}>
                 <span className="report-legend-item" style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="report-legend-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--t-red)", display: "inline-block" }} />Keluar (Unit)</span>
                 <span className="report-legend-item" style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="report-legend-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--t-green)", display: "inline-block" }} />Masuk (Unit)</span>
@@ -498,7 +498,7 @@ export function ReportPage() {
                   fontWeight: 700,
                   outline: "none",
                   cursor: "pointer",
-                  width: "160px",
+                  width: "140px",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
                   overflow: "hidden"
