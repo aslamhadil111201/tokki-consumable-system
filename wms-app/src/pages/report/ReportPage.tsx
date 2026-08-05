@@ -515,7 +515,8 @@ export function ReportPage() {
             {reportTxnSeries.length === 0 || reportTxnSeries.every(s => s.out === 0 && s.in === 0)
               ? <EmptyState message="Belum ada transaksi pada periode ini" />
               : (
-                <div className="chart-container-relative" style={{ height: "340px", position: "relative" }}>
+                <>
+                  <div className="chart-container-relative" style={{ height: "340px", position: "relative" }}>
                   <svg viewBox="0 0 600 340" width="100%" height="100%" style={{ overflow: "visible" }}>
                     <defs>
                       <linearGradient id="grad-out" x1="0" y1="0" x2="0" y2="1">
@@ -592,16 +593,18 @@ export function ReportPage() {
                           stroke={dark ? "#1a1b1e" : "#ffffff"}
                           strokeWidth="1.5"
                         />
-                        <text
-                          x={getX(idx)}
-                          y={getY(point.out) - 8}
-                          textAnchor="middle"
-                          fill="var(--t-red)"
-                          fontSize="9px"
-                          fontWeight="800"
-                        >
-                          {point.out}
-                        </text>
+                        {point.out > 0 && (
+                          <text
+                            x={getX(idx)}
+                            y={getY(point.out) - 8}
+                            textAnchor="middle"
+                            fill="var(--t-red)"
+                            fontSize="9px"
+                            fontWeight="800"
+                          >
+                            {point.out}
+                          </text>
+                        )}
                       </g>
                     ))}
 
@@ -615,16 +618,18 @@ export function ReportPage() {
                           stroke={dark ? "#1a1b1e" : "#ffffff"}
                           strokeWidth="1.5"
                         />
-                        <text
-                          x={getX(idx)}
-                          y={getY(point.in) - 8}
-                          textAnchor="middle"
-                          fill="var(--t-green)"
-                          fontSize="9px"
-                          fontWeight="800"
-                        >
-                          {point.in}
-                        </text>
+                        {point.in > 0 && (
+                          <text
+                            x={getX(idx)}
+                            y={getY(point.in) - 8}
+                            textAnchor="middle"
+                            fill="var(--t-green)"
+                            fontSize="9px"
+                            fontWeight="800"
+                          >
+                            {point.in}
+                          </text>
+                        )}
                       </g>
                     ))}
 
@@ -809,6 +814,7 @@ export function ReportPage() {
                       <div className="tooltip-row"><span className="tooltip-dot in" /> Masuk: <strong>{reportTxnSeries[hoveredIdx].in} unit</strong></div>
                     </div>
                   )}
+                  </div>
                   {/* Bottom Stats Summary Row */}
                   <div className="report-chart-summary-row" style={{ display: "flex", gap: 12, marginTop: 20 }}>
                     <div className="report-chart-summary-card" style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.1)", borderRadius: "12px" }}>
@@ -858,19 +864,22 @@ export function ReportPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </>
               )
             }
           </div>
         </div>
 
         <div className="card report-chart-card">
-          <div className="report-trend-hdr">
-            <div>
-              <div className="dash-panel-title" style={{ marginBottom: 4 }}>{reportTrendTitle}</div>
-              <div className="report-trend-sub">{reportTrendSubtitle}{trendSpikeCount > 0 && <span className="report-trend-spike">⚡ {trendSpikeCount} lonjakan</span>}</div>
+          <div className="report-trend-hdr" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+              <div className="dash-panel-title" style={{ marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{reportTrendTitle}</div>
+              <div className="report-trend-sub" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span>{reportTrendSubtitle}</span>
+                {trendSpikeCount > 0 && <span className="report-trend-spike" style={{ whiteSpace: "nowrap" }}>⚡ {trendSpikeCount} lonjakan</span>}
+              </div>
             </div>
-            <div className="report-trend-filters">
+            <div className="report-trend-filters" style={{ flexShrink: 0 }}>
               {([["all", "Semua"], ["up", "Naik"], ["down", "Turun"], ["spike", "Lonjakan!"]] as const).map(([id, label]) => (
                 <button key={id} onClick={() => setTrendFilter(id)} className="report-trend-fbtn" style={{ background: trendFilter === id ? "var(--t-primary)" : "transparent", color: trendFilter === id ? "white" : "var(--t-muted)" }}>{label}</button>
               ))}
