@@ -26,6 +26,8 @@ export function ReportPage() {
   const [reportProjectMode, setReportProjectMode] = useState<"unit" | "rp">("unit");
   const [trendFilter, setTrendFilter] = useState<"all" | "up" | "down" | "spike" | "cur" | "prev">("all");
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string>("all");
+  const [showAllTrends, setShowAllTrends] = useState(false);
 
   const approvedOutTrx = trx.filter(isApprovedOutTrx);
   const lowStock = items.filter(i => Number(i.stock) <= Number(i.minStock));
@@ -47,17 +49,33 @@ export function ReportPage() {
   })();
 
   const inReportRange = (d: string) => Boolean(d) && d >= reportRange.start && d <= reportRange.end;
-  const reportOut = approvedOutTrx.filter(t => inReportRange(t.date));
-  const reportIn = receives.filter(r => inReportRange(r.date));
+  
+  const reportOut = approvedOutTrx.filter(t => {
+    if (!inReportRange(t.date)) return false;
+    if (selectedItemId === "all") return true;
+    return toSafeRows(t.items).some((i: any) => Number(i.itemId) === Number(selectedItemId));
+  });
 
-  const reportTotalOutUnits = reportOut.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => b + Number(i.qty || 0), 0), 0);
+  const reportIn = receives.filter(r => {
+    if (!inReportRange(r.date)) return false;
+    if (selectedItemId === "all") return true;
+    return Number(r.itemId) === Number(selectedItemId);
+  });
+
+  const reportTotalOutUnits = reportOut.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => {
+    if (selectedItemId !== "all" && Number(i.itemId) !== Number(selectedItemId)) return b;
+    return b + Number(i.qty || 0);
+  }, 0), 0);
+
   const reportTotalInUnits = reportIn.reduce((a, r) => a + Number(r.qty || 0), 0);
 
   const reportOutValue = reportOut.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => {
+    if (selectedItemId !== "all" && Number(i.itemId) !== Number(selectedItemId)) return b;
     const ref = itemMap[Number(i.itemId || 0)];
     const estPrice = Number(ref?.averageCost || ref?.lastPrice || 0);
     return b + Number(i.qty || 0) * estPrice;
   }, 0), 0);
+
   const reportInValue = reportIn.reduce((a, r) => a + Number(r.totalCostIn ?? (Number(r.qty || 0) * Number(r.buyPrice || 0))), 0);
   const reportEstimatedValue = reportOutValue + reportInValue;
 
@@ -87,17 +105,33 @@ export function ReportPage() {
   })();
 
   const inPrevReportRange = (d: string) => Boolean(d) && d >= reportPrevRange.start && d <= reportPrevRange.end;
-  const reportOutPrev = approvedOutTrx.filter(t => inPrevReportRange(t.date));
-  const reportInPrev = receives.filter(r => inPrevReportRange(r.date));
 
-  const reportTotalOutUnitsPrev = reportOutPrev.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => b + Number(i.qty || 0), 0), 0);
+  const reportOutPrev = approvedOutTrx.filter(t => {
+    if (!inPrevReportRange(t.date)) return false;
+    if (selectedItemId === "all") return true;
+    return toSafeRows(t.items).some((i: any) => Number(i.itemId) === Number(selectedItemId));
+  });
+
+  const reportInPrev = receives.filter(r => {
+    if (!inPrevReportRange(r.date)) return false;
+    if (selectedItemId === "all") return true;
+    return Number(r.itemId) === Number(selectedItemId);
+  });
+
+  const reportTotalOutUnitsPrev = reportOutPrev.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => {
+    if (selectedItemId !== "all" && Number(i.itemId) !== Number(selectedItemId)) return b;
+    return b + Number(i.qty || 0);
+  }, 0), 0);
+
   const reportTotalInUnitsPrev = reportInPrev.reduce((a, r) => a + Number(r.qty || 0), 0);
 
   const reportOutValuePrev = reportOutPrev.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => {
+    if (selectedItemId !== "all" && Number(i.itemId) !== Number(selectedItemId)) return b;
     const ref = itemMap[Number(i.itemId || 0)];
     const estPrice = Number(ref?.averageCost || ref?.lastPrice || 0);
     return b + Number(i.qty || 0) * estPrice;
   }, 0), 0);
+
   const reportInValuePrev = reportInPrev.reduce((a, r) => a + Number(r.totalCostIn ?? (Number(r.qty || 0) * Number(r.buyPrice || 0))), 0);
   const reportEstimatedValuePrev = reportOutValuePrev + reportInValuePrev;
 
@@ -139,8 +173,8 @@ export function ReportPage() {
   const reportTxnTitle = reportPeriod === "week" ? "Tren Transaksi Harian (7 Hari Terakhir)" : reportPeriod === "month" ? "Tren Transaksi Harian (Bulan Berjalan)" : `Tren Transaksi Bulanan (Tahun ${new Date().getFullYear()})`;
 
   const getX = (index: number) => {
-    if (reportTxnSeries.length <= 1) return 30 + 270;
-    return 30 + (index / (reportTxnSeries.length - 1)) * 540;
+    if (reportTxnSeries.length <= 1) return 45 + 265;
+    return 45 + (index / (reportTxnSeries.length - 1)) * 530;
   };
   const getY = (val: number) => {
     const maxVal = reportTxnMax || 1;
@@ -160,6 +194,16 @@ export function ReportPage() {
   const areaIn = pathIn
     ? `${pathIn} L ${getX(reportTxnSeries.length - 1)} 300 L ${getX(0)} 300 Z`
     : "";
+
+  // Find peak indexes dynamically
+  const peakOutPoint = reportTxnSeries.length > 0
+    ? reportTxnSeries.reduce((max, p) => p.out > max.out ? p : max, reportTxnSeries[0])
+    : null;
+  const peakInPoint = reportTxnSeries.length > 0
+    ? reportTxnSeries.reduce((max, p) => p.in > max.in ? p : max, reportTxnSeries[0])
+    : null;
+  const peakOutIdx = peakOutPoint ? reportTxnSeries.indexOf(peakOutPoint) : -1;
+  const peakInIdx = peakInPoint ? reportTxnSeries.indexOf(peakInPoint) : -1;
 
   const reportTrendTitle = "Tren Penggunaan per Item";
   const reportTrendCurrentLabel = reportPeriod === "week" ? "7 Hari Terakhir" : reportPeriod === "month" ? "Bulan Berjalan" : "Tahun Berjalan";
@@ -347,26 +391,82 @@ export function ReportPage() {
 
       <div className="stats-g" style={{ marginBottom: 16 }}>
         {[
-          { label: "Total Keluar (↗)", value: `${reportTotalOutUnits.toLocaleString("id-ID")} unit`, sub: "Unit pengambilan", color: "var(--t-red)", bg: "var(--t-red-bg)", icon: "↗", trend: calcTrendPercent(reportTotalOutUnits, reportTotalOutUnitsPrev), glowClass: "glow-red" },
-          { label: "Total Masuk (↙)", value: `${reportTotalInUnits.toLocaleString("id-ID")} unit`, sub: "Unit penerimaan", color: "var(--t-green)", bg: "var(--t-green-bg)", icon: "↙", trend: calcTrendPercent(reportTotalInUnits, reportTotalInUnitsPrev), glowClass: "glow-green" },
-          { label: "Nilai Estimasi", value: fmtMoney(Math.round(reportEstimatedValue)), sub: "Keluar + masuk", color: "var(--t-primary)", bg: "var(--t-nav-active)", icon: "💰", trend: calcTrendPercent(reportEstimatedValue, reportEstimatedValuePrev), glowClass: "glow-primary" },
-          { label: "Item Kritis", value: `${lowStock.length} item`, sub: "Stok <= minimum", color: "var(--t-amber)", bg: "var(--t-amber-bg)", icon: "⚠", trend: { label: `${lowStock.length} item kritis`, color: "var(--t-amber)" }, glowClass: "glow-amber" },
+          {
+            label: "TOTAL KELUAR",
+            value: `${reportTotalOutUnits.toLocaleString("id-ID")} unit`,
+            sub: "Unit pengambilan",
+            color: "var(--t-red)",
+            bg: "rgba(239, 68, 68, 0.1)",
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t-red)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
+              </svg>
+            ),
+            trend: calcTrendPercent(reportTotalOutUnits, reportTotalOutUnitsPrev),
+            glowClass: "glow-red"
+          },
+          {
+            label: "TOTAL MASUK",
+            value: `${reportTotalInUnits.toLocaleString("id-ID")} unit`,
+            sub: "Unit penerimaan",
+            color: "var(--t-green)",
+            bg: "rgba(16, 185, 129, 0.1)",
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t-green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" />
+              </svg>
+            ),
+            trend: calcTrendPercent(reportTotalInUnits, reportTotalInUnitsPrev),
+            glowClass: "glow-green"
+          },
+          {
+            label: "NILAI ESTIMASI",
+            value: fmtMoney(Math.round(reportEstimatedValue)),
+            sub: "Keluar + masuk",
+            color: "#8b5cf6",
+            bg: "rgba(139, 92, 246, 0.1)",
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+            ),
+            trend: calcTrendPercent(reportEstimatedValue, reportEstimatedValuePrev),
+            glowClass: "glow-primary"
+          },
+          {
+            label: "ITEM KRITIS",
+            value: `${lowStock.length} item`,
+            sub: "Stok <= minimum",
+            color: "var(--t-amber)",
+            bg: "rgba(245, 158, 11, 0.1)",
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t-amber)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            ),
+            trend: { label: lowStock.length > 0 ? "Perlu perhatian" : "Aman", color: lowStock.length > 0 ? "var(--t-amber)" : "var(--t-green)" },
+            glowClass: "glow-amber"
+          },
         ].map((kpi, idx) => (
-          <div key={idx} className={`stat-card report-kpi-card ${kpi.glowClass}`}>
-            <div className="report-kpi-inner">
-              <div>
-                <div className="report-kpi-label">{kpi.label}</div>
-                <div className="report-kpi-val">{kpi.value}</div>
-                <div className="report-kpi-sub" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+          <div key={idx} className={`stat-card report-kpi-card ${kpi.glowClass}`} style={{ padding: "16px 18px", background: "var(--t-card)", border: "1px solid var(--t-border)", borderRadius: "16px" }}>
+            <div className="report-kpi-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div className="report-kpi-label" style={{ fontSize: "10.5px", fontWeight: 800, color: "var(--t-muted)", textTransform: "uppercase", letterSpacing: ".09em", marginBottom: 7 }}>{kpi.label}</div>
+                <div className="report-kpi-val" style={{ fontSize: "22px", fontWeight: 900, color: "var(--t-text)", lineHeight: 1.2 }}>{kpi.value}</div>
+                <div className="report-kpi-sub" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontSize: "11.5px", color: "var(--t-muted)", marginTop: 6 }}>
                   <span>{kpi.sub}</span>
                   {kpi.trend && (
-                    <span className="kpi-trend-badge" style={{ color: kpi.trend.color, fontSize: "10px", fontWeight: 800, background: `${kpi.trend.color}15`, padding: "1px 6px", borderRadius: 4 }}>
-                      {kpi.trend.label}
-                    </span>
+                    <>
+                      <span className="kpi-trend-badge" style={{ color: kpi.trend.color, fontSize: "10px", fontWeight: 800, background: `${kpi.trend.color}15`, padding: "2px 6px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                        {kpi.trend.label}
+                      </span>
+                      {kpi.label !== "ITEM KRITIS" && <span style={{ opacity: 0.6 }}>vs periode lalu</span>}
+                    </>
                   )}
                 </div>
               </div>
-              <div className="report-kpi-icon" style={{ background: kpi.bg, color: kpi.color }}>
+              <div className="report-kpi-icon" style={{ background: kpi.bg, border: "none", width: "40px", height: "40px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {kpi.icon}
               </div>
             </div>
@@ -376,11 +476,35 @@ export function ReportPage() {
 
       <div className="two-col" style={{ marginBottom: 16 }}>
         <div className="card report-chart-card">
-          <div className="report-chart-hdr">
+          <div className="report-chart-hdr" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: 12 }}>
             <div className="dash-panel-title">{reportTxnTitle}</div>
-            <div className="report-chart-legend">
-              <span className="report-legend-item"><span className="report-legend-dot" style={{ background: "var(--t-red)" }} />Keluar</span>
-              <span className="report-legend-item"><span className="report-legend-dot" style={{ background: "var(--t-green)" }} />Masuk</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div className="report-chart-legend" style={{ display: "flex", gap: 10, fontSize: "11px", color: "var(--t-muted)" }}>
+                <span className="report-legend-item" style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="report-legend-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--t-red)", display: "inline-block" }} />Keluar (Unit)</span>
+                <span className="report-legend-item" style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="report-legend-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--t-green)", display: "inline-block" }} />Masuk (Unit)</span>
+              </div>
+              <select
+                className="report-chart-select"
+                value={selectedItemId}
+                onChange={(e) => setSelectedItemId(e.target.value)}
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--t-border)",
+                  background: "var(--t-surface)",
+                  color: "var(--t-text)",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: "11.5px",
+                  fontWeight: 700,
+                  outline: "none",
+                  cursor: "pointer"
+                }}
+              >
+                <option value="all">Semua Item</option>
+                {items.map(it => (
+                  <option key={it.id} value={it.id}>{it.name}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="report-chart-body" style={{ minHeight: "340px", position: "relative" }}>
@@ -400,13 +524,44 @@ export function ReportPage() {
                       </linearGradient>
                     </defs>
 
+                    {/* Y-Axis scale labels */}
+                    {[
+                      { y: 300, val: 0 },
+                      { y: 237.5, val: Math.round(reportTxnMax * 0.25) },
+                      { y: 175, val: Math.round(reportTxnMax * 0.5) },
+                      { y: 112.5, val: Math.round(reportTxnMax * 0.75) },
+                      { y: 50, val: reportTxnMax }
+                    ].map((tick, idx) => (
+                      <text
+                        key={idx}
+                        x="30"
+                        y={tick.y + 3}
+                        textAnchor="end"
+                        fill="var(--t-muted)"
+                        fontSize="9px"
+                        fontWeight="700"
+                      >
+                        {tick.val}
+                      </text>
+                    ))}
+                    <text
+                      x="30"
+                      y="35"
+                      textAnchor="end"
+                      fill="var(--t-muted)"
+                      fontSize="9px"
+                      fontWeight="800"
+                    >
+                      Unit
+                    </text>
+
                     {/* Grid Lines */}
                     {[50, 112.5, 175, 237.5, 300].map((y, idx) => (
                       <line
                         key={idx}
-                        x1="30"
+                        x1="45"
                         y1={y}
-                        x2="570"
+                        x2="575"
                         y2={y}
                         stroke="var(--t-border)"
                         strokeOpacity="0.25"
@@ -421,6 +576,128 @@ export function ReportPage() {
                     {/* Paths */}
                     <path d={pathOut} fill="none" stroke="var(--t-red)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "d 0.3s ease" }} />
                     <path d={pathIn} fill="none" stroke="var(--t-green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "d 0.3s ease" }} />
+
+                    {/* Circles & Exact Values above them */}
+                    {reportTxnSeries.map((point, idx) => (
+                      <g key={`out-pt-${idx}`}>
+                        <circle
+                          cx={getX(idx)}
+                          cy={getY(point.out)}
+                          r="4"
+                          fill="var(--t-red)"
+                          stroke={dark ? "#1a1b1e" : "#ffffff"}
+                          strokeWidth="1.5"
+                        />
+                        <text
+                          x={getX(idx)}
+                          y={getY(point.out) - 8}
+                          textAnchor="middle"
+                          fill="var(--t-red)"
+                          fontSize="9px"
+                          fontWeight="800"
+                        >
+                          {point.out}
+                        </text>
+                      </g>
+                    ))}
+
+                    {reportTxnSeries.map((point, idx) => (
+                      <g key={`in-pt-${idx}`}>
+                        <circle
+                          cx={getX(idx)}
+                          cy={getY(point.in)}
+                          r="4"
+                          fill="var(--t-green)"
+                          stroke={dark ? "#1a1b1e" : "#ffffff"}
+                          strokeWidth="1.5"
+                        />
+                        <text
+                          x={getX(idx)}
+                          y={getY(point.in) - 8}
+                          textAnchor="middle"
+                          fill="var(--t-green)"
+                          fontSize="9px"
+                          fontWeight="800"
+                        >
+                          {point.in}
+                        </text>
+                      </g>
+                    ))}
+
+                    {/* Peak Badges */}
+                    {peakOutPoint && peakOutPoint.out > 0 && peakOutIdx !== -1 && (
+                      <g transform={`translate(${getX(peakOutIdx)}, ${getY(peakOutPoint.out) - 34})`}>
+                        <rect
+                          x="-35"
+                          y="-20"
+                          width="70"
+                          height="24"
+                          rx="6"
+                          fill="var(--t-red)"
+                        />
+                        <text
+                          x="0"
+                          y="-11"
+                          textAnchor="middle"
+                          fill="#ffffff"
+                          fontSize="7.5px"
+                          fontWeight="800"
+                        >
+                          Peak Keluar
+                        </text>
+                        <text
+                          x="0"
+                          y="-2"
+                          textAnchor="middle"
+                          fill="#ffffff"
+                          fontSize="8px"
+                          fontWeight="900"
+                        >
+                          {peakOutPoint.out} Unit
+                        </text>
+                        <path
+                          d="M -4 4 L 0 8 L 4 4 Z"
+                          fill="var(--t-red)"
+                        />
+                      </g>
+                    )}
+
+                    {peakInPoint && peakInPoint.in > 0 && peakInIdx !== -1 && (
+                      <g transform={`translate(${getX(peakInIdx)}, ${getY(peakInPoint.in) - 34})`}>
+                        <rect
+                          x="-35"
+                          y="-20"
+                          width="70"
+                          height="24"
+                          rx="6"
+                          fill="var(--t-green)"
+                        />
+                        <text
+                          x="0"
+                          y="-11"
+                          textAnchor="middle"
+                          fill="#ffffff"
+                          fontSize="7.5px"
+                          fontWeight="800"
+                        >
+                          Peak Masuk
+                        </text>
+                        <text
+                          x="0"
+                          y="-2"
+                          textAnchor="middle"
+                          fill="#ffffff"
+                          fontSize="8px"
+                          fontWeight="900"
+                        >
+                          {peakInPoint.in} Unit
+                        </text>
+                        <path
+                          d="M -4 4 L 0 8 L 4 4 Z"
+                          fill="var(--t-green)"
+                        />
+                      </g>
+                    )}
 
                     {/* X-Axis Labels */}
                     {reportTxnSeries.map((point, idx) => {
@@ -496,7 +773,7 @@ export function ReportPage() {
 
                     {/* Invisible Hover Zones */}
                     {reportTxnSeries.map((point, idx) => {
-                      const stepWidth = reportTxnSeries.length > 1 ? 540 / (reportTxnSeries.length - 1) : 540;
+                      const stepWidth = reportTxnSeries.length > 1 ? 530 / (reportTxnSeries.length - 1) : 530;
                       return (
                         <rect
                           key={point.key}
@@ -528,6 +805,55 @@ export function ReportPage() {
                       <div className="tooltip-row"><span className="tooltip-dot in" /> Masuk: <strong>{reportTxnSeries[hoveredIdx].in} unit</strong></div>
                     </div>
                   )}
+                  {/* Bottom Stats Summary Row */}
+                  <div className="report-chart-summary-row" style={{ display: "flex", gap: 12, marginTop: 20 }}>
+                    <div className="report-chart-summary-card" style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.1)", borderRadius: "12px" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: "8px", background: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--t-red)", flexShrink: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--t-red)" }}>Peak Pengeluaran</div>
+                        <div style={{ fontSize: "15px", fontWeight: 900, color: "var(--t-text)" }}>{peakOutPoint ? peakOutPoint.out : 0} Unit</div>
+                        <div style={{ fontSize: "10px", color: "var(--t-muted)", marginTop: 2 }}>Terjadi di {peakOutPoint ? peakOutPoint.label : ""} {new Date().getFullYear()}</div>
+                      </div>
+                    </div>
+
+                    <div className="report-chart-summary-card" style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.1)", borderRadius: "12px" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: "8px", background: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--t-green)", flexShrink: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                          <line x1="12" y1="8" x2="12" y2="16" />
+                          <line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--t-green)" }}>Peak Penerimaan</div>
+                        <div style={{ fontSize: "15px", fontWeight: 900, color: "var(--t-text)" }}>{peakInPoint ? peakInPoint.in : 0} Unit</div>
+                        <div style={{ fontSize: "10px", color: "var(--t-muted)", marginTop: 2 }}>Terjadi di {peakInPoint ? peakInPoint.label : ""} {new Date().getFullYear()}</div>
+                      </div>
+                    </div>
+
+                    <div className="report-chart-summary-card" style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(59, 130, 246, 0.05)", border: "1px solid rgba(59, 130, 246, 0.1)", borderRadius: "12px" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: "8px", background: "rgba(59, 130, 246, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6", flexShrink: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "10px", fontWeight: 800, color: "#3b82f6" }}>
+                          Rata-rata {reportPeriod === "year" ? "Bulanan" : "Harian"} (Keluar + Masuk)
+                        </div>
+                        <div style={{ fontSize: "15px", fontWeight: 900, color: "var(--t-text)" }}>
+                          {Math.round(reportTxnSeries.reduce((acc, p) => acc + p.out + p.in, 0) / (reportTxnSeries.length || 1))} Unit
+                        </div>
+                        <div style={{ fontSize: "10px", color: "var(--t-muted)", marginTop: 2 }}>
+                          Total rata-rata transaksi per {reportPeriod === "year" ? "bulan" : "hari"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )
             }
@@ -554,45 +880,75 @@ export function ReportPage() {
             ? <EmptyState message="Belum ada data pengambilan pada periode ini" />
             : (
               <div className="report-trend-list">
-                {reportMonthlyTrend.filter(r => {
-                  if (trendFilter === "up") return r.pctChange > 0;
-                  if (trendFilter === "down") return r.pctChange < 0;
-                  if (trendFilter === "spike") return r.isSpike;
-                  if (trendFilter === "cur") return r.cur > 0;
-                  if (trendFilter === "prev") return r.prev > 0;
-                  return true;
-                }).map((row, idx) => {
-                  const pill = row.isSpike
-                    ? { bg: "#fee2e2", c: "#dc2626", sign: "⚡" }
-                    : row.pctChange > 8
-                      ? { bg: "#fef3c7", c: "#d97706", sign: "▲" }
-                      : row.pctChange < 0
-                        ? { bg: "#d1fae5", c: "#059669", sign: "▼" }
-                        : { bg: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", c: "var(--t-muted)", sign: "→" };
-                  const rankClass = idx < 3 ? `rank-${idx + 1}` : "rank-default";
+                {(() => {
+                  const filtered = reportMonthlyTrend.filter(r => {
+                    if (trendFilter === "up") return r.pctChange > 0;
+                    if (trendFilter === "down") return r.pctChange < 0;
+                    if (trendFilter === "spike") return r.isSpike;
+                    if (trendFilter === "cur") return r.cur > 0;
+                    if (trendFilter === "prev") return r.prev > 0;
+                    return true;
+                  });
                   return (
-                    <div key={row.name} className="report-trend-item">
-                      <div className="report-ti-hdr">
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                          <span className={`rank-badge ${rankClass}`}>{idx + 1}</span>
-                          <div className="report-ti-name">{row.name}</div>
-                        </div>
-                        <div className="report-ti-stats">
-                          <span className="report-ti-diff">{row.prev}→{row.cur}</span>
-                          <span className="report-ti-badge" style={{ background: pill.bg, color: pill.c }}>{pill.sign} {row.pctChange === 999 ? "baru" : `${row.pctChange > 0 ? "+" : ""}${row.pctChange}%`}</span>
-                        </div>
-                      </div>
-                      <div className="report-ti-bars">
-                        <div className="report-ti-bar" style={{ background: dark ? "rgba(255,255,255,0.08)" : "#e5e7eb" }}>
-                          <div style={{ height: "100%", width: `${row.prevPct}%`, background: dark ? "rgba(255,255,255,0.22)" : "#bbf7d0", borderRadius: 6 }} />
-                        </div>
-                        <div className="report-ti-bar" style={{ background: dark ? "rgba(255,255,255,0.08)" : "#e5e7eb" }}>
-                          <div style={{ height: "100%", width: `${row.curPct}%`, background: row.isSpike ? "#ef4444" : "#10b981", borderRadius: 6, transition: "width .35s ease" }} />
-                        </div>
-                      </div>
-                    </div>
+                    <>
+                      {filtered.slice(0, showAllTrends ? undefined : 5).map((row, idx) => {
+                        const pill = row.isSpike
+                          ? { bg: "#fee2e2", c: "#dc2626", sign: "⚡" }
+                          : row.pctChange > 8
+                            ? { bg: "#fef3c7", c: "#d97706", sign: "▲" }
+                            : row.pctChange < 0
+                              ? { bg: "#d1fae5", c: "#059669", sign: "▼" }
+                              : { bg: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", c: "var(--t-muted)", sign: "→" };
+                        const rankClass = idx < 3 ? `rank-${idx + 1}` : "rank-default";
+                        return (
+                          <div key={row.name} className="report-trend-item">
+                            <div className="report-ti-hdr">
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                                <span className={`rank-badge ${rankClass}`}>{idx + 1}</span>
+                                <div className="report-ti-name">{row.name}</div>
+                              </div>
+                              <div className="report-ti-stats">
+                                <span className="report-ti-diff">{row.prev}→{row.cur}</span>
+                                <span className="report-ti-badge" style={{ background: pill.bg, color: pill.c }}>{pill.sign} {row.pctChange === 999 ? "baru" : `${row.pctChange > 0 ? "+" : ""}${row.pctChange}%`}</span>
+                              </div>
+                            </div>
+                            <div className="report-ti-bars">
+                              <div className="report-ti-bar" style={{ background: dark ? "rgba(255,255,255,0.08)" : "#e5e7eb" }}>
+                                <div style={{ height: "100%", width: `${row.prevPct}%`, background: dark ? "rgba(255,255,255,0.22)" : "#bbf7d0", borderRadius: 6 }} />
+                              </div>
+                              <div className="report-ti-bar" style={{ background: dark ? "rgba(255,255,255,0.08)" : "#e5e7eb" }}>
+                                <div style={{ height: "100%", width: `${row.curPct}%`, background: row.isSpike ? "#ef4444" : "#10b981", borderRadius: 6, transition: "width .35s ease" }} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {filtered.length > 5 && (
+                        <button
+                          className="report-trend-more-btn"
+                          onClick={() => setShowAllTrends(!showAllTrends)}
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            padding: "10px 0",
+                            marginTop: "12px",
+                            background: "transparent",
+                            border: "1px solid var(--t-border)",
+                            borderRadius: "10px",
+                            color: "var(--t-primary)",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            textAlign: "center",
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          {showAllTrends ? "Sembunyikan item ↑" : "Lihat semua item →"}
+                        </button>
+                      )}
+                    </>
                   );
-                })}
+                })()}
               </div>
             )
           }
@@ -648,20 +1004,63 @@ export function ReportPage() {
           {(reportProjectMode === "unit" ? reportProjectUsage : reportProjectByRp).length === 0
             ? <EmptyState message="Belum ada data pengambilan dengan project" />
             : (
-              <div className="report-proj-list">
-                {(reportProjectMode === "unit" ? reportProjectUsage : reportProjectByRp).map((row, idx) => (
-                  <div key={row.name} className="report-proj-item">
-                    <div className="report-pi-hdr">
-                      <div className="report-pi-name">{idx + 1}. {row.name}</div>
-                      <div className="report-pi-val">
-                        {reportProjectMode === "unit" ? `${row.total} unit` : fmtMoney(Math.round(row.total))}
+              <div className="report-proj-grid-v3" style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+                {(reportProjectMode === "unit" ? reportProjectUsage : reportProjectByRp).slice(0, 3).map((row, idx) => {
+                  const rankColors = [
+                    { bg: "rgba(245, 158, 11, 0.1)", border: "rgba(245, 158, 11, 0.2)", c: "#d97706" }, // Rank 1
+                    { bg: "rgba(16, 185, 129, 0.1)", border: "rgba(16, 185, 129, 0.2)", c: "#059669" }, // Rank 2
+                    { bg: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.2)", c: "#2563eb" }, // Rank 3
+                  ][idx] || { bg: "var(--t-border)", border: "transparent", c: "var(--t-muted)" };
+
+                  return (
+                    <div
+                      key={row.name}
+                      className="report-proj-card-v3"
+                      style={{
+                        flex: 1,
+                        minWidth: "160px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 16px",
+                        background: dark ? "rgba(255,255,255,0.02)" : "#f8fafc",
+                        border: "1px solid var(--t-border)",
+                        borderRadius: "12px",
+                        boxSizing: "border-box"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "8px",
+                            background: rankColors.bg,
+                            border: `1px solid ${rankColors.border}`,
+                            color: rankColors.c,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "15px",
+                            fontWeight: 900,
+                            flexShrink: 0
+                          }}
+                        >
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--t-text)" }}>{row.name}</div>
+                          <div style={{ fontSize: "11.5px", color: "var(--t-muted)", marginTop: 2, fontWeight: 700 }}>
+                            {reportProjectMode === "unit" ? `${row.total} unit` : fmtMoney(Math.round(row.total))}
+                          </div>
+                        </div>
                       </div>
+                      {idx === 0 && (
+                        <span style={{ fontSize: "18px", marginLeft: 8 }} title="Project Terbanyak">🏆</span>
+                      )}
                     </div>
-                    <div className="report-pi-bar-wrap" style={{ background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }}>
-                      <div className="report-pi-bar" style={{ width: `${row.pct}%`, background: reportProjectMode === "unit" ? `linear-gradient(90deg,#f59e0b,#fbbf24)` : `linear-gradient(90deg,var(--t-primary),var(--t-primary-light))` }} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )
           }
