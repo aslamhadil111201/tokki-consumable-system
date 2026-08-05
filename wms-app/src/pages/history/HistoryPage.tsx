@@ -41,41 +41,7 @@ export function HistoryPage() {
   const [showModal, setShowModal] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
-  // Audit
-  const [auditRows, setAuditRows] = useState<any[]>([]);
-  const [auditTotal, setAuditTotal] = useState(0);
-  const [auditPage, setAuditPage] = useState(1);
-  const [auditPageSize, setAuditPageSize] = useState(8);
-  const [auditActor, setAuditActor] = useState("");
-  const [auditAction, setAuditAction] = useState("");
-  const [auditFrom, setAuditFrom] = useState("");
-  const [auditTo, setAuditTo] = useState("");
 
-  useEffect(() => {
-    const fetchAudit = async () => {
-      if (!isAdmin) return;
-      try {
-        const { supabase } = await import("../../lib/supabase");
-        let query = supabase.from("audit_logs").select("*", { count: "exact" })
-          .order("created_at", { ascending: false })
-          .range((auditPage - 1) * auditPageSize, auditPage * auditPageSize - 1);
-        if (auditAction) query = query.eq("action", auditAction);
-        if (auditFrom) query = query.gte("created_at", auditFrom);
-        if (auditTo) query = query.lte("created_at", auditTo + "T23:59:59");
-        const { data, count, error } = await query;
-        if (!error) {
-          // Filter by actor username if specified
-          let rows = data || [];
-          if (auditActor) {
-            rows = rows.filter(r => r.actor?.username?.toLowerCase().includes(auditActor.toLowerCase()));
-          }
-          setAuditRows(rows);
-          setAuditTotal(count || rows.length);
-        }
-      } catch (e) { }
-    };
-    if (historyTab === "audit") fetchAudit();
-  }, [auditPage, auditPageSize, auditActor, auditAction, auditFrom, auditTo, isAdmin, historyTab]);
 
   useEffect(() => {
     const t = setInterval(() => setSlaTick(v => v + 1), 60000);
@@ -121,7 +87,6 @@ export function HistoryPage() {
   const inTotalPages = Math.ceil(filteredIn.length / Math.max(1, historyPageSize));
   const returTotalPages = Math.ceil(filteredReturns.length / Math.max(1, historyPageSize));
   const allTotalPages = Math.ceil(filteredAll.length / Math.max(1, historyPageSize));
-  const auditTotalPages = Math.ceil(auditTotal / Math.max(1, auditPageSize));
 
   const pagedOut = filteredOutByApproval.slice((historyOutPage - 1) * historyPageSize, historyOutPage * historyPageSize);
   const pagedIn = filteredIn.slice((historyInPage - 1) * historyPageSize, historyInPage * historyPageSize);
@@ -363,21 +328,7 @@ export function HistoryPage() {
     dlPdf(`retur-${todayStr()}.pdf`, "Laporan Retur Barang", ["ID", "Tanggal", "Waktu", "Karyawan", "Item", "Qty", "Alasan", "Catatan", "Status"], rows);
   };
 
-  const exportAuditExcel = () => {
-    const rows = [
-      ["Warehouse Management System"], ["Laporan Audit Trail"], [],
-      ["ID", "Waktu", "Aksi", "Actor", "Role", "Target"],
-      ...auditRows.map(a => [csvText(a.id), new Date(a.createdAt).toLocaleString("id-ID"), a.action, a.actor?.username || "", a.actor?.role || "", a.target || ""])
-    ];
-    const csv = "\uFEFF" + rows.map(r => r.map(v => typeof v === "string" ? csvEscape(v) : v).join(",")).join("\n");
-    triggerDownload(`audit-${todayStr()}.csv`, csv, "text/csv;charset=utf-8;");
-    setToast("Export Excel (CSV) audit berhasil");
-  };
 
-  const exportAuditPdf = () => {
-    const rows = auditRows.map(a => [a.id, new Date(a.createdAt).toLocaleString("id-ID"), a.action, a.actor?.username || "", a.actor?.role || "", a.target || ""]);
-    dlPdf(`audit-${todayStr()}.pdf`, "Laporan Audit Trail", ["ID", "Waktu", "Aksi", "Actor", "Role", "Target"], rows);
-  };
 
   const exportAllReportsExcel = async () => {
     await withLoading(async () => {
@@ -493,18 +444,12 @@ export function HistoryPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 4, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           {(() => {
-            const detectiveIcon = (
-              <span style={{ fontSize: 15, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, lineHeight: 1, marginRight: 2 }}>
-                🕵️‍♂️
-              </span>
-            );
             const subTabs = [
               { id: "all", icon: "🧾", label: `Semua (${allHistory.length})` },
               { id: "out", icon: "📤", label: `Pengambilan (${trx.length})` },
               { id: "in", icon: "📋", label: `Penerimaan (${receives.length})` },
               { id: "retur", icon: "↩", label: `Retur (${returns.length})` },
               ...(isAdmin ? [{ id: "approval", icon: "⏳", label: `Approval (${pendingApprovalCount})` }] : []),
-              ...(isAdmin ? [{ id: "audit", icon: detectiveIcon, label: `Audit (${auditTotal})` }] : []),
             ];
             return subTabs.map(tb => (
               <button key={tb.id} onClick={() => setHistoryTab(tb.id)} style={{ padding: "8px 14px", borderRadius: 9, border: "none", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all .2s", background: historyTab === tb.id ? T.primary : "transparent", color: historyTab === tb.id ? "white" : T.muted, boxShadow: historyTab === tb.id ? `0 4px 12px ${T.primaryGlow}` : "none", whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>{tb.icon} {tb.label}</button>
@@ -517,20 +462,17 @@ export function HistoryPage() {
               📊 Export Semua Laporan (Excel)
             </button>
           )}
-          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && (
+          {isAdmin && historyTab !== "all" && historyTab !== "approval" && (
             <BtnG onClick={historyTab === "in" ? exportReceivesExcel : historyTab === "retur" ? exportReturnsExcel : exportTransactionsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>
           )}
-          {isAdmin && historyTab !== "all" && historyTab !== "audit" && historyTab !== "approval" && (
+          {isAdmin && historyTab !== "all" && historyTab !== "approval" && (
             <BtnG onClick={historyTab === "in" ? exportReceivesPdf : historyTab === "retur" ? exportReturnsPdf : exportTransactionsPdf} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>
           )}
-          {isAdmin && historyTab === "audit" && <BtnG onClick={exportAuditExcel} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>}
-          {isAdmin && historyTab === "audit" && <BtnG onClick={exportAuditPdf} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>}
-          {isAdmin && historyTab !== "in" && historyTab !== "audit" && historyTab !== "approval" && historyTab !== "retur" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>}
+          {isAdmin && historyTab !== "in" && historyTab !== "approval" && historyTab !== "retur" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>}
           {canManage && historyTab === "in" && <BtnP onClick={() => setShowAdd(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Penerimaan</BtnP>}
         </div>
       </div>
 
-      {historyTab !== "audit" && (
         <div className="fbar" style={{ marginBottom: 14 }}>
           <input className="ifield" style={{ width: 220 }} placeholder="🔍 Cari nama/item/admin/PO/DO..." value={historyQuery} onChange={e => setHistoryQuery(e.target.value)} />
           {historyTab === "out" && (
@@ -553,7 +495,6 @@ export function HistoryPage() {
             {historyTab === "all" ? filteredAll.length : historyTab === "out" ? filteredOutByApproval.length : historyTab === "approval" ? filteredPending.length : historyTab === "retur" ? filteredReturns.length : filteredIn.length} transaksi ditemukan
           </span>
         </div>
-      )}
 
       {historyTab === "approval" && isAdmin && (
         <div>
@@ -1169,143 +1110,7 @@ export function HistoryPage() {
         </div>
       )}
 
-      {historyTab === "audit" && isAdmin && (
-        <div>
-          <p style={{ fontSize: 12.5, color: T.muted, fontWeight: 500, marginBottom: 16 }}>Audit log aktivitas sistem untuk admin/operator.</p>
-          {/* Filter bar */}
-          <div className="fbar">
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: T.muted, pointerEvents: "none" }}>🔍</span>
-              <input className="ifield" style={{ width: 190, paddingLeft: 32 }} placeholder="Filter actor username" value={auditActor} onChange={e => setAuditActor(e.target.value)} />
-            </div>
-            <select className="ifield" style={{ width: 190 }} value={auditAction} onChange={e => setAuditAction(e.target.value)}>
-              <option value="">Semua action</option>
-              {[
-                "auth.login", "admin.resetDummy", "admin.backupExport", "admin.restoreBackup", "items.create", "items.update", "items.delete",
-                "transactions.create", "transactions.pending", "transactions.approve", "transactions.reject", "transactions.delete", "receives.create", "receives.delete",
-                "master.create", "master.delete",
-              ].map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-            <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700, flexShrink: 0 }}>Dari</span>
-            <input type="date" className="ifield" style={{ width: 160 }} value={auditFrom} onChange={e => setAuditFrom(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
-            <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700, flexShrink: 0 }}>Sampai</span>
-            <input type="date" className="ifield" style={{ width: 160 }} value={auditTo} onChange={e => setAuditTo(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
-            <select className="ifield" style={{ width: 120 }} value={auditPageSize} onChange={e => setAuditPageSize(Number(e.target.value) || 8)}>
-              {[8, 12, 20].map(n => <option key={n} value={n}>{n}/hal</option>)}
-            </select>
-            <BtnG style={{ fontSize: 11.5, padding: "7px 12px", flexShrink: 0 }} onClick={() => { setAuditActor(""); setAuditAction(""); setAuditFrom(""); setAuditTo(""); }}>↺ Reset</BtnG>
-          </div>
-          {/* Rows */}
-          {auditRows.length === 0
-            ? <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}><div style={{ fontSize: 36, marginBottom: 12 }}>🛡</div>Belum ada audit log</div>
-            : (
-              <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden", minWidth: 0 }}>
-                {auditRows.map((a, ri) => {
-                  const actionIconMap: Record<string, string> = {
-                    "auth.login": "🔑", "auth.logout": "🚪",
-                    "items.create": "📦", "items.update": "✏️", "items.delete": "🗑️",
-                    "transactions.create": "↗️", "transactions.pending": "⏳", "transactions.approve": "✅", "transactions.reject": "⛔", "transactions.delete": "🗑️",
-                    "receives.create": "🚚", "receives.delete": "🗑️",
-                    "admin.resetDummy": "⚙️", "admin.backupExport": "💾", "admin.restoreBackup": "♻️",
-                    "master.create": "🏷️", "master.delete": "🗑️",
-                  };
-                  const actionColorMap: Record<string, string> = {
-                    "auth.login": T.green, "auth.logout": T.muted,
-                    "items.create": "#0ea5e9", "items.update": "#6366f1", "items.delete": T.red,
-                    "transactions.create": "#8b5cf6", "transactions.pending": T.amber, "transactions.approve": T.green, "transactions.reject": T.red, "transactions.delete": T.red,
-                    "receives.create": T.amber, "receives.delete": T.red,
-                    "admin.resetDummy": T.red, "admin.backupExport": "#f97316", "admin.restoreBackup": "#14b8a6",
-                    "master.create": "#ec4899", "master.delete": T.red,
-                  };
-                  const icon = actionIconMap[a.action] || "📋";
-                  const color = actionColorMap[a.action] || T.muted;
-                  const dt = new Date(a.created_at || a.createdAt);
-                  const dateStr = dt.getTime() ? `${dt.getDate()}/${dt.getMonth() + 1}/${dt.getFullYear()}, ${dt.getHours().toString().padStart(2, "0")}.${dt.getMinutes().toString().padStart(2, "0")}.${dt.getSeconds().toString().padStart(2, "0")}` : "-";
-                  return (
-                    <div key={a.id} className="audit-row"
-                      onMouseEnter={e => { e.currentTarget.style.background = dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                      {/* Icon circle */}
-                      <div style={{ width: 46, height: 46, borderRadius: "50%", background: dark ? `${color}22` : `${color}18`, border: `1.5px solid ${color}55`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
-                        {icon}
-                      </div>
-                      {/* Action + badges */}
-                      <div className="audit-col-action">
-                        <div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, marginBottom: 6 }}>{a.action}</div>
-                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 10.5, fontWeight: 700, color: T.navActiveText, background: T.navActive, padding: "2px 9px", borderRadius: 5, border: `1px solid ${T.navActiveBorder}` }}>Actor: {a.actor?.username || "-"}</span>
-                          <span style={{ fontSize: 10.5, fontWeight: 700, color: T.muted, background: T.surface, padding: "2px 9px", borderRadius: 5, border: `1px solid ${T.border}` }}>Role: {a.actor?.role || "-"}</span>
-                        </div>
-                      </div>
-                      {/* Target */}
-                      <div className="audit-col-target">
-                        <div style={{ fontSize: 9.5, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 4 }}>Target</div>
-                        <div style={{ fontSize: 12.5, fontWeight: 600, color: T.text }}>{a.target || "-"}</div>
-                      </div>
-                      {/* Date */}
-                      <div className="audit-col-date">
-                        <span>📅</span><span>{dateStr}</span>
-                      </div>
-                      {/* ID badge */}
-                      <div className="audit-col-id" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, color: T.amberText, borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 800 }}>
-                        #{a.id}
-                      </div>
-                      {/* Arrow btn */}
-                      <div className="audit-col-arrow" style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.muted, fontSize: 14, flexShrink: 0, transition: "all .15s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = color; (e.currentTarget as HTMLDivElement).style.color = color; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T.border; (e.currentTarget as HTMLDivElement).style.color = T.muted; }}>
-                        →
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )
-          }
-          {/* Pagination */}
-          {auditRows.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 600 }}>Menampilkan {(auditPage - 1) * auditPageSize + 1} – {Math.min(auditPage * auditPageSize, auditTotal)} dari {auditTotal} data</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                {/* Prev */}
-                <button onClick={() => setAuditPage(p => Math.max(1, p - 1))} disabled={auditPage <= 1}
-                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: auditPage <= 1 ? T.muted : T.text, fontSize: 14, fontWeight: 700, cursor: auditPage <= 1 ? "default" : "pointer", opacity: auditPage <= 1 ? 0.4 : 1, transition: "all .18s" }}>
-                  ‹
-                </button>
-                {/* Numbered pages with ellipsis */}
-                {(() => {
-                  const pages: number[] = [];
-                  for (let i = 1; i <= auditTotalPages; i++) {
-                    if (i === 1 || i === auditTotalPages || Math.abs(i - auditPage) <= 1) pages.push(i);
-                  }
-                  const els: React.ReactNode[] = [];
-                  let prev = -1;
-                  pages.forEach(p => {
-                    if (prev !== -1 && p - prev > 1) els.push(<span key={`e${p}`} style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: T.muted }}>…</span>);
-                    els.push(
-                      <button key={p} onClick={() => setAuditPage(p)}
-                        style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${auditPage === p ? T.primary : T.border}`, background: auditPage === p ? T.primary : T.surface, color: auditPage === p ? "white" : T.muted, fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
-                        {p}
-                      </button>
-                    );
-                    prev = p;
-                  });
-                  return els;
-                })()}
-                {/* Next */}
-                <button onClick={() => setAuditPage(p => Math.min(auditTotalPages, p + 1))} disabled={auditPage >= auditTotalPages}
-                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: auditPage >= auditTotalPages ? T.muted : T.text, fontSize: 14, fontWeight: 700, cursor: auditPage >= auditTotalPages ? "default" : "pointer", opacity: auditPage >= auditTotalPages ? 0.4 : 1, transition: "all .18s" }}>
-                  ›
-                </button>
-              </div>
-              <select value={auditPageSize} onChange={e => setAuditPageSize(Number(e.target.value) || 8)}
-                style={{ padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", outline: "none" }}>
-                {[8, 12, 20].map(n => <option key={n} value={n}>{n}/hal</option>)}
-              </select>
-            </div>
-          )}
-        </div>
-      )}
+
 
       <TransactionModal open={showModal} onClose={() => setShowModal(false)} />
       <AddStockModal open={showAdd} onClose={() => setShowAdd(false)} />
