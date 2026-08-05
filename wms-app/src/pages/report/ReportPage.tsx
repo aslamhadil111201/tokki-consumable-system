@@ -10,6 +10,15 @@ import { useStore } from "../../store/useStore";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="report-empty-state">
+      <div className="report-empty-icon">📤</div>
+      <div className="report-empty-msg">{message}</div>
+    </div>
+  );
+}
+
 export function ReportPage() {
   const { dark, trx, receives, items, setToast, dataReady } = useStore();
 
@@ -58,9 +67,22 @@ export function ReportPage() {
   })();
 
   const reportPrevRange = (() => {
+    const now = new Date();
+    if (reportPeriod === "year") {
+      const prevYear = now.getFullYear() - 1;
+      const start = new Date(prevYear, 0, 1);
+      const end = new Date(prevYear, 11, 31);
+      return { start: isoDate(start), end: isoDate(end) };
+    }
+    if (reportPeriod === "month") {
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { start: isoDate(prevStart), end: isoDate(prevEnd) };
+    }
+    // week
     const start = new Date(reportRange.start);
     const prevEnd = new Date(start); prevEnd.setDate(prevEnd.getDate() - 1);
-    const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - (reportRangeDays - 1));
+    const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - 6);
     return { start: isoDate(prevStart), end: isoDate(prevEnd) };
   })();
 
@@ -79,12 +101,14 @@ export function ReportPage() {
   const reportInValuePrev = reportInPrev.reduce((a, r) => a + Number(r.totalCostIn ?? (Number(r.qty || 0) * Number(r.buyPrice || 0))), 0);
   const reportEstimatedValuePrev = reportOutValuePrev + reportInValuePrev;
 
-  const getChangePct = (cur: number, prev: number) => {
-    if (prev === 0) return cur > 0 ? { label: "+100% vs lalu", color: "var(--t-green)" } : { label: "0% vs lalu", color: "var(--t-muted)" };
+  const calcTrendPercent = (cur: number, prev: number) => {
+    if (prev === 0 && cur === 0) return null;
+    if (prev === 0 && cur > 0) return { label: "Baru", color: "var(--t-green)" };
     const diff = cur - prev;
     const pct = Math.round((diff / prev) * 100);
     const color = pct >= 0 ? "var(--t-green)" : "var(--t-red)";
-    return { label: `${pct >= 0 ? "+" : ""}${pct}% vs lalu`, color };
+    const icon = pct >= 0 ? "▲" : "▼";
+    return { label: `${icon} ${pct >= 0 ? "+" : ""}${pct}% vs lalu`, color };
   };
 
   const reportTxnSeries = (() => {
@@ -294,6 +318,7 @@ export function ReportPage() {
         <div className="report-filters">
           <span className="report-filter-label">Periode</span>
           <div className="report-period-pill">
+            <div className="pill-indicator" style={{ transform: reportPeriod === "week" ? "translateX(0%)" : reportPeriod === "month" ? "translateX(100%)" : "translateX(200%)" }} />
             {[
               { id: "week", label: "Minggu" },
               { id: "month", label: "Bulan" },
@@ -305,7 +330,13 @@ export function ReportPage() {
             ))}
           </div>
           <span className="report-filter-date">
-            <span className="calendar-icon">📅</span> {fmtDate(reportRange.start)} - {fmtDate(reportRange.end)}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: "middle", display: "inline-block" }}>
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {fmtDate(reportRange.start)} - {fmtDate(reportRange.end)}
           </span>
         </div>
         <div className="report-actions">
@@ -316,9 +347,9 @@ export function ReportPage() {
 
       <div className="stats-g" style={{ marginBottom: 16 }}>
         {[
-          { label: "Total Keluar", value: `${reportTotalOutUnits.toLocaleString("id-ID")} unit`, sub: "Unit pengambilan", color: "var(--t-red)", bg: "var(--t-red-bg)", icon: "↗", trend: getChangePct(reportTotalOutUnits, reportTotalOutUnitsPrev), glowClass: "glow-red" },
-          { label: "Total Masuk", value: `${reportTotalInUnits.toLocaleString("id-ID")} unit`, sub: "Unit penerimaan", color: "var(--t-green)", bg: "var(--t-green-bg)", icon: "↙", trend: getChangePct(reportTotalInUnits, reportTotalInUnitsPrev), glowClass: "glow-green" },
-          { label: "Nilai Estimasi", value: fmtMoney(Math.round(reportEstimatedValue)), sub: "Keluar + masuk", color: "var(--t-primary)", bg: "var(--t-nav-active)", icon: "💰", trend: getChangePct(reportEstimatedValue, reportEstimatedValuePrev), glowClass: "glow-primary" },
+          { label: "Total Keluar (↗)", value: `${reportTotalOutUnits.toLocaleString("id-ID")} unit`, sub: "Unit pengambilan", color: "var(--t-red)", bg: "var(--t-red-bg)", icon: "↗", trend: calcTrendPercent(reportTotalOutUnits, reportTotalOutUnitsPrev), glowClass: "glow-red" },
+          { label: "Total Masuk (↙)", value: `${reportTotalInUnits.toLocaleString("id-ID")} unit`, sub: "Unit penerimaan", color: "var(--t-green)", bg: "var(--t-green-bg)", icon: "↙", trend: calcTrendPercent(reportTotalInUnits, reportTotalInUnitsPrev), glowClass: "glow-green" },
+          { label: "Nilai Estimasi", value: fmtMoney(Math.round(reportEstimatedValue)), sub: "Keluar + masuk", color: "var(--t-primary)", bg: "var(--t-nav-active)", icon: "💰", trend: calcTrendPercent(reportEstimatedValue, reportEstimatedValuePrev), glowClass: "glow-primary" },
           { label: "Item Kritis", value: `${lowStock.length} item`, sub: "Stok <= minimum", color: "var(--t-amber)", bg: "var(--t-amber-bg)", icon: "⚠", trend: { label: `${lowStock.length} item kritis`, color: "var(--t-amber)" }, glowClass: "glow-amber" },
         ].map((kpi, idx) => (
           <div key={idx} className={`stat-card report-kpi-card ${kpi.glowClass}`}>
@@ -354,7 +385,7 @@ export function ReportPage() {
           </div>
           <div className="report-chart-body" style={{ minHeight: "220px", position: "relative" }}>
             {reportTxnSeries.length === 0 || reportTxnSeries.every(s => s.out === 0 && s.in === 0)
-              ? <div className="report-chart-empty">Belum ada transaksi</div>
+              ? <EmptyState message="Belum ada transaksi pada periode ini" />
               : (
                 <div className="chart-container-relative" style={{ height: "220px", position: "relative" }}>
                   <svg viewBox="0 0 600 220" width="100%" height="100%" style={{ overflow: "visible" }}>
@@ -520,7 +551,7 @@ export function ReportPage() {
             <button onClick={() => setTrendFilter(trendFilter === "cur" ? "all" : "cur")} className="report-trend-cbtn" style={{ border: `1px solid ${trendFilter === "cur" ? "#10b981" : "var(--t-border)"}`, background: trendFilter === "cur" ? (dark ? "rgba(16,185,129,0.25)" : "#d1fae5") : "transparent", color: trendFilter === "cur" ? "#059669" : "var(--t-muted)" }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#10b981", display: "inline-block", flexShrink: 0 }} />{reportTrendCurrentLabel}</button>
           </div>
           {reportMonthlyTrend.length === 0
-            ? <div className="report-chart-empty">Belum ada data pengambilan pada periode ini</div>
+            ? <EmptyState message="Belum ada data pengambilan pada periode ini" />
             : (
               <div className="report-trend-list">
                 {reportMonthlyTrend.filter(r => {
@@ -538,14 +569,12 @@ export function ReportPage() {
                       : row.pctChange < 0
                         ? { bg: "#d1fae5", c: "#059669", sign: "▼" }
                         : { bg: dark ? "rgba(255,255,255,0.08)" : "#f1f5f9", c: "var(--t-muted)", sign: "→" };
-                  const isTopRank = idx < 3;
-                  const rankBadges = ["🥇", "🥈", "🥉"];
-                  const rankBadge = isTopRank ? rankBadges[idx] : `#${idx + 1}`;
+                  const rankClass = idx < 3 ? `rank-${idx + 1}` : "rank-default";
                   return (
                     <div key={row.name} className="report-trend-item">
                       <div className="report-ti-hdr">
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                          <span className={`rank-badge rank-${idx + 1}`}>{rankBadge}</span>
+                          <span className={`rank-badge ${rankClass}`}>{idx + 1}</span>
                           <div className="report-ti-name">{row.name}</div>
                         </div>
                         <div className="report-ti-stats">
@@ -583,7 +612,7 @@ export function ReportPage() {
             </div>
           </div>
           {reportDeptStack.length === 0
-            ? <div className="report-chart-empty">Belum ada pengambilan pada periode ini</div>
+            ? <EmptyState message="Belum ada pengambilan pada periode ini" />
             : (
               <div className="report-dept-list">
                 {reportDeptStack.map((row: any) => (
@@ -617,7 +646,7 @@ export function ReportPage() {
             </div>
           </div>
           {(reportProjectMode === "unit" ? reportProjectUsage : reportProjectByRp).length === 0
-            ? <div className="report-chart-empty">Belum ada data pengambilan dengan project</div>
+            ? <EmptyState message="Belum ada data pengambilan dengan project" />
             : (
               <div className="report-proj-list">
                 {(reportProjectMode === "unit" ? reportProjectUsage : reportProjectByRp).map((row, idx) => (
