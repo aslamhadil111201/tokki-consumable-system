@@ -47,6 +47,7 @@ export const MainLayout = () => {
   });
 
   const notifRef = useRef(null);
+  const lastFetchedRef = useRef(Date.now());
 
   useEffect(() => {
     if (!loggedIn) navigate("/login");
@@ -54,7 +55,11 @@ export const MainLayout = () => {
   }, [loggedIn, navigate]);
 
   useEffect(() => {
-    if (loggedIn) fetchAll();
+    if (loggedIn) {
+      fetchAll().then(() => {
+        lastFetchedRef.current = Date.now();
+      });
+    }
   }, [loggedIn]);
 
   // Detect new pending transactions and push notification
@@ -74,12 +79,36 @@ export const MainLayout = () => {
     prevPendingRef.current = currentPending;
   }, [trx, loggedIn]);
 
-  // Poll data every 30s
+  // Throttled refresh on window focus / visibility change (max once every 5 minutes)
   useEffect(() => {
     if (!loggedIn) return;
-    const iv = setInterval(() => { if (document.visibilityState === "visible") fetchAll(); }, 30000);
+    const handleFocus = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastFetchedRef.current > 300000) { // 5 minutes
+        fetchAll().then(() => {
+          lastFetchedRef.current = Date.now();
+        });
+      }
+    };
+    document.addEventListener("visibilitychange", handleFocus);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleFocus);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [loggedIn, fetchAll]);
+
+  // Slow background poll data every 10 minutes (600,000ms) to save egress
+  useEffect(() => {
+    if (!loggedIn) return;
+    const iv = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchAll().then(() => {
+          lastFetchedRef.current = Date.now();
+        });
+      }
+    }, 600000); // 10 minutes
     return () => clearInterval(iv);
-  }, [loggedIn]);
+  }, [loggedIn, fetchAll]);
 
   useEffect(() => {
     const h = (e) => { if (notifRef.current && !notifRef.current.contains(e.target)) setNotif(false); };
@@ -179,6 +208,22 @@ export const MainLayout = () => {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               <Toggle />
+
+              {/* MANUAL REFRESH */}
+              <button
+                className="tb-btn"
+                onClick={() => {
+                  withLoading(async () => {
+                    await fetchAll();
+                    lastFetchedRef.current = Date.now();
+                    setToast("Data berhasil diperbarui", "ok");
+                  }, "Memperbarui data...");
+                }}
+                style={{ padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                title="Pembaruan Data Manual"
+              >
+                ↻
+              </button>
 
               {/* NOTIF */}
               <div className="notif-wrap" ref={notifRef}>

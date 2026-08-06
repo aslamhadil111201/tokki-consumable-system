@@ -25,6 +25,30 @@ export const AddStockModal = ({
   ));
   const [addFormDragOver, setAddFormDragOver] = useState(false);
 
+  const handleFile = async (f: File) => {
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(f.type)) {
+      setToast("Hanya PDF, JPG, PNG yang diizinkan", "err");
+      return;
+    }
+    if (f.size > 10485760) {
+      setToast("Ukuran lampiran maks 10MB", "err");
+      return;
+    }
+    try {
+      if (f.type.startsWith("image/")) {
+        const { compressImage } = await import("../../utils/helpers");
+        const compressed = await compressImage(f, 1000, 1000, 0.7);
+        setAddForm(p => ({ ...p, attachment: compressed }));
+      } else {
+        const reader = new FileReader();
+        reader.onload = ev => setAddForm(p => ({ ...p, attachment: ev.target?.result as string || null }));
+        reader.readAsDataURL(f);
+      }
+    } catch (err) {
+      setToast("Gagal memuat file", "err");
+    }
+  };
+
   const canManage = (user?.role || "").toLowerCase() === "admin" || (user?.role || "").toLowerCase() === "operator";
 
   if (!open) return null;
@@ -153,11 +177,7 @@ export const AddStockModal = ({
             onDrop={e => {
               e.preventDefault(); setAddFormDragOver(false);
               const f = e.dataTransfer.files?.[0]; if (!f) return;
-              if (!["image/jpeg", "image/png", "application/pdf"].includes(f.type)) { setToast("Hanya PDF, JPG, PNG yang diizinkan", "err"); return; }
-              if (f.size > 10485760) { setToast("Ukuran lampiran maks 10MB", "err"); return; }
-              const reader = new FileReader();
-              reader.onload = ev => setAddForm(p => ({ ...p, attachment: ev.target?.result as string || null }));
-              reader.readAsDataURL(f);
+              handleFile(f);
             }}
             style={{ border: `2px dashed ${addFormDragOver ? T.primary : T.border}`, borderRadius: 12, padding: "18px 16px", textAlign: "center", transition: "border-color .2s", background: addFormDragOver ? T.navActive : "transparent", cursor: "pointer" }}
             onClick={() => { if (!addForm.attachment) (document.getElementById("attach-upload-input") as HTMLInputElement)?.click(); }}
@@ -182,11 +202,7 @@ export const AddStockModal = ({
             )}
             <input id="attach-upload-input" type="file" accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf" style={{ display: "none" }} onChange={e => {
               const f = e.target.files?.[0]; if (!f) return;
-              if (!["image/jpeg", "image/png", "application/pdf"].includes(f.type)) { setToast("Hanya PDF, JPG, PNG yang diizinkan", "err"); return; }
-              if (f.size > 10485760) { setToast("Ukuran lampiran maks 10MB", "err"); return; }
-              const reader = new FileReader();
-              reader.onload = ev => setAddForm(p => ({ ...p, attachment: ev.target?.result as string || null }));
-              reader.readAsDataURL(f);
+              handleFile(f);
               e.target.value = "";
             }} />
           </div>

@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { T, gText } from "../../theme/tokens";
@@ -78,7 +78,18 @@ export const NewItemModal = ({
               <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 8, lineHeight: 1.5 }}>Upload foto barang (JPG/PNG/WEBP, maks 2MB)</div>
               <label style={{ display: "inline-flex", alignItems: "center", gap: 7, background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.navActiveText }}>
                 📂 Pilih Foto
-                <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (!f) return; if (f.size > 2097152) { setToast("Ukuran foto maks 2MB", "err"); return; } const reader = new FileReader(); reader.onload = ev => setNewItemForm(p => ({ ...p, photo: ev.target?.result as string || null })); reader.readAsDataURL(f); }} />
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={async e => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  if (f.size > 10485760) { setToast("Ukuran file maks 10MB", "err"); return; }
+                  try {
+                    const { compressImage } = await import("../../utils/helpers");
+                    const compressed = await compressImage(f, 800, 800, 0.7);
+                    setNewItemForm(p => ({ ...p, photo: compressed }));
+                  } catch (err) {
+                    setToast("Gagal mengompresi foto", "err");
+                  }
+                }} />
               </label>
               {newItemForm.photo && <button onClick={() => setNewItemForm(p => ({ ...p, photo: null }))} style={{ marginLeft: 8, background: "none", border: "none", color: T.muted, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 11.5, fontWeight: 600 }}>✕ Hapus</button>}
             </div>

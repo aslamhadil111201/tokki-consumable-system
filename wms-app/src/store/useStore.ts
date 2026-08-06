@@ -184,19 +184,18 @@ export const useStore = create<StoreState>((set, get) => {
         const trx = trxRes.data || [];
         const map: Record<number, any> = {};
         items.forEach((i: any) => { map[Number(i.id)] = i; });
-        set({ items, trx, itemMap: map, dataReady: true });
+        set({ items, trx, itemMap: map, dataReady: true, allHistory: trx });
 
         // Fetch others async
         supabase.from('admins').select('*').then(({ data }) => set({ admins: data || [] }));
         supabase.from('departments').select('*').then(({ data }) => set({ departments: data || [] }));
         supabase.from('employees').select('*').then(({ data }) => set({ employees: data || [] }));
         supabase.from('workOrders').select('*').then(({ data }) => set({ workOrders: data || [] }));
-        supabase.from('receives').select('*').order('id', { ascending: false }).then(({ data }) => set({ receives: data || [] }));
+        // Query the receives_view instead of the receives table to avoid downloading large base64 attachments in the list
+        supabase.from('receives_view').select('*').order('id', { ascending: false }).then(({ data }) => set({ receives: data || [] }));
         supabase.from('returns').select('*').order('id', { ascending: false }).then(({ data }) => set({ returns: data || [] }));
         supabase.from('delivery_notes').select('*').order('id', { ascending: false }).then(({ data }) => set({ deliveryNotes: data || [] }));
         supabase.from('shipping_addresses').select('*').order('destination', { ascending: true }).then(({ data }) => set({ shippingAddresses: data || [] }));
-        // allHistory = combined transactions + receives
-        supabase.from('transactions').select('*').order('id', { ascending: false }).then(({ data }) => set({ allHistory: data || [] }));
       } catch (e: any) {
         setToast(e?.message || "Gagal terhubung ke Supabase", "err");
       }

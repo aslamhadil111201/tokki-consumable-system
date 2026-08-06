@@ -160,3 +160,22 @@ ALTER TABLE returns DISABLE ROW LEVEL SECURITY;
 ALTER TABLE delivery_notes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE shipping_addresses DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
+
+-- 13. receives_view (Optimization to prevent fetching base64 attachments in listings)
+CREATE OR REPLACE VIEW receives_view AS
+SELECT 
+  id, 
+  "itemId", 
+  "itemName", 
+  unit, 
+  qty, 
+  "poNumber", 
+  "doNumber", 
+  date, 
+  admin, 
+  time, 
+  "buyPrice", 
+  created_at,
+  (attachment IS NOT NULL AND attachment <> '') AS "hasAttachment"
+FROM receives;
+

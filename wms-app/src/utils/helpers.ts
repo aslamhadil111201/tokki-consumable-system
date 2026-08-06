@@ -78,3 +78,55 @@ export const tabToPath = (tab = ""): string =>
     history: "/Riwayat",
     report: "/Laporan",
   }[tab] || "/Dasboard");
+
+/** Compresses an image file (PNG/JPEG/WEBP) and returns a compressed JPEG base64 string */
+export const compressImage = (file: File, maxW = 800, maxH = 800, quality = 0.7): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    // Only compress images
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("File is not an image"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxW) {
+            height = Math.round((height * maxW) / width);
+            width = maxW;
+          }
+        } else {
+          if (height > maxH) {
+            width = Math.round((width * maxH) / height);
+            height = maxH;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        // Force output to jpeg for strong compression
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => {
+        resolve(event.target?.result as string);
+      };
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
