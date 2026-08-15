@@ -16,11 +16,11 @@
 }
 
 .stat5-g .stat-card .stat-val {
-  font-size: clamp(16px, 3.5vw, 28px);
+  font-size: clamp(14px, 3vw, 24px);
   font-weight: 900;
   line-height: 1.2;
-  word-break: break-word;
-  overflow-wrap: break-word;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .audit-row {

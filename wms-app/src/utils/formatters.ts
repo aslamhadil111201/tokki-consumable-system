@@ -19,7 +19,7 @@ export const todayFmt = (): string =>
 
 /** Formats a number as Indonesian Rupiah (e.g. "Rp 1.000.000") */
 export const fmtMoney = (n: number | string | null | undefined): string =>
-  `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
+  `Rp ${Math.round(Number(n || 0)).toLocaleString("id-ID")}`;
 
 /** Converts a Date object to "YYYY-MM-DD" string */
 export const isoDate = (d: Date): string =>
