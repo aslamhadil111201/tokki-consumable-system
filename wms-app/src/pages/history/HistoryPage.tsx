@@ -67,8 +67,7 @@ export function HistoryPage() {
     return { ...r, taker: r.employee, itemName: it?.name || r.itemName || `Item #${r.itemId}`, unit: it?.unit || "pcs" };
   }).filter(filterFn);
 
-  const filteredOutByApproval = filteredOut.filter(t => historyApprovalStatus === "all" || trxApprovalStatus(t) === historyApprovalStatus);
-  const filteredPending = trx.filter(t => trxApprovalStatus(t) === "pending").filter(filterFn);
+  const filteredOutByApproval = filteredOut;
 
   const outTotalPages = Math.ceil(filteredOutByApproval.length / Math.max(1, historyPageSize));
   const inTotalPages = Math.ceil(filteredIn.length / Math.max(1, historyPageSize));
