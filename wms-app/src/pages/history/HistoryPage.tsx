@@ -498,7 +498,7 @@ export function HistoryPage() {
                               : itemsArr.slice(0, 3).map((it: any, ii: number) => (
                                 <div key={ii} style={{ display: "grid", gridTemplateColumns: "14px minmax(0,1fr) auto", alignItems: "center", columnGap: 8, marginBottom: 3 }}>
                                   <span style={{ fontSize: 11 }}>📦</span>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{it.itemName}</span>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: T.text, lineHeight: 1.35 }} title={it.itemName}>{it.itemName}</span>
                                   <span style={{ fontSize: 10, fontWeight: 800, color: T.navActiveText, background: T.navActive, padding: "1px 7px", borderRadius: 5, border: `1px solid ${T.navActiveBorder}`, flexShrink: 0 }}>×{it.qty} {it.unit || "pcs"}</span>
                                 </div>
                               ))
@@ -617,7 +617,7 @@ export function HistoryPage() {
                     {t.items.slice(0, 3).map((it: any, ii: number) => (
                       <div key={ii} style={{ display: "grid", gridTemplateColumns: "14px minmax(0,1fr) auto", alignItems: "center", columnGap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 11 }}>📦</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{it.itemName}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: T.text, lineHeight: 1.35 }} title={it.itemName}>{it.itemName}</span>
                         <span style={{ fontSize: 10, fontWeight: 800, color: T.navActiveText, background: T.navActive, padding: "1px 7px", borderRadius: 5, border: `1px solid ${T.navActiveBorder}`, flexShrink: 0 }}>×{it.qty} {it.unit}</span>
                       </div>
                     ))}
