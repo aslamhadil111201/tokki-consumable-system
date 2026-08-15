@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import { trxApprovalStatus } from "../utils/helpers";
 
 export function useNotifications({
@@ -27,7 +27,7 @@ export function useNotifications({
         const { supabase } = await import("../lib/supabase");
         const { count, error } = await supabase
           .from("transactions")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .eq("approvalStatus", "pending");
 
         if (canceled || error) return;
@@ -65,7 +65,7 @@ export function useNotifications({
     pullPendingCount();
     const iv = window.setInterval(() => {
       if (document.visibilityState === "visible") pullPendingCount();
-    }, 30000);
+    }, 300000); // 5 minutes
 
     return () => {
       canceled = true;

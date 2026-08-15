@@ -56,6 +56,32 @@ export function StockPage() {
   const currentPage = stockPage > totalPages ? 1 : stockPage;
   const pagedItems = filtItems.slice((currentPage - 1) * stockPageSize, currentPage * stockPageSize);
 
+  const [itemPhotos, setItemPhotos] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (pagedItems.length === 0) return;
+    const ids = pagedItems.map(i => i.id);
+    let active = true;
+
+    const fetchPhotos = async () => {
+      const { supabase } = await import("../../lib/supabase");
+      const { data } = await supabase
+        .from("items")
+        .select("id, photo")
+        .in("id", ids);
+      if (data && active) {
+        const mapped: Record<number, string> = {};
+        data.forEach(d => {
+          if (d.photo) mapped[Number(d.id)] = d.photo;
+        });
+        setItemPhotos(prev => ({ ...prev, ...mapped }));
+      }
+    };
+
+    fetchPhotos();
+    return () => { active = false; };
+  }, [currentPage, stockPageSize, catF, stockStatusF, searchQ, items]);
+
   const filtMenipisCount = filtItems.filter(i => stockStatusKey(i) === "menipis").length;
   const filtHabisCount = filtItems.filter(i => stockStatusKey(i) === "habis").length;
 
@@ -184,8 +210,8 @@ export function StockPage() {
               )}
 
               <div className="stk-photo-box">
-                {it.photo
-                  ? <img src={it.photo} alt={it.name} className="stk-photo-img" />
+                {itemPhotos[Number(it.id)]
+                  ? <img src={itemPhotos[Number(it.id)]} alt={it.name} className="stk-photo-img" />
                   : <div className="stk-photo-placeholder" style={{ background: s.bg, color: s.dot }}>📷</div>
                 }
               </div>

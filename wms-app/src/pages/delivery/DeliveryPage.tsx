@@ -67,7 +67,7 @@ export function DeliveryPage() {
     while (true) {
       const { data } = await supabase
         .from("delivery_notes")
-        .select("*")
+        .select("id, batch, category, date, project_no, no_kendaraan, destination, attn, full_address, items")
         .range(from, from + PAGE - 1);
       if (!data || data.length === 0) break;
       all = all.concat(data);
@@ -153,7 +153,7 @@ export function DeliveryPage() {
 
   const fetchAddresses = async () => {
     const { supabase } = await import("../../lib/supabase");
-    const { data } = await supabase.from("shipping_addresses").select("*").order("destination");
+    const { data } = await supabase.from("shipping_addresses").select("id, destination, attn, contact, full_address").order("destination");
     setAddresses(data || []);
   };
 

@@ -31,21 +31,18 @@ export function LoginPage() {
       try {
         const { supabase } = await import("../../lib/supabase");
         console.log("[LOGIN] Supabase imported, querying users...");
-        const { data: users, error } = await supabase
-          .from("users")
-          .select("*")
-          .eq("username", loginForm.username)
-          .limit(1);
+        const { data: users, error } = await supabase.rpc("verify_user_login", {
+          p_username: loginForm.username,
+          p_password: loginForm.password
+        });
 
-        console.log("[LOGIN] Query result:", { error, usersCount: users?.length });
+        console.log("[LOGIN] RPC result:", { error, usersCount: users?.length });
         if (error) throw new Error("Gagal menghubungi database");
-        if (!users || users.length === 0) throw new Error("Username tidak ditemukan");
+        if (!users || users.length === 0) throw new Error("Username atau password salah");
 
         const user = users[0];
-        if (user.password !== loginForm.password) throw new Error("Password salah");
-
-        console.log("[LOGIN] Password match! Calling storeLogin...");
-        storeLogin("supabase-session", { id: user.id, username: user.username, role: user.role });
+        console.log("[LOGIN] Login success via RPC! Calling storeLogin...");
+        storeLogin("supabase-session", { id: user.id, username: user.username, role: user.role, name: user.name });
         
         // Log audit (fire and forget)
         await supabase.from("audit_logs").insert([{

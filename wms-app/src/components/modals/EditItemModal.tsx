@@ -22,6 +22,27 @@ export const EditItemModal = ({
   useEffect(() => {
     if (open && item) {
       setEditItem({ ...item });
+      if (item.id) {
+        let active = true;
+        const fetchPhoto = async () => {
+          const { supabase } = await import("../../lib/supabase");
+          const { data } = await supabase
+            .from("items")
+            .select("photo")
+            .eq("id", item.id)
+            .single();
+          if (data && data.photo && active) {
+            setEditItem((prev: any) => {
+              if (prev && prev.id === item.id) {
+                return { ...prev, photo: data.photo };
+              }
+              return prev;
+            });
+          }
+        };
+        fetchPhoto();
+        return () => { active = false; };
+      }
     } else {
       setEditItem(null);
     }

@@ -49,10 +49,14 @@ export const MainLayout = () => {
   const notifRef = useRef(null);
   const lastFetchedRef = useRef(Date.now());
 
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
+  const isOperator = (user?.role || "").toLowerCase() === "operator";
+  const isGuest = (user?.role || "").toLowerCase() === "guest";
+
   useEffect(() => {
     if (!loggedIn) navigate("/login");
     else if (isGuest && location.pathname !== "/delivery") navigate("/delivery");
-  }, [loggedIn, navigate]);
+  }, [loggedIn, navigate, isGuest, location.pathname]);
 
   useEffect(() => {
     if (loggedIn) {
@@ -97,7 +101,7 @@ export const MainLayout = () => {
     };
   }, [loggedIn, fetchAll]);
 
-  // Slow background poll data every 10 minutes (600,000ms) to save egress
+  // Slow background poll data every 15 minutes (900,000ms) as fallback to save egress
   useEffect(() => {
     if (!loggedIn) return;
     const iv = setInterval(() => {
@@ -106,8 +110,50 @@ export const MainLayout = () => {
           lastFetchedRef.current = Date.now();
         });
       }
-    }, 600000); // 10 minutes
+    }, 900000); // 15 minutes
     return () => clearInterval(iv);
+  }, [loggedIn, fetchAll]);
+
+  // Supabase Realtime subscription to receive database changes instantly
+  useEffect(() => {
+    if (!loggedIn) return;
+    let channel: any;
+
+    const setupRealtime = async () => {
+      try {
+        const { supabase } = await import('../../lib/supabase');
+        const channelName = `wms-db-changes-${Math.random().toString(36).substring(2, 9)}`;
+        channel = supabase.channel(channelName)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
+            fetchAll();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+            fetchAll();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'returns' }, () => {
+            fetchAll();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'receives' }, () => {
+            fetchAll();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_notes' }, () => {
+            fetchAll();
+          })
+          .subscribe();
+      } catch (err) {
+        console.error("Realtime subscription setup failed:", err);
+      }
+    };
+
+    setupRealtime();
+
+    return () => {
+      if (channel) {
+        import('../../lib/supabase').then(({ supabase }) => {
+          supabase.removeChannel(channel);
+        });
+      }
+    };
   }, [loggedIn, fetchAll]);
 
   useEffect(() => {
@@ -117,10 +163,6 @@ export const MainLayout = () => {
   }, []);
 
   if (!loggedIn) return null;
-
-  const isAdmin = (user?.role || "").toLowerCase() === "admin";
-  const isOperator = (user?.role || "").toLowerCase() === "operator";
-  const isGuest = (user?.role || "").toLowerCase() === "guest";
 
   // Guest: hanya bisa akses Surat Jalan
   const visibleTabs = isGuest
