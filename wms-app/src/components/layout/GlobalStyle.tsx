@@ -256,7 +256,7 @@ export const GlobalStyle = () => {
       height: auto !important;
       min-height: 100vh;
     }
-    .login-bg{position:fixed;inset:0;background:linear-gradient(135deg,rgba(0,12,5,0.82) 0%,rgba(0,10,4,0.66) 40%,rgba(0,8,3,0.74) 100%),url('/login-bg-new.png');background-size:cover;background-position:center;background-repeat:no-repeat}
+     .login-bg{position:fixed;inset:0;background:linear-gradient(135deg,rgba(0,12,5,0.82) 0%,rgba(0,10,4,0.66) 40%,rgba(0,8,3,0.74) 100%),url('/login-bg-new.webp');background-size:cover;background-position:center;background-repeat:no-repeat}
     .login-bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,${dark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.12)"} 1px,transparent 1px);background-size:26px 26px}
     .login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;position:relative;z-index:1;box-sizing:border-box}
     .login-card{
