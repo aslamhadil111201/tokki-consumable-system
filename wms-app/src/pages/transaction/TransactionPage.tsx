@@ -298,16 +298,12 @@ export function TransactionPage() {
       {returSubTab === "retur" && (
         <div>
           {/* Summary cards */}
-          <div className="stats-g retur-stats-g">
+          <div className="stats-g retur-stats-g" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
             {(() => {
               const totalUnit = returns.reduce((a, r) => a + Number(r.qty || 0), 0);
-              const pending = returns.filter(r => r.status === "Menunggu").length;
-              const diterima = returns.filter(r => r.status === "Diterima").length;
               return [
                 { label: "Total Retur", val: returns.length, icon: "↩", color: "var(--t-amber)", bg: "var(--t-amber-bg)", sub: "total catatan" },
                 { label: "Unit Dikembalikan", val: totalUnit, icon: "📦", color: "var(--t-green)", bg: "var(--t-green-bg)", sub: "unit barang kembali" },
-                { label: "Diterima", val: diterima, icon: "✅", color: "var(--t-primary)", bg: "var(--t-nav-active)", sub: "sudah diproses" },
-                { label: "Menunggu", val: pending, icon: "⏳", color: "var(--t-red)", bg: "var(--t-red-bg)", sub: "menunggu konfirmasi" },
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card retur-stat-card">
@@ -328,7 +324,6 @@ export function TransactionPage() {
             ? <div className="trx-empty-state"><div className="trx-empty-icon">↩</div>Belum ada retur tercatat</div>
             : pagedReturns.map(r => {
               const it = itemMap[Number(r.itemId)];
-              const isDiterima = r.status === "Diterima";
               return (
                 <div key={r.id} className="retur-card">
                   <div className="retur-card-icon-wrap">
@@ -338,7 +333,6 @@ export function TransactionPage() {
                   <div className="retur-card-body">
                     <div className="retur-card-header">
                       <span className="retur-emp-name">{r.employee}</span>
-                      <span className="retur-status-badge" style={{ border: `1px solid ${isDiterima ? "var(--t-green-border)" : "var(--t-red-border)"}`, background: isDiterima ? "var(--t-green-bg)" : "var(--t-red-bg)", color: isDiterima ? "var(--t-green-text)" : "var(--t-red-text)" }}>{r.status || "Menunggu"}</span>
                     </div>
                     <div className="retur-item-row">
                       <span className="retur-item-icon">📦</span>
@@ -353,31 +347,6 @@ export function TransactionPage() {
                   </div>
                   {isAdmin && (
                     <div className="retur-actions">
-                      {!isDiterima && (
-                        <button onClick={async () => {
-                          await withLoading(async () => {
-                            try {
-                              const { supabase } = await import("../../lib/supabase");
-                              
-                              // 1. Update status retur di database
-                              const { error } = await supabase.from("returns").update({ status: "Diterima" }).eq("id", r.id);
-                              if (error) throw new Error(error.message || "Gagal update status");
-
-                              // 2. Tambahkan kembali barang ke stok jika itemId valid
-                              if (r.itemId) {
-                                const { data: itemData } = await supabase.from("items").select("stock").eq("id", r.itemId).single();
-                                if (itemData) {
-                                  const newStock = (itemData.stock || 0) + Number(r.qty || 0);
-                                  await supabase.from("items").update({ stock: newStock }).eq("id", r.itemId);
-                                }
-                              }
-
-                              setToast("Status retur diperbarui & stok ditambahkan ✓");
-                              fetchAll();
-                            } catch (e: any) { setToast(e?.message || "Gagal update status", "err"); }
-                          }, "Memperbarui...");
-                        }} className="retur-btn-terima">✅ Terima</button>
-                      )}
                       <button onClick={async () => {
                         if (confirm(`Apakah Anda yakin ingin menghapus data retur dari "${r.employee}"?`)) {
                           await withLoading(async () => {

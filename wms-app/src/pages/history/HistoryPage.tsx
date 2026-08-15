@@ -815,17 +815,13 @@ export function HistoryPage() {
       {/* ─ TAB RETUR BARANG ─ */}
       {historyTab === "retur" && (
         <div>
-          {/* Stats 4 columns */}
-          <div className="stat5-g">
+          {/* Stats 2 columns */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 18 }}>
             {(() => {
               const totalUnitRetur = returns.reduce((acc, r) => acc + Number(r.qty || 0), 0);
-              const totalDiterima = returns.filter(r => r.status === "Diterima").length;
-              const totalMenunggu = returns.filter(r => r.status !== "Diterima").length;
               return [
                 { label: "Total Retur", sub: "catatan retur", val: returns.length, icon: "↩", dot: T.primary },
                 { label: "Unit Dikembalikan", sub: "unit barang", val: totalUnitRetur, icon: "📦", dot: T.green },
-                { label: "Diterima", sub: "sudah disetujui", val: totalDiterima, icon: "✅", dot: "#10b981" },
-                { label: "Menunggu", sub: "belum disetujui", val: totalMenunggu, icon: "⏳", dot: T.amber },
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card" style={{ display: "flex", flexDirection: "column", padding: "16px 14px" }}>
@@ -843,24 +839,18 @@ export function HistoryPage() {
           {filteredReturns.length === 0
             ? <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}><div style={{ fontSize: 36, marginBottom: 12 }}>↩</div>Belum ada riwayat retur barang</div>
             : pagedReturns.map((r: any) => {
-              const isDiterima = r.status === "Diterima";
               return (
-                <div key={r.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${isDiterima ? T.green : T.amber}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", boxShadow: T.shadowSm, transition: "box-shadow .2s" }}>
+                <div key={r.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${T.green}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", boxShadow: T.shadowSm, transition: "box-shadow .2s" }}>
                   {/* Avatar */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 12px", gap: 5, minWidth: 70, flexShrink: 0 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: isDiterima ? T.greenBg : T.amberBg, border: `2px solid ${isDiterima ? T.green : T.amber}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, lineHeight: 1 }}>↩</div>
-                    <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".07em", color: isDiterima ? T.green : T.amber, textTransform: "uppercase" }}>RETUR</span>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: T.greenBg, border: `2px solid ${T.green}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, lineHeight: 1 }}>↩</div>
+                    <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".07em", color: T.green, textTransform: "uppercase" }}>RETUR</span>
                   </div>
                   {/* Content */}
                   <div className="trx-row-inner">
                     {/* Name */}
                     <div className="trx-col-name">
                       <div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{r.employee || "-"}</div>
-                      <div style={{ marginTop: 4 }}>
-                        <Badge bg={isDiterima ? T.greenBg : T.amberBg} color={isDiterima ? T.greenText : T.amberText} border={isDiterima ? T.greenBorder : T.amberBorder}>
-                          {isDiterima ? "✅ Diterima" : "⏳ Menunggu"}
-                        </Badge>
-                      </div>
                     </div>
                     {/* Time */}
                     <div className="trx-col-time">

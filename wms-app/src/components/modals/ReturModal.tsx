@@ -36,11 +36,21 @@ export const ReturModal = ({
         const it = items.find(i => i.id === itemId);
         const { error } = await supabase.from("returns").insert([{
           employee: empName, itemId, qty, reason: returForm.reason,
-          note: String(returForm.note || "").trim(), date: todayStr(), time: nowTime()
+          note: String(returForm.note || "").trim(), date: todayStr(), time: nowTime(),
+          status: "Diterima"
         }]);
         if (error) throw new Error(error.message || "Gagal menyimpan retur");
         
-        setToast("Retur berhasil dicatat, menunggu konfirmasi Admin ✓");
+        // Tambahkan kembali barang ke stok langsung
+        if (itemId) {
+          const { data: itemData } = await supabase.from("items").select("stock").eq("id", itemId).single();
+          if (itemData) {
+            const newStock = (itemData.stock || 0) + qty;
+            await supabase.from("items").update({ stock: newStock }).eq("id", itemId);
+          }
+        }
+        
+        setToast("Retur berhasil dicatat & stok ditambahkan ✓");
         onClose();
         setReturForm(emptyReturForm());
         fetchAll();
@@ -52,7 +62,7 @@ export const ReturModal = ({
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div style={{ fontSize: 20, fontWeight: 900, ...gText(), marginBottom: 4 }}>↩ Catat Retur Barang</div>
-        <div style={{ fontSize: 12, color: T.muted, marginBottom: 18 }}>Barang yang diretur akan menambah stok setelah disetujui Admin.</div>
+        <div style={{ fontSize: 12, color: T.muted, marginBottom: 18 }}>Barang yang diretur akan langsung ditambahkan ke stok barang.</div>
         <div className="sect-box">
           <div className="sect-lbl">👤 Data Pengembali</div>
           <div><FL>Nama Pengembali *</FL>
