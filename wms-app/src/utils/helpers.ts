@@ -130,3 +130,6 @@ export const compressImage = (file: File, maxW = 800, maxH = 800, quality = 0.7)
   });
 };
 
+/** Global session cache for item photos to prevent duplicate fetches */
+export const globalPhotoCache: Record<number, string> = {};
+

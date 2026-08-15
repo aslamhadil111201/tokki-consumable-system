@@ -73,6 +73,11 @@ export const EditItemModal = ({
           totalValue: newTotalValue
         }).eq("id", editItem.id);
         if (error) throw new Error(error.message || "Gagal memperbarui item");
+        
+        // Hapus cache foto lama agar jika foto diubah langsung memuat yang baru
+        const { globalPhotoCache } = await import("../../utils/helpers");
+        delete globalPhotoCache[Number(editItem.id)];
+
         onClose();
         setToast("Item berhasil diperbarui \u2713");
         await fetchAll();

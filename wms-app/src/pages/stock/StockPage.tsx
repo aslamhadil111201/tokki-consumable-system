@@ -64,15 +64,26 @@ export function StockPage() {
     let active = true;
 
     const fetchPhotos = async () => {
-      const { supabase } = await import("../../lib/supabase");
-      const { data } = await supabase
-        .from("items")
-        .select("id, photo")
-        .in("id", ids);
-      if (data && active) {
+      const { globalPhotoCache } = await import("../../utils/helpers");
+      const missingIds = ids.filter(id => !globalPhotoCache[id]);
+      
+      if (missingIds.length > 0) {
+        const { supabase } = await import("../../lib/supabase");
+        const { data } = await supabase
+          .from("items")
+          .select("id, photo")
+          .in("id", missingIds);
+        if (data) {
+          data.forEach(d => {
+            if (d.photo) globalPhotoCache[Number(d.id)] = d.photo;
+          });
+        }
+      }
+
+      if (active) {
         const mapped: Record<number, string> = {};
-        data.forEach(d => {
-          if (d.photo) mapped[Number(d.id)] = d.photo;
+        ids.forEach(id => {
+          if (globalPhotoCache[id]) mapped[id] = globalPhotoCache[id];
         });
         setItemPhotos(prev => ({ ...prev, ...mapped }));
       }
