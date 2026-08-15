@@ -66,22 +66,7 @@ export const MainLayout = () => {
     }
   }, [loggedIn]);
 
-  // Detect new pending transactions and push notification
-  const prevPendingRef = useRef(0);
-  useEffect(() => {
-    if (!loggedIn) return;
-    const currentPending = trx.filter(t => trxApprovalStatus(t) === "pending").length;
-    if (prevPendingRef.current > 0 && currentPending > prevPendingRef.current) {
-      const diff = currentPending - prevPendingRef.current;
-      const msg = `\uD83D\uDD14 ${diff} permintaan baru menunggu approval`;
-      setNotifHistory(prev => {
-        const next = [{ id: Date.now(), msg, type: "ok", ts: new Date().toISOString(), read: false }, ...prev].slice(0, 50);
-        localStorage.setItem("wms_notif_history", JSON.stringify(next));
-        return next;
-      });
-    }
-    prevPendingRef.current = currentPending;
-  }, [trx, loggedIn]);
+
 
   // Throttled refresh on window focus / visibility change (max once every 5 minutes)
   useEffect(() => {
@@ -174,7 +159,6 @@ export const MainLayout = () => {
   const lowStock = items.filter(i => i.stock <= i.minStock);
   const approvedOutTrx = trx.filter(isApprovedOutTrx);
   const todayTrx = approvedOutTrx.filter(t => t.date === todayStr());
-  const pendingApprovalCount = trx.filter(t => trxApprovalStatus(t) === "pending").length;
   const currentTab = location.pathname.substring(1) || "dashboard";
 
 
@@ -204,7 +188,6 @@ export const MainLayout = () => {
                   <span className="nav-icon">{t.icon}</span>
                   <span className="nav-text">{t.label}</span>
                   {t.id === "transaction" && todayTrx.length > 0 && <span className="nav-pill">{todayTrx.length}</span>}
-                  {t.id === "history" && pendingApprovalCount > 0 && <span className="nav-pill">{pendingApprovalCount}</span>}
                 </Link>
               ))}
               <button className="nav-item mobile-logout" onClick={() => logout()}>

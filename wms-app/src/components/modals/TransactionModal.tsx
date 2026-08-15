@@ -95,25 +95,11 @@ export const TransactionModal = ({
       try {
         const { supabase } = await import("../../lib/supabase");
         
-        // Cek apakah perlu approval:
-        // - Jika ada item yang stoknya menipis (stock <= minStock) setelah diambil
-        // - Atau qty pengambilan > 50% dari stok tersedia
-        let needsApproval = false;
-        for (const c of form.cart) {
-          const it = items.find(i => i.id === c.itemId);
-          if (!it) continue;
-          const remainingStock = it.stock - c.qty;
-          if (remainingStock <= it.minStock || c.qty > it.stock * 0.5) {
-            needsApproval = true;
-            break;
-          }
-        }
-
-        const approvalStatus = needsApproval ? "pending" : "approved";
         const insertPayload = { 
           ...payload, 
-          approvalStatus,
-          ...(approvalStatus === "approved" ? { approvedBy: "system", approvedAt: new Date().toISOString() } : {})
+          approvalStatus: "approved",
+          approvedBy: "system", 
+          approvedAt: new Date().toISOString()
         };
         const { error } = await supabase.from("transactions").insert([insertPayload]);
         if (error) throw new Error(error.message || "Gagal menyimpan transaksi");

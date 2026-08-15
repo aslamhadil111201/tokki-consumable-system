@@ -27,29 +27,16 @@ export function HistoryPage() {
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyFrom, setHistoryFrom] = useState("");
   const [historyTo, setHistoryTo] = useState("");
-  const [historyApprovalStatus, setHistoryApprovalStatus] = useState("all");
   const [historyPageSize, setHistoryPageSize] = useState(6);
   const [historyOutPage, setHistoryOutPage] = useState(1);
   const [historyInPage, setHistoryInPage] = useState(1);
   const [historyReturPage, setHistoryReturPage] = useState(1);
-  
-  const [approvalBusyKey, setApprovalBusyKey] = useState<string | null>(null);
-  const [slaTick, setSlaTick] = useState(0);
-  const [autoRejectHours, setAutoRejectHours] = useState(24);
 
   // Modals
   const [showModal, setShowModal] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
-
-
-  useEffect(() => {
-    const t = setInterval(() => setSlaTick(v => v + 1), 60000);
-    return () => clearInterval(t);
-  }, []);
-
   const approvedOutTrx = trx.filter(isApprovedOutTrx);
-  const pendingApprovalCount = trx.filter(t => trxApprovalStatus(t) === "pending").length;
 
   const allHistory = [
     ...trx.map(t => ({ ...t, type: "out", _ts: t.date + "T" + (t.time || "00:00") })),
@@ -96,64 +83,7 @@ export function HistoryPage() {
   const totalOut = approvedOutTrx.reduce((a, t) => a + toSafeRows(t.items).reduce((b: number, i: any) => b + Number(i.qty || 0), 0), 0);
   const totalIn = receives.reduce((a, r) => a + Number(r.qty || 0), 0);
 
-  const getSlaInfo = (t: any) => {
-    const ageMs = Date.now() - Number(t.id);
-    const limitMs = autoRejectHours * 60 * 60 * 1000;
-    const remainingMs = Math.max(0, limitMs - ageMs);
-    const urgency = remainingMs === 0 ? "critical" : remainingMs < limitMs * 0.25 ? "warning" : "normal";
-    if (remainingMs === 0) return { urgency, remainingMs, remainingMin: 0, label: "Waktu Habis", remainingLabel: "Telah melewati batas SLA" };
-    const m = Math.floor(remainingMs / 60000);
-    const h = Math.floor(m / 60); const remM = m % 60;
-    const remainingLabel = h > 0 ? `${h} jam ${remM} mnt tersisa` : `${remM} mnt tersisa`;
-    const label = ageMs < 60000 ? "Baru Saja" : ageMs < 3600000 ? `${Math.floor(ageMs / 60000)} mnt lalu` : `${Math.floor(ageMs / 3600000)} jam lalu`;
-    return { urgency, remainingMs, remainingMin: m, label, remainingLabel };
-  };
 
-  const processTransactionApproval = async (id: number, act: "approve" | "reject") => {
-    if (!isAdmin) { setToast("Hanya admin yang dapat menyetujui transaksi", "err"); return; }
-    setApprovalBusyKey(`${id}:${act}`);
-    try {
-      const { supabase } = await import("../../lib/supabase");
-      const updateData = act === "approve"
-        ? { approvalStatus: "approved", approvedBy: user?.username || "admin", approvedAt: new Date().toISOString() }
-        : { approvalStatus: "rejected", approvedBy: user?.username || "admin", approvedAt: new Date().toISOString() };
-      const { error } = await supabase.from("transactions").update(updateData).eq("id", id);
-      if (error) throw new Error(error.message || `Gagal ${act} transaksi`);
-
-      // Jika reject, kembalikan stok barang ke gudang
-      if (act === "reject") {
-        const trxData = trx.find(t => t.id === id);
-        if (trxData && Array.isArray(trxData.items)) {
-          for (const line of trxData.items) {
-            const itemId = Number(line.itemId);
-            const qty = Number(line.qty || 0);
-            if (itemId && qty > 0) {
-              const item = items.find(i => Number(i.id) === itemId);
-              if (item) {
-                const newStock = (item.stock || 0) + qty;
-                const avgCost = Number(item.averageCost || 0);
-                const newTotalValue = Math.round(newStock * avgCost * 100) / 100;
-                await supabase.from("items").update({ 
-                  stock: newStock,
-                  totalValue: newTotalValue
-                }).eq("id", itemId);
-              }
-            }
-          }
-        }
-      }
-
-      // Log audit
-      await supabase.from("audit_logs").insert([{
-        action: `transactions.${act}`,
-        actor: { username: user?.username, role: user?.role },
-        target: `Transaction #${id}`
-      }]);
-      setToast(`Transaksi berhasil di-${act} \u2713`);
-      await fetchAll();
-    } catch (e: any) { setToast(e?.message || `Gagal ${act} transaksi`, "err"); }
-    finally { setApprovalBusyKey(null); }
-  };
 
   const deleteTransaction = async (id: number) => {
     if (!isAdmin) { setToast("Hanya admin yang boleh menghapus transaksi", "err"); return; }
@@ -250,20 +180,7 @@ export function HistoryPage() {
     } catch { setToast("Gagal mengambil lampiran", "err"); }
   };
 
-  const approvalMetaChips = (t: any) => {
-    const s = trxApprovalStatus(t);
-    if (s === "pending") return null;
-    return (
-      <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
-        <span style={{ fontSize: 10, background: T.surface, color: T.muted, padding: "2px 8px", borderRadius: 4, border: `1px solid ${T.border}` }}>
-          👤 Oleh: {s === "approved" ? t.approvedBy : t.rejectedBy}
-        </span>
-        <span style={{ fontSize: 10, background: T.surface, color: T.muted, padding: "2px 8px", borderRadius: 4, border: `1px solid ${T.border}` }}>
-          📅 {fmtDate((s === "approved" ? t.approvedAt : t.rejectedAt) || "")}
-        </span>
-      </div>
-    );
-  };
+
 
   const dlPdf = (fileName: string, title: string, headers: any[], rows: any[]) => {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
@@ -275,9 +192,9 @@ export function HistoryPage() {
   const exportTransactionsExcel = () => {
     const rows = [
       ["Warehouse Management System"], ["Laporan Riwayat Pengambilan"], [],
-      ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Unit", "Keterangan", "Status"],
+      ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Unit", "Keterangan"],
       ...filteredOutByApproval.flatMap((t: any) => toSafeRows(t.items).map((it: any) => [
-        csvText(t.id), fmtDateExcel(t.date), t.time, t.taker, t.dept, t.workOrder || "", t.admin || "", it.itemName, it.qty, it.unit, t.note || "", trxApprovalStatus(t).toUpperCase()
+        csvText(t.id), fmtDateExcel(t.date), t.time, t.taker, t.dept, t.workOrder || "", t.admin || "", it.itemName, it.qty, it.unit, t.note || ""
       ]))
     ];
     const csv = "\uFEFF" + rows.map(r => r.map(v => typeof v === "string" ? csvEscape(v) : v).join(",")).join("\n");
@@ -286,8 +203,8 @@ export function HistoryPage() {
   };
 
   const exportTransactionsPdf = () => {
-    const rows = filteredOutByApproval.flatMap((t: any) => toSafeRows(t.items).map((it: any) => [t.id, t.date, t.time, t.taker, t.dept, t.workOrder || "", t.admin || "", it.itemName, `${it.qty} ${it.unit}`, t.note || "", trxApprovalStatus(t).toUpperCase()]));
-    dlPdf(`pengambilan-${todayStr()}.pdf`, "Riwayat Pengambilan", ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Ket", "Status"], rows);
+    const rows = filteredOutByApproval.flatMap((t: any) => toSafeRows(t.items).map((it: any) => [t.id, t.date, t.time, t.taker, t.dept, t.workOrder || "", t.admin || "", it.itemName, `${it.qty} ${it.unit}`, t.note || ""]));
+    dlPdf(`pengambilan-${todayStr()}.pdf`, "Riwayat Pengambilan", ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Ket"], rows);
   };
 
   const exportReceivesExcel = () => {
@@ -365,7 +282,6 @@ export function HistoryPage() {
             "Nama Barang": it.itemName || "-",
             "Qty": it.qty,
             "Unit": it.unit || "pcs",
-            "Status": trxApprovalStatus(t).toUpperCase(),
             "Keterangan": t.note || "-"
           }))
         );
@@ -448,8 +364,7 @@ export function HistoryPage() {
               { id: "all", icon: "🧾", label: `Semua (${allHistory.length})` },
               { id: "out", icon: "📤", label: `Pengambilan (${trx.length})` },
               { id: "in", icon: "📋", label: `Penerimaan (${receives.length})` },
-              { id: "retur", icon: "↩", label: `Retur (${returns.length})` },
-              ...(isAdmin ? [{ id: "approval", icon: "⏳", label: `Approval (${pendingApprovalCount})` }] : []),
+              { id: "retur", icon: "↩", label: `Retur (${returns.length})` }
             ];
             return subTabs.map(tb => (
               <button key={tb.id} onClick={() => setHistoryTab(tb.id)} style={{ padding: "8px 14px", borderRadius: 9, border: "none", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all .2s", background: historyTab === tb.id ? T.primary : "transparent", color: historyTab === tb.id ? "white" : T.muted, boxShadow: historyTab === tb.id ? `0 4px 12px ${T.primaryGlow}` : "none", whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>{tb.icon} {tb.label}</button>
@@ -462,27 +377,19 @@ export function HistoryPage() {
               📊 Export Semua Laporan (Excel)
             </button>
           )}
-          {isAdmin && historyTab !== "all" && historyTab !== "approval" && (
+          {isAdmin && historyTab !== "all" && (
             <BtnG onClick={historyTab === "in" ? exportReceivesExcel : historyTab === "retur" ? exportReturnsExcel : exportTransactionsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>
           )}
-          {isAdmin && historyTab !== "all" && historyTab !== "approval" && (
+          {isAdmin && historyTab !== "all" && (
             <BtnG onClick={historyTab === "in" ? exportReceivesPdf : historyTab === "retur" ? exportReturnsPdf : exportTransactionsPdf} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>
           )}
-          {isAdmin && historyTab !== "in" && historyTab !== "approval" && historyTab !== "retur" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>}
+          {isAdmin && historyTab !== "in" && historyTab !== "retur" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>}
           {canManage && historyTab === "in" && <BtnP onClick={() => setShowAdd(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 800 }}>＋ Catat Penerimaan</BtnP>}
         </div>
       </div>
 
         <div className="fbar" style={{ marginBottom: 14 }}>
           <input className="ifield" style={{ width: 220 }} placeholder="🔍 Cari nama/item/admin/PO/DO..." value={historyQuery} onChange={e => setHistoryQuery(e.target.value)} />
-          {historyTab === "out" && (
-            <select className="ifield" style={{ width: 190 }} value={historyApprovalStatus} onChange={e => setHistoryApprovalStatus(e.target.value)}>
-              <option value="all">Semua Status Approval</option>
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          )}
           <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700 }}>Dari</span>
           <input type="date" className="ifield" style={{ width: 160 }} value={historyFrom} onChange={e => setHistoryFrom(e.target.value)} onClick={e => e.currentTarget.showPicker()} />
           <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 700 }}>Sampai</span>
@@ -490,79 +397,13 @@ export function HistoryPage() {
           <select className="ifield" style={{ width: 120 }} value={historyPageSize} onChange={e => setHistoryPageSize(Number(e.target.value) || 6)}>
             {[6, 10, 15, 20].map(n => <option key={n} value={n}>{n}/hal</option>)}
           </select>
-          <BtnG style={{ fontSize: 11.5, padding: "7px 12px" }} onClick={() => { setHistoryQuery(""); setHistoryFrom(""); setHistoryTo(""); setHistoryApprovalStatus("all"); }}>✕ Reset</BtnG>
+          <BtnG style={{ fontSize: 11.5, padding: "7px 12px" }} onClick={() => { setHistoryQuery(""); setHistoryFrom(""); setHistoryTo(""); }}>✕ Reset</BtnG>
           <span style={{ marginLeft: "auto", fontSize: 11.5, color: T.muted, fontWeight: 600, whiteSpace: "nowrap" }}>
-            {historyTab === "all" ? filteredAll.length : historyTab === "out" ? filteredOutByApproval.length : historyTab === "approval" ? filteredPending.length : historyTab === "retur" ? filteredReturns.length : filteredIn.length} transaksi ditemukan
+            {historyTab === "all" ? filteredAll.length : historyTab === "out" ? filteredOutByApproval.length : historyTab === "retur" ? filteredReturns.length : filteredIn.length} transaksi ditemukan
           </span>
         </div>
 
-      {historyTab === "approval" && isAdmin && (
-        <div>
-          {filteredPending.length === 0
-            ? <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}><div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>Tidak ada transaksi yang menunggu approval</div>
-            : filteredPending.map((t: any) => {
-              const totalUnits = (t.items || []).reduce((a: number, i: any) => a + Number(i.qty || 0), 0);
-              const totalCostRow = Number(t.totalCostOut ?? (t.items || []).reduce((acc: number, it: any) => { const avg = Number(it.averageCost ?? itemMap[Number(it.itemId)]?.averageCost ?? 0); return acc + (Number(it.qty || 0) * avg); }, 0));
-              const sla = getSlaInfo(t);
-              const slaColor = sla.urgency === "critical" ? T.red : sla.urgency === "warning" ? "#f97316" : T.amber;
-              const slaIcon = sla.urgency === "critical" ? "🔴" : sla.urgency === "warning" ? "⚠️" : "⏱";
-              const slaBorderLeft = `4px solid ${slaColor}`;
-              const slaCardBg = sla.urgency === "critical" ? `linear-gradient(90deg,rgba(239,68,68,0.07) 0%,transparent 120px)` : sla.urgency === "warning" ? `linear-gradient(90deg,rgba(249,115,22,0.07) 0%,transparent 120px)` : "none";
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, backgroundImage: slaCardBg, border: `1px solid ${sla.urgency === "critical" ? T.redBorder : sla.urgency === "warning" ? "rgba(249,115,22,0.3)" : T.border}`, borderLeft: slaBorderLeft, borderRadius: 14, marginBottom: 8, overflow: "hidden", boxShadow: T.shadowSm }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 12px", gap: 5, minWidth: 70, flexShrink: 0 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: sla.urgency === "critical" ? T.redBg : T.amberBg, border: `2px solid ${slaColor}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, lineHeight: 1 }}>⏳</div>
-                    <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: ".07em", color: slaColor, textTransform: "uppercase" }}>PENDING</span>
-                    {sla.label && <span style={{ fontSize: 9, fontWeight: 800, color: slaColor, textAlign: "center", lineHeight: 1.2 }}>{slaIcon} {sla.label}</span>}
-                    {sla.remainingLabel && <span style={{ fontSize: 9, fontWeight: 800, color: sla.remainingMin === 0 ? T.red : T.muted, textAlign: "center", lineHeight: 1.2 }}>🕒 {sla.remainingLabel}</span>}
-                  </div>
-                  <div className="trx-row-inner">
-                    <div className="trx-col-name">
-                      <div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{t.taker || "-"}</div>
-                      <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{t.dept || "-"}</div>
-                      <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>Admin: {t.admin || "-"}</div>
-                    </div>
-                    <div className="trx-col-time">
-                      <div style={{ fontSize: 16, fontWeight: 900, color: T.text, lineHeight: 1 }}>{t.time || "-"}</div>
-                      <div style={{ fontSize: 10.5, color: T.muted, marginTop: 3 }}>{fmtDate(t.date)}</div>
-                    </div>
-                    <div className="trx-col-items">
-                      {(t.items || []).slice(0, 3).map((it: any, ii: number) => (
-                        <div key={ii} style={{ display: "grid", gridTemplateColumns: "14px minmax(0,1fr) auto", alignItems: "center", columnGap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 11 }}>📦</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{it.itemName}</span>
-                          <span style={{ fontSize: 10, fontWeight: 800, color: T.navActiveText, background: T.navActive, padding: "1px 7px", borderRadius: 5, border: `1px solid ${T.navActiveBorder}`, flexShrink: 0 }}>×{it.qty} {it.unit}</span>
-                        </div>
-                      ))}
-                      {(t.items || []).length > 3 && <div style={{ fontSize: 10, color: T.muted }}>+{(t.items || []).length - 3} item lainnya</div>}
-                      {t.approvalReason && <div style={{ fontSize: 10.5, color: T.amber, fontWeight: 700, marginTop: 4 }}>Alasan: {t.approvalReason}</div>}
-                    </div>
-                    <div className="trx-col-count" style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                        <span style={{ fontSize: 16, fontWeight: 900, color: T.text, lineHeight: 1 }}>{(t.items || []).length}</span>
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: T.muted }}>jenis</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                        <span style={{ fontSize: 16, fontWeight: 900, color: T.text, lineHeight: 1 }}>{totalUnits}</span>
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: T.muted }}>unit</span>
-                      </div>
-                    </div>
-                    <div className="trx-col-total">
-                      <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 3, textTransform: "uppercase", letterSpacing: ".05em" }}>Total</div>
-                      <div style={{ fontSize: 14, fontWeight: 900, color: slaColor }}>{fmtMoney(totalCostRow)}</div>
-                      {sla.urgency !== "normal" && <div style={{ fontSize: 9, fontWeight: 700, color: slaColor, marginTop: 3 }}>{sla.urgency === "critical" ? "🚨 Segera diproses!" : "⚠ Menunggu lama"}</div>}
-                    </div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-                      <button type="button" disabled={Boolean(approvalBusyKey)} onClick={() => processTransactionApproval(t.id, "approve")} style={{ background: T.greenBg, border: `1px solid ${T.greenBorder}`, color: T.greenText, borderRadius: 8, padding: "7px 10px", fontSize: 11, fontWeight: 700, cursor: approvalBusyKey ? "not-allowed" : "pointer", whiteSpace: "nowrap", opacity: approvalBusyKey ? 0.65 : 1 }}>{approvalBusyKey === `${t.id}:approve` ? "Memproses..." : "✅ Approve"}</button>
-                      <button type="button" disabled={Boolean(approvalBusyKey)} onClick={() => processTransactionApproval(t.id, "reject")} style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, color: T.redText, borderRadius: 8, padding: "7px 10px", fontSize: 11, fontWeight: 700, cursor: approvalBusyKey ? "not-allowed" : "pointer", whiteSpace: "nowrap", opacity: approvalBusyKey ? 0.65 : 1 }}>{approvalBusyKey === `${t.id}:reject` ? "Memproses..." : "⛔ Reject"}</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          }
-        </div>
-      )}
+
 
       {/* ─ TAB SEMUA ─ */}
       {historyTab === "all" && (
@@ -621,17 +462,7 @@ export function HistoryPage() {
                                 </Badge>
                               </div>
                             )}
-                            {!isIn && !isRetur && (
-                              <div style={{ marginTop: 4 }}>
-                                {(() => {
-                                  const status = trxApprovalStatus(row);
-                                  if (status === "pending") return <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>⏳ Pending Approval</Badge>;
-                                  if (status === "rejected") return <Badge bg={T.redBg} color={T.redText} border={T.redBorder}>⛔ Rejected</Badge>;
-                                  return <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>✅ Approved</Badge>;
-                                })()}
-                                {approvalMetaChips(row)}
-                              </div>
-                            )}
+
                           </div>
                           {/* Time */}
                           <div className="trx-col-time">
@@ -775,15 +606,7 @@ export function HistoryPage() {
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{t.taker}</div>
                     <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{t.dept}</div>
                     <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>Admin: {t.admin}</div>
-                    <div style={{ marginTop: 4 }}>
-                      {(() => {
-                        const status = trxApprovalStatus(t);
-                        if (status === "pending") return <Badge bg={T.amberBg} color={T.amberText} border={T.amberBorder}>⏳ Pending Approval</Badge>;
-                        if (status === "rejected") return <Badge bg={T.redBg} color={T.redText} border={T.redBorder}>⛔ Rejected</Badge>;
-                        return <Badge bg={T.greenBg} color={T.greenText} border={T.greenBorder}>✅ Approved</Badge>;
-                      })()}
-                      {approvalMetaChips(t)}
-                    </div>
+
                   </div>
                   {/* Time */}
                   <div className="trx-col-time">

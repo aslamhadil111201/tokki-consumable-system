@@ -77,7 +77,7 @@ export function exportTransactionsExcel({
 }): void {
   const source = filteredOut;
   const unitTotal = source.reduce(
-    (acc, t) => acc + toSafeRows(t.items as unknown[]).reduce((x: number, it: unknown) => x + Number((it as Record<string, unknown>).qty || 0), 0),
+    (acc: number, t: any) => acc + toSafeRows(t.items).reduce((x: number, it: any) => x + Number(it.qty || 0), 0),
     0,
   );
   const rows: CsvRow[] = [
@@ -109,7 +109,7 @@ export function exportTransactionsPdf({
 }): void {
   const source = filteredOut;
   const unitTotal = source.reduce(
-    (acc, t) => acc + toSafeRows(t.items as unknown[]).reduce((x: number, it: unknown) => x + Number((it as Record<string, unknown>).qty || 0), 0),
+    (acc: number, t: any) => acc + toSafeRows(t.items).reduce((x: number, it: any) => x + Number(it.qty || 0), 0),
     0,
   );
   const rows = toSafeRows(source).flatMap(t =>
@@ -232,72 +232,7 @@ export function exportReturnsPdf({
   toast$("Export PDF retur berhasil");
 }
 
-// ─── APPROVAL ─────────────────────────────────────────────────────
 
-interface ApprovalRow {
-  id: unknown;
-  date: string;
-  time: unknown;
-  taker: unknown;
-  dept: unknown;
-  workOrder: unknown;
-  admin: unknown;
-  itemName: unknown;
-  qty: unknown;
-  unit: unknown;
-  status: unknown;
-  approvalReason: unknown;
-  approvedBy: unknown;
-  approvedAt: unknown;
-  approvalNote: unknown;
-  slaDur: unknown;
-}
-
-export function exportApprovalExcel({
-  approvalReportSource,
-  approvalReportRows,
-  toast$,
-}: {
-  approvalReportSource: { approvalStatus?: string }[];
-  approvalReportRows: ApprovalRow[];
-  toast$: ToastFn;
-}): void {
-  const approved = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "approved").length;
-  const rejected = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "rejected").length;
-  const pending = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "pending").length;
-  const rows: CsvRow[] = [
-    ["Warehouse Management System"], ["Laporan Approval Pengambilan"],
-    ["Dibuat", `${todayFmt()} ${nowTime()}`], ["Total Transaksi", approvalReportSource.length],
-    ["Approved", approved], ["Rejected", rejected], ["Pending", pending], [],
-    ["ID", "Tanggal", "Waktu", "Pengambil", "Section", "Project", "Admin", "Item", "Qty", "Unit", "Status", "Alasan Approval", "Diproses Oleh", "Waktu Proses", "Catatan", "Durasi SLA"],
-    ...approvalReportRows.map(r => [csvText(r.id), fmtDateExcel(r.date), r.time, r.taker, r.dept, r.workOrder, r.admin, r.itemName, r.qty, r.unit, r.status, r.approvalReason, r.approvedBy, r.approvedAt, r.approvalNote, r.slaDur]),
-  ];
-  const csv = "\uFEFF" + rows.map(r => r.map(v => typeof v === "string" && v.startsWith("=") ? v : csvEscape(v)).join(",")).join("\n");
-  triggerDownload(`laporan-approval-${todayStr()}.csv`, csv, "text/csv;charset=utf-8;");
-  toast$("Export Excel (CSV) laporan approval berhasil");
-}
-
-export function exportApprovalPdf({
-  approvalReportSource,
-  approvalReportRows,
-  toast$,
-}: {
-  approvalReportSource: { approvalStatus?: string }[];
-  approvalReportRows: ApprovalRow[];
-  toast$: ToastFn;
-}): void {
-  const approved = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "approved").length;
-  const rejected = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "rejected").length;
-  const pending = approvalReportSource.filter(t => String(t?.approvalStatus || "approved").toLowerCase() === "pending").length;
-  downloadPdfTable({
-    fileName: `laporan-approval-${todayStr()}.pdf`,
-    title: `Laporan Approval Pengambilan - ${todayFmt()}`,
-    subtitle: `Total: ${approvalReportSource.length} | Approved: ${approved} | Rejected: ${rejected} | Pending: ${pending}`,
-    headers: ["ID", "Tanggal", "Pengambil", "Section", "Item", "Qty", "Status", "Diproses Oleh", "Durasi SLA", "Alasan"],
-    rows: approvalReportRows.map(r => [r.id, r.date, r.taker, r.dept, r.itemName, `${r.qty} ${r.unit}`, r.status, r.approvedBy, r.slaDur, r.approvalReason]),
-  });
-  toast$("Export PDF laporan approval berhasil");
-}
 
 // ─── AUDIT ────────────────────────────────────────────────────────
 

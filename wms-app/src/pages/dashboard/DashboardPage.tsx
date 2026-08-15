@@ -21,21 +21,14 @@ export function DashboardPage() {
   const [dashDonutSegIdx, setDashDonutSegIdx] = useState(-1);
   const [dashTrendPointIdx, setDashTrendPointIdx] = useState(-1);
   const [showModal, setShowModal] = useState(false);
-  
-  // Settings state (if needed for auto reject)
-  const [autoRejectInput, setAutoRejectInput] = useState("24");
-  const [autoRejectSaving, setAutoRejectSaving] = useState(false);
 
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
-  const autoRejectHours = 24; // Mocked, ideally from store if needed
 
   // Core derivations
   const approvedOutTrx = trx.filter(isApprovedOutTrx);
-  const pendingApprovalTrx = trx.filter(t => trxApprovalStatus(t) === "pending");
   const todayTrx = approvedOutTrx.filter(t => t.date === todayStr());
   const todayUnits = todayTrx.reduce((a, t) => a + (t.items || []).reduce((b: number, i: any) => b + i.qty, 0), 0);
   const lowStock = items.filter(i => i.stock <= i.minStock);
-  const pendingApprovalCount = pendingApprovalTrx.length;
   
   // Dashboard specific derivations
   const dashStockAman = items.filter(i => Number(i.stock) > Number(i.minStock)).length;
@@ -53,21 +46,7 @@ export function DashboardPage() {
   
   const dashRecentReceives = [...receives].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 4);
 
-  const saveAutoRejectSetting = async () => {
-    const h = parseInt(autoRejectInput, 10);
-    if (!Number.isFinite(h) || h < 1 || h > 720) { setToast("Masukkan jam antara 1–720", "err"); return; }
-    setAutoRejectSaving(true);
-    try {
-      const { supabase } = await import("../../lib/supabase");
-      const { error } = await supabase
-        .from("settings")
-        .update({ autoRejectHours: h })
-        .neq("id", -1);
-      if (error) throw new Error(error.message || "Gagal simpan setting");
-      setToast(`Auto-reject diset ke ${h} jam`, "ok");
-    } catch (e: any) { setToast(e?.message || "Gagal simpan setting", "err"); }
-    finally { setAutoRejectSaving(false); }
-  };
+
 
   const openStockWithFilter = (filter: string) => {
     navigate("/stock");
@@ -263,63 +242,7 @@ export function DashboardPage() {
         );
       })()}
 
-      {isAdmin && (() => {
-        const apTotal = trx.length;
-        const apPending = pendingApprovalTrx.length;
-        const apApproved = trx.filter(t => trxApprovalStatus(t) === "approved").length;
-        const apRejected = trx.filter(t => trxApprovalStatus(t) === "rejected").length;
-        return (
-          <div style={{ marginBottom: 20 }}>
-            <div className="approval-ov-header">
-              <div className="approval-ov-title">📊 Approval Overview</div>
-              <button className="tb-btn approval-ov-btn" onClick={() => navigate("/history")}>Lihat approval →</button>
-            </div>
-            <div className="approval-ov-g">
-              {[
-                { label: "Total Pengajuan", val: String(apTotal), sub: "semua transaksi", dot: "var(--t-primary)", icon: "\uD83D\uDCCB" },
-                { label: "Pending", val: String(apPending), sub: "menunggu approval", dot: apPending > 0 ? "#f59e0b" : "var(--t-muted)", icon: "\u231B" },
-                { label: "Disetujui", val: String(apApproved), sub: "approved", dot: "#10b981", icon: "\u2705" },
-                { label: "Ditolak", val: String(apRejected), sub: "rejected", dot: apRejected > 0 ? "var(--t-red)" : "var(--t-muted)", icon: "\u274C" },
-              ].map((s, i) => (
-                <div key={i} className="stat-card approval-ov-card">
-                  <div className="approval-ov-card-inner">
-                    <div className="approval-ov-info">
-                      <div className="approval-ov-info-hdr">
-                        <div className="dash-stat-icon">{s.icon}</div>
-                        <div className="approval-ov-info-lbl">{s.label}</div>
-                      </div>
-                      <div className="approval-ov-info-val">{s.val}</div>
-                      <div className="approval-ov-info-sub">{s.sub}</div>
-                    </div>
-                    <div className="approval-ov-dot" style={{ background: s.dot, boxShadow: `0 0 8px ${s.dot}` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
 
-      {isAdmin && (
-        <div className="auto-reject-panel">
-          <div className="auto-reject-title">⚙️ Auto-reject pending</div>
-          <div className="auto-reject-controls">
-            <input
-              type="number" min={1} max={720} value={autoRejectInput}
-              onChange={e => setAutoRejectInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") saveAutoRejectSetting(); }}
-              className="auto-reject-input"
-            />
-            <span className="auto-reject-lbl">jam sejak dibuat</span>
-            <button
-              className="tb-btn auto-reject-btn" disabled={autoRejectSaving}
-              onClick={saveAutoRejectSetting}
-              style={{ opacity: autoRejectSaving ? 0.6 : 1 }}
-            >{autoRejectSaving ? "Menyimpan..." : "Simpan"}</button>
-          </div>
-          <div className="auto-reject-status">Sekarang: <b style={{ color: "var(--t-primary)" }}>{autoRejectHours} jam</b></div>
-        </div>
-      )}
 
       {/* Tables 2-col */}
       <div className="dash-tables-g">
