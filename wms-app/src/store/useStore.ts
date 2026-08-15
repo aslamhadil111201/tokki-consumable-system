@@ -66,10 +66,10 @@ export const useStore = create<StoreState>((set, get) => {
   };
 
   const getInitialAuth = () => {
-    const token = localStorage.getItem("wms_token") || "";
+    const token = sessionStorage.getItem("wms_token") || "";
     let user = null;
     try {
-      user = JSON.parse(localStorage.getItem("wms_user") || "null");
+      user = JSON.parse(sessionStorage.getItem("wms_user") || "null");
     } catch {}
     return { token, loggedIn: Boolean(token), user };
   };
@@ -84,14 +84,14 @@ export const useStore = create<StoreState>((set, get) => {
     loggedIn: initialAuth.loggedIn,
     authToken: initialAuth.token,
     login: (token, user) => {
-      localStorage.setItem("wms_token", token);
-      localStorage.setItem("wms_user", JSON.stringify(user));
+      sessionStorage.setItem("wms_token", token);
+      sessionStorage.setItem("wms_user", JSON.stringify(user));
       set({ authToken: token, loggedIn: true, user });
     },
     setUser: (user) => set({ user }),
     logout: (message = "") => {
-      localStorage.removeItem("wms_token");
-      localStorage.removeItem("wms_user");
+      sessionStorage.removeItem("wms_token");
+      sessionStorage.removeItem("wms_user");
       set({
         loggedIn: false,
         authToken: "",

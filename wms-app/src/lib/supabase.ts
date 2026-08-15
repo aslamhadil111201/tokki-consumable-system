@@ -7,7 +7,11 @@ const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').replace(/
 console.log("Supabase URL initialized as:", supabaseUrl);
 console.log("Supabase Key exists:", !!supabaseAnonKey);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false
+  }
+});
 
 
 
