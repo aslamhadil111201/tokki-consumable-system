@@ -13,9 +13,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-if (typeof window !== 'undefined') {
-  (window as any).supabase = supabase;
-}
-
 
 
