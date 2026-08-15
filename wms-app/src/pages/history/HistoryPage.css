@@ -16,7 +16,7 @@
 }
 
 .stat5-g .stat-card .stat-val {
-  font-size: clamp(14px, 3vw, 24px);
+  font-size: clamp(12px, 2.2vw, 20px);
   font-weight: 900;
   line-height: 1.2;
   word-break: normal;
