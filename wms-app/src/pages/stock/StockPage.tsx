@@ -216,7 +216,7 @@ export function StockPage() {
                 }
               </div>
 
-              <div className="stk-name" style={{ paddingRight: isAdmin ? 76 : 0 }}>{it.name}</div>
+              <div className="stk-name" title={it.name} style={{ paddingRight: isAdmin ? 76 : 0 }}>{it.name}</div>
               {it.itemCode && <div className="stk-code" style={{ color: s.dot }}>Kode: {it.itemCode}</div>}
               
               <div className="stk-cat-row">
