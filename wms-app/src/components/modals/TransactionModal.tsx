@@ -125,7 +125,7 @@ export const TransactionModal = ({
           }
         }
         
-        if (approvalStatus === "approved") {
+        if (insertPayload.approvalStatus === "approved") {
           setToast(`Transaksi ${form.taker} tercatat, stok diperbarui ✓`);
         } else {
           setToast(`Transaksi ${form.taker} tercatat & stok dikurangi (menunggu konfirmasi) ✓`);
