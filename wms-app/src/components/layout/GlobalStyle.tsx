@@ -226,13 +226,13 @@ export const GlobalStyle = () => {
     .al-row:last-child{border-bottom:none}
 
     .notif-wrap{position:relative}
-    .notif-drop{position:absolute;top:calc(100% + 8px);right:0;width:290px;background:${T.surfaceSolid};border:1px solid ${T.border};border-radius:16px;box-shadow:${T.shadowCard};z-index:200;overflow:hidden;backdrop-filter:blur(20px)}
+    .notif-drop{position:absolute;top:calc(100% + 8px);right:0;width:290px;background:${T.surfaceSolid};border:1px solid ${T.border};border-radius:8px;box-shadow:${T.shadowCard};z-index:200;overflow:hidden}
 
-    .toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:13px 18px;border-radius:14px;font-size:12.5px;font-weight:700;box-shadow:${T.shadowCard};animation:toastIn .22s ease;display:flex;align-items:center;gap:9px;backdrop-filter:blur(14px);border:1px solid;max-width:300px}
+    .toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 16px;border-radius:8px;font-size:12.5px;font-weight:600;box-shadow:${T.shadowSm};animation:toastIn .22s ease;display:flex;align-items:center;gap:9px;border:1px solid;max-width:300px}
     @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
 
     .busy-overlay{position:fixed;inset:0;z-index:1300;background:rgba(0,6,3,0.58);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
-    .busy-card{display:flex;flex-direction:column;align-items:center;gap:12px;background:${T.surfaceSolid};border:1px solid ${T.border};border-radius:16px;padding:18px 24px;box-shadow:${T.shadowCard};min-width:210px}
+    .busy-card{display:flex;flex-direction:column;align-items:center;gap:12px;background:${T.surfaceSolid};border:1px solid ${T.border};border-radius:8px;padding:18px 24px;box-shadow:${T.shadowCard};min-width:210px}
     .busy-spin{width:34px;height:34px;border-radius:50%;border:3px solid ${T.border};border-top-color:${T.primary};animation:busySpin .85s linear infinite}
     .busy-text{font-size:13px;font-weight:800;color:${T.text};letter-spacing:.02em}
     .busy-sub{font-size:11px;color:${T.muted}}
