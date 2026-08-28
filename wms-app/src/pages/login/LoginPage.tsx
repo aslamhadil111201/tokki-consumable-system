@@ -90,10 +90,7 @@ export function LoginPage() {
           </button>
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
-            <img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ height: dark ? 46 : 54, objectFit: "contain" }} />
-            <div style={{ fontSize: 9, fontWeight: 600, color: T.muted, letterSpacing: ".08em", textTransform: "uppercase", marginTop: 6 }}>
-              Warehouse Management System
-            </div>
+            <img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ height: dark ? 52 : 62, objectFit: "contain" }} />
           </div>
 
           <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2, marginBottom: 2, color: T.text }}>
