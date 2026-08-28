@@ -1,12 +1,12 @@
-/* TransactionPage.css — static layout/positioning values only */
+﻿/* TransactionPage.css — static layout/positioning values only */
 /* theme-dependent values (colors, backgrounds) remain in App.tsx CSS string */
 
 .trx-card {
-  border-radius: 16px;
+  border-radius: 8px;
   margin-bottom: 10px;
   overflow: hidden;
   transition: all .22s;
-  backdrop-filter: blur(10px);
+  
   max-width: 100%;
   word-wrap: break-word;
   background: var(--t-card);
@@ -124,7 +124,7 @@
 .trx-panel-header {
   background: var(--t-card);
   border: 1px solid var(--t-border);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 16px;
   display: flex;
@@ -143,7 +143,7 @@
 
 .trx-panel-title {
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--t-text);
   line-height: 1.2;
 }
@@ -163,8 +163,8 @@
 
 .trx-btn-catat-retur {
   padding: 12px 18px;
-  border-radius: 14px;
-  font-weight: 800;
+  border-radius: 8px;
+  font-weight: 600;
   font-size: 13px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   border: 1.5px solid var(--t-amber);
@@ -178,7 +178,7 @@
   gap: 4px;
   background: var(--t-surface);
   border: 1px solid var(--t-border);
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 4px;
   margin-bottom: 14px;
   overflow-x: auto;
@@ -231,7 +231,7 @@
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   letter-spacing: .5px;
   margin-top: 1px;
@@ -263,7 +263,7 @@
 
 .trx-stat-qty {
   font-size: 26px;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--t-primary-light);
   line-height: 1;
 }
@@ -302,7 +302,7 @@
 
 .trx-item-qty {
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--t-nav-active-text);
   background: var(--t-nav-active);
   padding: 1px 7px;
@@ -324,7 +324,7 @@
 
 .retur-stat-label {
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--t-muted);
   text-transform: uppercase;
   letter-spacing: .09em;
@@ -333,7 +333,7 @@
 
 .retur-stat-val {
   font-size: 26px;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--t-text);
   line-height: 1.2;
 }
@@ -352,7 +352,7 @@
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 700;
   border: 1px solid var(--t-border);
 }
 
@@ -363,7 +363,7 @@
   background: var(--t-card);
   border: 1px solid var(--t-border);
   border-left: 4px solid var(--t-amber);
-  border-radius: 14px;
+  border-radius: 8px;
   margin-bottom: 8px;
   overflow: hidden;
   box-shadow: var(--t-shadow-sm);
@@ -394,7 +394,7 @@
 
 .retur-card-lbl {
   font-size: 9px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: .07em;
   color: var(--t-amber);
   text-transform: uppercase;
@@ -416,13 +416,13 @@
 
 .retur-emp-name {
   font-size: 13.5px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--t-text);
 }
 
 .retur-status-badge {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   padding: 2px 8px;
   border-radius: 5px;
 }
@@ -446,7 +446,7 @@
 
 .retur-item-qty {
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--t-nav-active-text);
   background: var(--t-nav-active);
   padding: 1px 8px;
@@ -539,3 +539,4 @@
 .retur-stats-g {
   margin-bottom: 16px;
 }
+
