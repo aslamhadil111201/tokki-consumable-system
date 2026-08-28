@@ -278,7 +278,7 @@ export const GlobalStyle = () => {
     .login-btn{width:100%;padding:13px 20px;font-size:14px;font-weight:700;background:${T.primary};color:white;border:none;border-radius:8px;cursor:pointer;letter-spacing:.01em;display:flex;align-items:center;justify-content:center;gap:9px;transition:opacity .15s;font-family:'Plus Jakarta Sans',sans-serif}
     .login-btn:hover{opacity:0.9}
     .login-btn:active{opacity:1}
-    .login-mode-icon-btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid ${T.border};background:${T.surface};color:${T.text};font-size:18px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;box-shadow:${T.shadowSm}}
+    .login-mode-icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid ${T.border};background:${T.surface};color:${T.text};font-size:14px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s}
     .login-mode-icon-btn:hover{border-color:${T.borderHover};background:${T.navActive};color:${T.navActiveText};transform:translateY(-1px)}
     .login-mode-icon-btn:focus-visible{outline:none;box-shadow:0 0 0 2px ${T.primaryGlow}}
     .login-divider{display:flex;align-items:center;gap:12px;margin:18px 0 14px}
