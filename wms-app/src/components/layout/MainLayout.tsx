@@ -169,7 +169,6 @@ export const MainLayout = () => {
               </div>
             </Link>
             <div className="sb-nav-scroll">
-              <div className="nav-label">Menu Utama</div>
               {visibleTabs.map(t => (
                 <Link key={t.id} to={`/${t.id}`} className={`nav-item${currentTab === t.id ? " active" : ""}`} onClick={() => setSidebar(false)} style={{ textDecoration: "none" }}>
                   <span className="nav-icon">{t.icon}</span>

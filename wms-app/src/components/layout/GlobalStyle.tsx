@@ -198,7 +198,7 @@ export const GlobalStyle = () => {
     .audit-col-arrow{flex-shrink:0}
 
     .fbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
-    .cat-btn{padding:7px 14px;border-radius:9px;border:1px solid ${T.border};background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .18s}
+    .cat-btn{padding:7px 14px;border-radius:6px;border:1px solid ${T.border};background:${T.surface};color:${T.muted};font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s}
     .cat-btn:hover{border-color:${T.navActiveBorder};color:${T.navActiveText};background:${T.navActive}}
     .cat-btn.on{background:${T.primary};border-color:transparent;color:white}
 

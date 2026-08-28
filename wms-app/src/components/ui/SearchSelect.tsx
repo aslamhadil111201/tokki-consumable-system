@@ -29,7 +29,7 @@ export const SearchSelect = ({ options, value, onChange, placeholder }) => {
         autoComplete="off"
       />
       {open && (
-        <div style={{ position: "absolute", zIndex: 600, width: "100%", background: T.surfaceSolid, border: `1px solid ${T.border}`, borderRadius: 10, maxHeight: 210, overflowY: "auto", boxShadow: T.shadowCard, marginTop: 4 }}>
+        <div style={{ position: "absolute", zIndex: 600, width: "100%", background: T.surfaceSolid, border: `1px solid ${T.border}`, borderRadius: 6, maxHeight: 210, overflowY: "auto", boxShadow: T.shadowSm, marginTop: 4 }}>
           {filtered.length === 0
             ? <div style={{ padding: "10px 13px", fontSize: 12, color: T.muted }}>Tidak ditemukan</div>
             : filtered.map((o, index) => (
