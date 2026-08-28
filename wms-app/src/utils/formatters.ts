@@ -21,6 +21,15 @@ export const todayFmt = (): string =>
 export const fmtMoney = (n: number | string | null | undefined): string =>
   `Rp ${Math.round(Number(n || 0)).toLocaleString("id-ID")}`;
 
+/** Formats a number as short Rupiah for stat cards (e.g. "Rp 14,5 Jt", "Rp 1,2 M") */
+export const fmtMoneyShort = (n: number | string | null | undefined): string => {
+  const v = Math.round(Number(n || 0));
+  if (v >= 1_000_000_000) return `Rp ${(v / 1_000_000_000).toFixed(1).replace(".", ",")} M`;
+  if (v >= 1_000_000) return `Rp ${(v / 1_000_000).toFixed(1).replace(".", ",")} Jt`;
+  if (v >= 1_000) return `Rp ${(v / 1_000).toFixed(1).replace(".", ",")} Rb`;
+  return `Rp ${v.toLocaleString("id-ID")}`;
+};
+
 /** Converts a Date object to "YYYY-MM-DD" string */
 export const isoDate = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

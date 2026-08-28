@@ -8,7 +8,7 @@ import { BtnG } from "../../components/ui/BtnG";
 import { Prog } from "../../components/ui/Prog";
 import { DashboardSkeleton } from "../../components/ui/Skeleton";
 import { stockStatus } from "../../utils/stockHelpers";
-import { fmtMoney, fmtDate, todayFmt, isoDate, todayStr } from "../../utils/formatters";
+import { fmtMoney, fmtMoneyShort, fmtDate, todayFmt, isoDate, todayStr } from "../../utils/formatters";
 import { trxApprovalStatus, isApprovedOutTrx } from "../../utils/helpers";
 import { useStore } from "../../store/useStore";
 import { TransactionModal } from "../../components/modals/TransactionModal";
@@ -309,7 +309,7 @@ export function DashboardPage() {
         {[
           { label: "Update Terakhir", val: todayFmt() },
           { label: "Total Transaksi Hari Ini", val: `${todayTrx.length} Transaksi` },
-          { label: "Total Nilai Stok (Est.)", val: fmtMoney(dashTotalNilaiStok) },
+          { label: "Total Nilai Stok (Est.)", val: fmtMoneyShort(dashTotalNilaiStok) },
         ].map((f, i) => (
           <div key={i} className="stat-card dash-footer-card">
             <div>
@@ -325,4 +325,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
 

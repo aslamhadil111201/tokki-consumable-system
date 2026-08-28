@@ -6,7 +6,7 @@ import { Badge } from "../../components/ui/Badge";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
 import { TablePageSkeleton } from "../../components/ui/Skeleton";
-import { fmtMoney, fmtDate, fmtDateExcel, todayStr } from "../../utils/formatters";
+import { fmtMoney, fmtMoneyShort, fmtDate, fmtDateExcel, todayStr } from "../../utils/formatters";
 import { trxApprovalStatus, isApprovedOutTrx, toSafeRows, csvEscape, csvText, triggerDownload } from "../../utils/helpers";
 import { EXCEL_ICON, PDF_ICON } from "../../constants/index";
 import { useStore } from "../../store/useStore";
@@ -572,7 +572,7 @@ export function HistoryPage() {
                 { label: "Total Unit Keluar", sub: "unit total", val: totalOut, valStr: null, icon: "", dot: T.green },
                 { label: "Item Berbeda", sub: "jenis barang", val: [...new Set(approvedOutTrx.flatMap(t => t.items.map((i: any) => i.itemId)))].length, valStr: null, icon: "🗂️", dot: T.primaryLight },
                 { label: "Jumlah Pengambil", sub: "karyawan", val: [...new Set(approvedOutTrx.map(t => t.taker))].length, valStr: null, icon: "", dot: T.amber },
-                { label: "Total Nilai", sub: "estimasi harga rata-rata", val: null, valStr: fmtMoney(totalNilai), icon: "Rp", dot: T.primary },
+                { label: "Total Nilai", sub: "estimasi harga rata-rata", val: null, valStr: fmtMoneyShort(totalNilai), icon: "Rp", dot: T.primary },
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card" style={{ display: "flex", flexDirection: "column", gap: 0, padding: "16px 14px" }}>
@@ -691,7 +691,7 @@ export function HistoryPage() {
                 { label: "Total Unit Masuk", sub: "unit", val: totalIn, valStr: null, icon: "", dot: T.green },
                 { label: "Item Berbeda", sub: "jenis barang", val: [...new Set(receives.map(r => r.itemId))].length, valStr: null, icon: "🗂️", dot: T.primaryLight },
                 { label: "Admin Terlibat", sub: "admin", val: [...new Set(receives.map(r => r.admin).filter(Boolean))].length, valStr: null, icon: "", dot: T.amber },
-                { label: "Total Nilai", sub: "estimasi harga beli", val: null, valStr: fmtMoney(totalNilaiIn), icon: "Rp", dot: T.primary },
+                { label: "Total Nilai", sub: "estimasi harga beli", val: null, valStr: fmtMoneyShort(totalNilaiIn), icon: "Rp", dot: T.primary },
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card" style={{ display: "flex", flexDirection: "column", padding: "16px 14px" }}>
@@ -919,6 +919,7 @@ export function HistoryPage() {
     </div>
   );
 }
+
 
 
 
