@@ -445,8 +445,11 @@ export function HistoryPage() {
                     return (
                       <div key={`${row.type || "x"}-${row.id}`} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${accentColor}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", transition: "box-shadow .2s", boxShadow: T.shadowSm }}>
                         {/* Type */}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 10px", flexShrink: 0, minWidth: 44 }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: accentColor, textTransform: "uppercase", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>{isRetur ? "RETUR" : isIn ? "MASUK" : "KELUAR"}</span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 10px", gap: 5, minWidth: 56, flexShrink: 0 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 8, background: accentBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                            {isRetur ? "↩" : isIn ? "↙" : "↗"}
+                          </div>
+                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: accentColor, textTransform: "uppercase" }}>{isRetur ? "RETUR" : isIn ? "MASUK" : "KELUAR"}</span>
                         </div>
                         {/* Content */}
                         <div className="trx-row-inner">
@@ -589,8 +592,9 @@ export function HistoryPage() {
             return (
               <div key={t.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${T.red}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", boxShadow: T.shadowSm, transition: "box-shadow .2s" }}>
                 {/* Type */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 10px", flexShrink: 0, minWidth: 44 }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: T.red, textTransform: "uppercase", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>KELUAR</span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 10px", gap: 5, minWidth: 56, flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: T.redBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>↗</div>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: T.red, textTransform: "uppercase" }}>KELUAR</span>
                 </div>
                 {/* Content */}
                 <div className="trx-row-inner">
@@ -708,8 +712,9 @@ export function HistoryPage() {
               return (
                 <div key={r.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${T.green}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", boxShadow: T.shadowSm, transition: "box-shadow .2s" }}>
                   {/* Type */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 10px", flexShrink: 0, minWidth: 44 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: T.green, textTransform: "uppercase", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>MASUK</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 10px", gap: 5, minWidth: 56, flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: T.greenBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>↙</div>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: T.green, textTransform: "uppercase" }}>MASUK</span>
                   </div>
                   {/* Content */}
                   <div className="trx-row-inner">
@@ -827,8 +832,9 @@ export function HistoryPage() {
               return (
                 <div key={r.id} style={{ display: "flex", alignItems: "stretch", gap: 0, background: T.card, border: `1px solid ${T.border}`, borderLeft: `4px solid ${T.green}`, borderRadius: 14, marginBottom: 8, overflow: "hidden", boxShadow: T.shadowSm, transition: "box-shadow .2s" }}>
                   {/* Type */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 10px", flexShrink: 0, minWidth: 44 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: T.amber, textTransform: "uppercase", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>RETUR</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "14px 10px", gap: 5, minWidth: 56, flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: T.amberBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>↩</div>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".07em", color: T.amber, textTransform: "uppercase" }}>RETUR</span>
                   </div>
                   {/* Content */}
                   <div className="trx-row-inner">
