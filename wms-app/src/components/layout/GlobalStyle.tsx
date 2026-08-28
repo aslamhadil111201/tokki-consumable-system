@@ -70,7 +70,7 @@ export const GlobalStyle = () => {
     .nav-item:hover{background:${T.surface};color:${T.text};border-color:${T.border}}
     .nav-item.active{background:${T.navActive};color:${T.navActiveText};border-color:${T.navActiveBorder}}
     .nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .nav-pill{margin-left:auto;background:${T.primary};color:white;font-size:10px;font-weight:800;padding:1px 8px;border-radius:20px}
+    .nav-pill{margin-left:auto;background:${T.primary};color:white;font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px}
     .sb-footer{padding:14px 0 20px;border-top:1px solid ${T.border};flex-shrink:0}
 
     /* MAIN */
@@ -87,7 +87,7 @@ export const GlobalStyle = () => {
     .nav-item.mobile-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
 
     /* TOGGLE — smooth cubic */
-    .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:30px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s;appearance:none;-webkit-appearance:none;font-family:'Plus Jakarta Sans',sans-serif;position:relative;z-index:2}
+    .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:8px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s;appearance:none;-webkit-appearance:none;font-family:'Plus Jakarta Sans',sans-serif;position:relative;z-index:2}
     .toggle-wrap:hover{border-color:${T.borderHover}}
     .toggle-wrap:focus-visible{outline:none;box-shadow:0 0 0 2px ${T.primaryGlow}}
     .toggle-wrap.mini{min-width:72px;min-height:36px;padding:6px 11px;justify-content:center}
