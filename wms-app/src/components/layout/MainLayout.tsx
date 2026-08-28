@@ -242,7 +242,7 @@ export const MainLayout = () => {
                 {notif && (
                   <div className="notif-drop" style={{ width: 320 }}>
                     <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, background: T.surface, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, ...gText() }}>Notifikasi</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Notifikasi</div>
                       <div style={{ display: "flex", gap: 6 }}>
                         {notifTab === "notif" && notifHistory.filter(n => !n.read).length > 0 && (
                           <button onClick={() => { const marked = notifHistory.map(n => ({ ...n, read: true })); setNotifHistory(marked); localStorage.setItem("wms_notif_history", JSON.stringify(marked)); }}
@@ -340,4 +340,5 @@ export const MainLayout = () => {
     </>
   );
 };
+
 

@@ -106,7 +106,7 @@ export const AddStockModal = ({
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, ...gText(), marginBottom: 4 }}>📥 Receive New</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: T.text, marginBottom: 4 }}>📥 Receive New</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Catat penerimaan barang dan tambahkan stok ke inventaris</div>
         <div className="sect-box">
           <div className="sect-lbl">📄 Dokumen Penerimaan</div>
@@ -215,4 +215,5 @@ export const AddStockModal = ({
     </div>
   );
 };
+
 

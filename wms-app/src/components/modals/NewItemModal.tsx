@@ -63,7 +63,7 @@ export const NewItemModal = ({
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, ...gText(), marginBottom: 4 }}>➕ Add New Item</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: T.text, marginBottom: 4 }}>➕ Add New Item</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Input manual data barang baru beserta foto produk</div>
         <div className="sect-box">
           <div className="sect-lbl">📷 Foto Barang</div>
@@ -119,4 +119,5 @@ export const NewItemModal = ({
     </div>
   );
 };
+
 
