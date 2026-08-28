@@ -452,22 +452,19 @@ export function ReportPage() {
           <div key={idx} className={`stat-card report-kpi-card ${kpi.glowClass}`} style={{ padding: "16px 18px", background: "var(--t-card)", border: "1px solid var(--t-border)", borderRadius: "16px" }}>
             <div className="report-kpi-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <div className="report-kpi-label" style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--t-muted)", textTransform: "uppercase", letterSpacing: ".09em", marginBottom: 7 }}>{kpi.label}</div>
+              <div className="report-kpi-label" style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--t-muted)", textTransform: "uppercase", letterSpacing: ".09em", marginBottom: 7 }}>{kpi.label}</div>
                 <div className="report-kpi-val" style={{ fontSize: "22px", fontWeight: 700, color: "var(--t-text)", lineHeight: 1.2 }}>{kpi.value}</div>
                 <div className="report-kpi-sub" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontSize: "11.5px", color: "var(--t-muted)", marginTop: 6 }}>
                   <span>{kpi.sub}</span>
                   {kpi.trend && (
                     <>
-                      <span className="kpi-trend-badge" style={{ color: kpi.trend.color, fontSize: "10px", fontWeight: 700, background: `${kpi.trend.color}15`, padding: "2px 6px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      <span className="kpi-trend-badge" style={{ color: kpi.trend.color, fontSize: "10px", fontWeight: 700, background: `${kpi.trend.color}15`, padding: "2px 6px", borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 3 }}>
                         {kpi.trend.label}
                       </span>
                       {kpi.label !== "ITEM KRITIS" && <span style={{ opacity: 0.6 }}>vs periode lalu</span>}
                     </>
                   )}
                 </div>
-              </div>
-              <div className="report-kpi-icon" style={{ background: kpi.bg, border: "none", width: "40px", height: "40px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {kpi.icon}
               </div>
             </div>
           </div>
