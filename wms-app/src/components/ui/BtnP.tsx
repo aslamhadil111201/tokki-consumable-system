@@ -8,13 +8,13 @@ export const BtnP = ({ children, style, ...r }) => {
   return (
     <button {...r} style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
-      background: `linear-gradient(135deg,${T.primary},${T.primaryLight})`,
-      color: "white", border: "none", borderRadius: 12, fontFamily: "'Plus Jakarta Sans',sans-serif",
-      fontSize: 13, fontWeight: 700, padding: "10px 20px", cursor: "pointer",
-      boxShadow: `0 4px 14px ${T.primaryGlow}`, transition: "all .2s ease", ...style
+      background: T.primary,
+      color: "white", border: "none", borderRadius: 8, fontFamily: "'Plus Jakarta Sans',sans-serif",
+      fontSize: 13, fontWeight: 600, padding: "10px 20px", cursor: "pointer",
+      transition: "opacity .15s ease", ...style
     }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = `0 8px 24px ${T.primaryGlow}`; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `0 4px 14px ${T.primaryGlow}`; }}>
+      onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}>
       {children}
     </button>
   );

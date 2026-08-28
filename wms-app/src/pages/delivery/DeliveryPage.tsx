@@ -19,6 +19,8 @@ export function DeliveryPage() {
   const { dark, user, setToast } = useStore();
   const T = getT(dark);
   const isGuest = (user?.role || "").toLowerCase() === "guest";
+  const isOperator = (user?.role || "").toLowerCase() === "operator";
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
 
   const [notes, setNotes] = useState([]);
   const [addresses, setAddresses] = useState([]);
@@ -377,7 +379,7 @@ export function DeliveryPage() {
           <BtnG onClick={() => setView("list")} style={{ padding: "6px 12px", fontSize: 12 }}><ArrowLeft size={14} /> Kembali</BtnG>
           <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>Kelola Shipping Address</span>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            {!isGuest && <BtnG onClick={() => setShowImportAddr(true)} style={{ padding: "7px 14px", fontSize: 12 }}><FileUp size={14} /> Import Excel</BtnG>}
+            {isAdmin && <BtnG onClick={() => setShowImportAddr(true)} style={{ padding: "7px 14px", fontSize: 12 }}><FileUp size={14} /> Import Excel</BtnG>}
             <BtnP onClick={() => { setAddrEditId(null); setNewDest(""); setNewAddr(""); setNewAttn(""); setNewContact(""); setAddrForm(true); }} style={{ padding: "7px 14px", fontSize: 12 }}><Plus size={14} /> Tambah Alamat</BtnP>
           </div>
         </div>
@@ -713,8 +715,8 @@ export function DeliveryPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <BtnG onClick={() => setView("addr")} style={{ fontSize: 12, padding: "8px 14px" }}><MapPin size={14} /> Kelola Alamat</BtnG>
-          {!isGuest && <BtnG onClick={() => setShowImport(true)} style={{ fontSize: 12, padding: "8px 14px" }}><FileUp size={14} /> Import Excel</BtnG>}
-          {!isGuest && <BtnG onClick={removeDuplicates} style={{ fontSize: 12, padding: "8px 14px", color: "#ef4444", borderColor: "#ef444440" }}>Hapus Duplikat</BtnG>}
+          {isAdmin && <BtnG onClick={() => setShowImport(true)} style={{ fontSize: 12, padding: "8px 14px" }}><FileUp size={14} /> Import Excel</BtnG>}
+          {isAdmin && <BtnG onClick={removeDuplicates} style={{ fontSize: 12, padding: "8px 14px", color: "#ef4444", borderColor: "#ef444440" }}>Hapus Duplikat</BtnG>}
           <BtnP onClick={openNew} style={{ fontSize: 12, padding: "8px 14px" }}><Plus size={14} /> Buat Surat Jalan</BtnP>
         </div>
       </div>

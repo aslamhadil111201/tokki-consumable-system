@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from "react";
 import "./DashboardPage.css";
 import { gText } from "../../theme/tokens";
@@ -62,10 +62,9 @@ export function DashboardPage() {
       <div className="dash-hero">
         <div className="dash-hero-content">
           <div className="dash-hero-copy">
-            <div className="dash-hero-badge">🏭 Sistem Gudang Aktif</div>
             <div className="dash-hero-title">Ringkasan Hari Ini</div>
             <div className="dash-hero-stats">
-              <span>📅 {todayFmt()}</span>
+              <span>{todayFmt()}</span>
               <span className="dash-hero-dot">•</span>
               <span><b className="dash-hero-highlight">{todayTrx.length}</b> transaksi</span>
               <span className="dash-hero-dot">•</span>
@@ -73,12 +72,6 @@ export function DashboardPage() {
             </div>
           </div>
           <BtnP onClick={() => setShowModal(true)} className="dash-hero-btn">＋ Catat Pengambilan</BtnP>
-          <div className="dash-hero-illus" aria-hidden="true">
-            <div className="dash-box b1" />
-            <div className="dash-box b2" />
-            <div className="dash-box b3" />
-            <div className="dash-box b4" />
-          </div>
         </div>
       </div>
 
@@ -253,7 +246,7 @@ export function DashboardPage() {
             <span className="dash-table-badge dash-table-badge-amber">{lowStock.length} Item</span>
           </div>
           {lowStock.length === 0
-            ? <div className="dash-empty-state"><div className="dash-empty-icon">✅</div>Semua stok aman</div>
+            ? <div className="dash-empty-state"><div className="dash-empty-icon">—</div>Semua stok aman</div>
             : (<>
               <div className="dash-low-hdr dash-row-border">
                 <span>Item</span><span>Stok</span><span>Min Stok</span><span className="dash-col-satuan">Satuan</span>
@@ -262,7 +255,6 @@ export function DashboardPage() {
                 const s = stockStatus(it, dark); return (
                   <div key={it.id} className="dash-low-row dash-row-border">
                     <div className="dash-item-cell">
-                      <div className="dash-item-icon">📦</div>
                       <div className="dash-item-info">
                         <div className="dash-item-name">{it.name}</div>
                         <div className="dash-item-cat">{it.category || ""}</div>
@@ -285,7 +277,7 @@ export function DashboardPage() {
             <span className="dash-table-badge dash-table-badge-nav">{dashRecentReceives.length} Item</span>
           </div>
           {dashRecentReceives.length === 0
-            ? <div className="dash-empty-state"><div className="dash-empty-icon">📭</div>Belum ada penerimaan</div>
+            ? <div className="dash-empty-state"><div className="dash-empty-icon">—</div>Belum ada penerimaan</div>
             : (<>
               <div className="dash-recv-hdr dash-row-border">
                 <span>Item</span><span>Jumlah</span><span>Tanggal</span><span className="dash-col-oleh">Oleh</span>
@@ -293,7 +285,6 @@ export function DashboardPage() {
               {dashRecentReceives.map((r, i) => (
                 <div key={r.id} className="dash-recv-row" style={{ borderBottom: i < dashRecentReceives.length - 1 ? "1px solid var(--t-border)" : "none", color: "var(--t-muted)" }}>
                   <div className="dash-item-cell">
-                    <div className="dash-item-icon">📥</div>
                     <div className="dash-item-info">
                       <div className="dash-item-name">{r.itemName}</div>
                       <div className="dash-item-cat">{r.category || ""}</div>
@@ -316,12 +307,11 @@ export function DashboardPage() {
       {/* Footer bar */}
       <div className="dash-footer-g">
         {[
-          { icon: "📅", label: "Update Terakhir", val: todayFmt() },
-          { icon: "🔄", label: "Total Transaksi Hari Ini", val: `${todayTrx.length} Transaksi` },
-          { icon: "💰", label: "Total Nilai Stok (Est.)", val: fmtMoney(dashTotalNilaiStok) },
+          { label: "Update Terakhir", val: todayFmt() },
+          { label: "Total Transaksi Hari Ini", val: `${todayTrx.length} Transaksi` },
+          { label: "Total Nilai Stok (Est.)", val: fmtMoney(dashTotalNilaiStok) },
         ].map((f, i) => (
           <div key={i} className="stat-card dash-footer-card">
-            <div className="dash-footer-icon">{f.icon}</div>
             <div>
               <div className="dash-footer-lbl">{f.label}</div>
               <div className="dash-footer-val">{f.val}</div>
@@ -335,3 +325,4 @@ export function DashboardPage() {
     </div>
   );
 }
+

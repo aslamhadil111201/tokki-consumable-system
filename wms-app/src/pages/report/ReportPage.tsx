@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from "react";
 import "./ReportPage.css";
 import { BtnG } from "../../components/ui/BtnG";
@@ -13,7 +13,7 @@ import autoTable from "jspdf-autotable";
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="report-empty-state">
-      <div className="report-empty-icon">📤</div>
+      <div className="report-empty-icon"></div>
       <div className="report-empty-msg">{message}</div>
     </div>
   );
@@ -452,13 +452,13 @@ export function ReportPage() {
           <div key={idx} className={`stat-card report-kpi-card ${kpi.glowClass}`} style={{ padding: "16px 18px", background: "var(--t-card)", border: "1px solid var(--t-border)", borderRadius: "16px" }}>
             <div className="report-kpi-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <div className="report-kpi-label" style={{ fontSize: "10.5px", fontWeight: 800, color: "var(--t-muted)", textTransform: "uppercase", letterSpacing: ".09em", marginBottom: 7 }}>{kpi.label}</div>
-                <div className="report-kpi-val" style={{ fontSize: "22px", fontWeight: 900, color: "var(--t-text)", lineHeight: 1.2 }}>{kpi.value}</div>
+                <div className="report-kpi-label" style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--t-muted)", textTransform: "uppercase", letterSpacing: ".09em", marginBottom: 7 }}>{kpi.label}</div>
+                <div className="report-kpi-val" style={{ fontSize: "22px", fontWeight: 700, color: "var(--t-text)", lineHeight: 1.2 }}>{kpi.value}</div>
                 <div className="report-kpi-sub" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontSize: "11.5px", color: "var(--t-muted)", marginTop: 6 }}>
                   <span>{kpi.sub}</span>
                   {kpi.trend && (
                     <>
-                      <span className="kpi-trend-badge" style={{ color: kpi.trend.color, fontSize: "10px", fontWeight: 800, background: `${kpi.trend.color}15`, padding: "2px 6px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      <span className="kpi-trend-badge" style={{ color: kpi.trend.color, fontSize: "10px", fontWeight: 700, background: `${kpi.trend.color}15`, padding: "2px 6px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
                         {kpi.trend.label}
                       </span>
                       {kpi.label !== "ITEM KRITIS" && <span style={{ opacity: 0.6 }}>vs periode lalu</span>}
@@ -555,7 +555,7 @@ export function ReportPage() {
                       textAnchor="end"
                       fill="var(--t-muted)"
                       fontSize="9px"
-                      fontWeight="800"
+                      fontWeight="700"
                     >
                       Unit
                     </text>
@@ -600,7 +600,7 @@ export function ReportPage() {
                             textAnchor="middle"
                             fill="var(--t-red)"
                             fontSize="9px"
-                            fontWeight="800"
+                            fontWeight="700"
                           >
                             {point.out}
                           </text>
@@ -625,7 +625,7 @@ export function ReportPage() {
                             textAnchor="middle"
                             fill="var(--t-green)"
                             fontSize="9px"
-                            fontWeight="800"
+                            fontWeight="700"
                           >
                             {point.in}
                           </text>
@@ -650,7 +650,7 @@ export function ReportPage() {
                           textAnchor="middle"
                           fill="#ffffff"
                           fontSize="7.5px"
-                          fontWeight="800"
+                          fontWeight="700"
                         >
                           Peak Keluar
                         </text>
@@ -687,7 +687,7 @@ export function ReportPage() {
                           textAnchor="middle"
                           fill="#ffffff"
                           fontSize="7.5px"
-                          fontWeight="800"
+                          fontWeight="700"
                         >
                           Peak Masuk
                         </text>
@@ -824,8 +824,8 @@ export function ReportPage() {
                         </svg>
                       </div>
                       <div>
-                        <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--t-red)" }}>Peak Pengeluaran</div>
-                        <div style={{ fontSize: "15px", fontWeight: 900, color: "var(--t-text)" }}>{peakOutPoint ? peakOutPoint.out : 0} Unit</div>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--t-red)" }}>Peak Pengeluaran</div>
+                        <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--t-text)" }}>{peakOutPoint ? peakOutPoint.out : 0} Unit</div>
                         <div style={{ fontSize: "10px", color: "var(--t-muted)", marginTop: 2 }}>Terjadi di {peakOutPoint ? peakOutPoint.label : ""} {new Date().getFullYear()}</div>
                       </div>
                     </div>
@@ -839,8 +839,8 @@ export function ReportPage() {
                         </svg>
                       </div>
                       <div>
-                        <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--t-green)" }}>Peak Penerimaan</div>
-                        <div style={{ fontSize: "15px", fontWeight: 900, color: "var(--t-text)" }}>{peakInPoint ? peakInPoint.in : 0} Unit</div>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--t-green)" }}>Peak Penerimaan</div>
+                        <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--t-text)" }}>{peakInPoint ? peakInPoint.in : 0} Unit</div>
                         <div style={{ fontSize: "10px", color: "var(--t-muted)", marginTop: 2 }}>Terjadi di {peakInPoint ? peakInPoint.label : ""} {new Date().getFullYear()}</div>
                       </div>
                     </div>
@@ -852,10 +852,10 @@ export function ReportPage() {
                         </svg>
                       </div>
                       <div>
-                        <div style={{ fontSize: "10px", fontWeight: 800, color: "#3b82f6" }}>
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#3b82f6" }}>
                           Rata-rata {reportPeriod === "year" ? "Bulanan" : "Harian"} (Keluar + Masuk)
                         </div>
-                        <div style={{ fontSize: "15px", fontWeight: 900, color: "var(--t-text)" }}>
+                        <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--t-text)" }}>
                           {Math.round(reportTxnSeries.reduce((acc, p) => acc + p.out + p.in, 0) / (reportTxnSeries.length || 1))} Unit
                         </div>
                         <div style={{ fontSize: "10px", color: "var(--t-muted)", marginTop: 2 }}>
@@ -876,7 +876,7 @@ export function ReportPage() {
               <div className="dash-panel-title" style={{ marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{reportTrendTitle}</div>
               <div className="report-trend-sub" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 <span>{reportTrendSubtitle}</span>
-                {trendSpikeCount > 0 && <span className="report-trend-spike" style={{ whiteSpace: "nowrap" }}>⚡ {trendSpikeCount} lonjakan</span>}
+                {trendSpikeCount > 0 && <span className="report-trend-spike" style={{ whiteSpace: "nowrap" }}>{trendSpikeCount} lonjakan</span>}
               </div>
             </div>
             <div className="report-trend-filters" style={{ flexShrink: 0 }}>
@@ -950,7 +950,7 @@ export function ReportPage() {
                             borderRadius: "10px",
                             color: "var(--t-primary)",
                             fontSize: "12px",
-                            fontWeight: 800,
+                            fontWeight: 700,
                             cursor: "pointer",
                             textAlign: "center",
                             transition: "all 0.2s"
@@ -1055,21 +1055,21 @@ export function ReportPage() {
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: "15px",
-                            fontWeight: 900,
+                            fontWeight: 700,
                             flexShrink: 0
                           }}
                         >
                           {idx + 1}
                         </div>
                         <div>
-                          <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--t-text)" }}>{row.name}</div>
+                          <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--t-text)" }}>{row.name}</div>
                           <div style={{ fontSize: "11.5px", color: "var(--t-muted)", marginTop: 2, fontWeight: 700 }}>
                             {reportProjectMode === "unit" ? `${row.total} unit` : fmtMoney(Math.round(row.total))}
                           </div>
                         </div>
                       </div>
                       {idx === 0 && (
-                        <span style={{ fontSize: "18px", marginLeft: 8 }} title="Project Terbanyak">🏆</span>
+                        <span style={{ fontSize: "18px", marginLeft: 8 }} title="Project Terbanyak"></span>
                       )}
                     </div>
                   );
@@ -1083,3 +1083,4 @@ export function ReportPage() {
     </div>
   );
 }
+

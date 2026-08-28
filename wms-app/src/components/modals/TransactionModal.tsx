@@ -20,12 +20,60 @@ export const TransactionModal = ({
   onClose: () => void;
   initialItem?: any;
 }) => {
-  const { items, employees, departments, admins, workOrders, withLoading, setToast, fetchAll, dark, user } = useStore();
+  const { items, employees, departments, admins, workOrders, trx, withLoading, setToast, fetchAll, dark, user } = useStore();
   const T = getT(dark);
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
+
+  const handleTakerChange = (name) => {
+    setForm(prev => ({
+      ...prev,
+      taker: name,
+    }));
+  };
   
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectCode, setNewProjectCode] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [newEmployeeName, setNewEmployeeName] = useState("");
+  const [newEmployeeDept, setNewEmployeeDept] = useState("");
+
+  const handleCreateEmployee = async () => {
+    const name = newEmployeeName.trim();
+    const dept = newEmployeeDept.trim();
+    if (!name) { setToast("Nama karyawan harus diisi", "err"); return; }
+    if (employees.some(e => String(e.name || "").trim().toLowerCase() === name.toLowerCase())) {
+      setToast("Nama karyawan sudah terdaftar", "err");
+      return;
+    }
+
+    await withLoading(async () => {
+      try {
+        const { supabase } = await import("../../lib/supabase");
+        const nextId = employees.length > 0 ? Math.max(...employees.map(e => Number(e.id || 0))) + 1 : 1;
+
+        const { error } = await supabase.from("employees").insert([{
+          id: nextId,
+          name,
+          dept
+        }]);
+        if (error) throw error;
+
+        setToast(`${name} berhasil ditambahkan ✓`);
+        setForm(p => ({
+          ...p,
+          taker: name,
+          dept: dept || p.dept
+        }));
+        setShowAddEmployee(false);
+        setNewEmployeeName("");
+        setNewEmployeeDept("");
+        await fetchAll();
+      } catch (e: any) {
+        setToast(e.message || "Gagal menambahkan karyawan", "err");
+      }
+    }, "Menyimpan karyawan baru...");
+  };
 
   const handleCreateProject = async () => {
     const code = newProjectCode.trim();
@@ -140,14 +188,26 @@ export const TransactionModal = ({
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 22, fontWeight: 900, ...gText(), marginBottom: 4 }}>Catat Pengambilan</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>Catat Pengambilan</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Satu transaksi bisa mencakup beberapa barang sekaligus</div>
         <div className="sect-box">
-          <div className="sect-lbl">👤 Data Pengambil</div>
+          <div className="sect-lbl">Data Pengambil</div>
           <div className="mgrid">
             <div><FL>Tanggal *</FL><input className="ifield" type="date" style={{ maxWidth: 160 }} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} onClick={e => e.currentTarget.showPicker()} /></div>
-            <div><FL>Nama Pengambil *</FL>
-              <SearchSelect options={employees.map(e => ({ value: e.name, label: e.name }))} value={form.taker} onChange={v => setForm({ ...form, taker: v })} placeholder="— Cari/pilih karyawan —" />
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <FL>Nama Pengambil *</FL>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddEmployee(true)}
+                    style={{ background: "none", border: "none", color: "var(--t-primary-light)", fontSize: "11px", fontWeight: "700", cursor: "pointer", padding: "0 0 4px 0", textDecoration: "underline" }}
+                  >
+                    ＋ Tambah Karyawan Baru
+                  </button>
+                )}
+              </div>
+              <SearchSelect options={employees.map(e => ({ value: e.name, label: e.name }))} value={form.taker} onChange={handleTakerChange} placeholder="— Cari/pilih karyawan —" />
             </div>
             <div><FL>Section *</FL>
               <SearchSelect options={departments.map(d => ({ value: d.name, label: d.name }))} value={form.dept} onChange={v => setForm({ ...form, dept: v })} placeholder="— Cari/pilih section —" />
@@ -158,13 +218,15 @@ export const TransactionModal = ({
             <div className="mspan">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <FL>No. Project</FL>
-                <button
-                  type="button"
-                  onClick={() => setShowAddProject(true)}
-                  style={{ background: "none", border: "none", color: "var(--t-primary-light)", fontSize: "11px", fontWeight: "700", cursor: "pointer", padding: "0 0 4px 0", textDecoration: "underline" }}
-                >
-                  ＋ Tambah Project Baru
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProject(true)}
+                    style={{ background: "none", border: "none", color: "var(--t-primary-light)", fontSize: "11px", fontWeight: "700", cursor: "pointer", padding: "0 0 4px 0", textDecoration: "underline" }}
+                  >
+                    ＋ Tambah Project Baru
+                  </button>
+                )}
               </div>
               <SearchSelect options={workOrders.map(w => ({ value: w.code, label: `${w.code} — ${w.project}` }))} value={form.workOrder} onChange={v => setForm({ ...form, workOrder: v })} placeholder="— Cari/pilih project (opsional) —" />
             </div>
@@ -172,7 +234,7 @@ export const TransactionModal = ({
           </div>
         </div>
         <div className="sect-box">
-          <div className="sect-lbl">🛒 Tambah ke Keranjang</div>
+          <div className="sect-lbl">Tambah ke Keranjang</div>
           <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
             <div style={{ flex: "1 1 0", minWidth: 0 }}><FL>Pilih Barang</FL>
               <SearchSelect
@@ -194,11 +256,11 @@ export const TransactionModal = ({
             {form.cart.length > 0 && <button style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 11.5, fontWeight: 600 }} onClick={() => setForm(f => ({ ...f, cart: [] }))}>Kosongkan</button>}
           </div>
           {form.cart.length === 0
-            ? <div style={{ textAlign: "center", padding: 22, background: dark ? "rgba(0,0,0,0.12)" : T.surface, border: `1.5px dashed ${T.border}`, borderRadius: 11, color: T.muted, fontSize: 12.5 }}>🛒 Belum ada barang ditambahkan</div>
+            ? <div style={{ textAlign: "center", padding: 22, background: dark ? "rgba(0,0,0,0.12)" : T.surface, border: `1.5px dashed ${T.border}`, borderRadius: 8, color: T.muted, fontSize: 12.5 }}>Belum ada barang ditambahkan</div>
             : form.cart.map((c: any) => {
               const it = items.find(i => i.id === c.itemId); const cc = catColor(it?.category); return (
                 <div key={c.itemId} className="cart-row">
-                  <div style={{ width: 30, height: 30, background: cc.bg, border: `1px solid ${cc.border}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⚙</div>
+                  <div style={{ width: 30, height: 30, background: cc.bg, border: `1px solid ${cc.border}`, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: cc.border }}>■</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it?.name}</div>
                     <div style={{ fontSize: 11, color: T.muted }}>{it?.category}</div>
@@ -210,15 +272,53 @@ export const TransactionModal = ({
             })}
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <BtnP onClick={submitTrx} style={{ flex: 1, padding: "13px", fontSize: 14, borderRadius: 12 }}>💾 Simpan Transaksi</BtnP>
+          <BtnP onClick={submitTrx} style={{ flex: 1, padding: "13px", fontSize: 14, borderRadius: 8 }}>Simpan Transaksi</BtnP>
           <BtnG onClick={() => { onClose(); setPickerItem(""); setPickerQty(""); }}>Batal</BtnG>
         </div>
       </div>
 
+      {showAddEmployee && (
+        <div className="overlay" style={{ zIndex: 1100 }} onClick={() => setShowAddEmployee(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 4 }}>Tambah Karyawan Baru</div>
+            <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Tambahkan nama karyawan baru ke database</div>
+
+            <div className="sect-box" style={{ marginBottom: 12 }}>
+              <div>
+                <FL>Nama Karyawan *</FL>
+                <input
+                  className="ifield"
+                  value={newEmployeeName}
+                  onChange={e => setNewEmployeeName(e.target.value)}
+                  placeholder="Contoh: Budi Santoso"
+                />
+              </div>
+            </div>
+
+            <div className="sect-box" style={{ marginBottom: 20 }}>
+              <div>
+                <FL>Section</FL>
+                <SearchSelect
+                  options={departments.map(d => ({ value: d.name, label: d.name }))}
+                  value={newEmployeeDept}
+                  onChange={v => setNewEmployeeDept(v)}
+                  placeholder="— Pilih section (opsional) —"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <BtnP onClick={handleCreateEmployee} style={{ flex: 1, padding: "11px", fontSize: 13, borderRadius: 8 }}>Simpan Karyawan</BtnP>
+              <BtnG onClick={() => { setShowAddEmployee(false); setNewEmployeeName(""); setNewEmployeeDept(""); }}>Batal</BtnG>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddProject && (
         <div className="overlay" style={{ zIndex: 1100 }} onClick={() => setShowAddProject(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
-            <div style={{ fontSize: 18, fontWeight: 900, ...gText(), marginBottom: 4 }}>＋ Tambah Project Baru</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 4 }}>Tambah Project Baru</div>
             <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Tambahkan nomor proyek baru ke database</div>
             
             <div className="sect-box" style={{ marginBottom: 12 }}>
@@ -246,7 +346,7 @@ export const TransactionModal = ({
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
-              <BtnP onClick={handleCreateProject} style={{ flex: 1, padding: "11px", fontSize: 13, borderRadius: 10 }}>💾 Simpan Project</BtnP>
+              <BtnP onClick={handleCreateProject} style={{ flex: 1, padding: "11px", fontSize: 13, borderRadius: 8 }}>Simpan Project</BtnP>
               <BtnG onClick={() => { setShowAddProject(false); setNewProjectCode(""); setNewProjectName(""); }}>Batal</BtnG>
             </div>
           </div>

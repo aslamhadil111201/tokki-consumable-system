@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { useStore } from "../../store/useStore";
@@ -9,18 +9,6 @@ import { triggerDownload, trxApprovalStatus, isApprovedOutTrx } from "../../util
 import { stockStatus, stockStatusIcon } from "../../utils/stockHelpers";
 import { GlobalStyle } from "./GlobalStyle";
 import { ToastNotification } from "../ui/ToastNotification";
-
-const Blobs = () => {
-  const dark = useStore(s => s.dark);
-  const T = getT(dark);
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
-      <div style={{ position: "absolute", top: "-15%", left: "-10%", width: 420, height: 420, borderRadius: "50%", background: "rgba(16,185,129,0.2)", filter: "blur(100px)", opacity: dark ? 0.5 : 0.3, transition: "opacity .4s" }} />
-      <div style={{ position: "absolute", bottom: "-15%", right: "-10%", width: 340, height: 340, borderRadius: "50%", background: "rgba(5,150,105,0.15)", filter: "blur(90px)", opacity: dark ? 0.5 : 0.25, transition: "opacity .4s" }} />
-      <div style={{ position: "absolute", top: "45%", right: "15%", width: 220, height: 220, borderRadius: "50%", background: "rgba(20,184,166,0.1)", filter: "blur(70px)", opacity: dark ? 0.4 : 0.2, transition: "opacity .4s" }} />
-    </div>
-  );
-};
 
 const Toggle = ({ mini = false }) => {
   const { dark, toggleTheme } = useStore();
@@ -167,7 +155,6 @@ export const MainLayout = () => {
     <>
       <GlobalStyle />
       <ToastNotification />
-      <Blobs />
       <div className="shell">
         {sidebar && <div className="backdrop-mob" onClick={() => setSidebar(false)} />}
 
@@ -175,10 +162,10 @@ export const MainLayout = () => {
         <aside className={`sidebar${sidebar ? " open" : ""}${sidebarCollapsed ? " collapsed" : ""}`}>
           <div className="sb-inner">
             <Link to="/dashboard" className="brand" onClick={() => setSidebar(false)} style={{ width: "100%", border: "none", background: "transparent", cursor: "pointer", transition: "all .2s", borderRadius: 8, textDecoration: "none" }}>
-              <div className="brand-logo"><img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
+              <img src={dark ? "/Logo-Sidebar-DARK.png" : "/Logo-Sidebar.png"} alt="Tokki" style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 900, color: T.primaryLight, lineHeight: 1.2 }}>Warehouse</div>
-                <div style={{ fontSize: 9, color: T.muted, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700, marginTop: 2 }}>Management System</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.primaryLight, lineHeight: 1.2 }}>Warehouse</div>
+                <div style={{ fontSize: 8.5, color: T.muted, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, marginTop: 2 }}>Management System</div>
               </div>
             </Link>
             <div className="sb-nav-scroll">
@@ -197,7 +184,7 @@ export const MainLayout = () => {
             </div>
             <div className="sb-footer">
               <div className="sb-user-row" style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 6px" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg,${T.primary},${T.primaryLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "white", flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg,${T.primary},${T.primaryLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "white", flexShrink: 0 }}>
                   {(user?.username || "A")[0].toUpperCase()}
                 </div>
                 <div className="sb-user-meta" style={{ minWidth: 0 }}>
@@ -234,21 +221,6 @@ export const MainLayout = () => {
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               <Toggle />
 
-              {/* MANUAL REFRESH */}
-              <button
-                className="tb-btn"
-                onClick={() => {
-                  withLoading(async () => {
-                    await fetchAll();
-                    lastFetchedRef.current = Date.now();
-                    setToast("Data berhasil diperbarui", "ok");
-                  }, "Memperbarui data...");
-                }}
-                style={{ padding: "7px 12px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                title="Pembaruan Data Manual"
-              >
-                ↻
-              </button>
 
               {/* NOTIF */}
               <div className="notif-wrap" ref={notifRef}>
@@ -259,7 +231,7 @@ export const MainLayout = () => {
                     <button className="tb-btn" onClick={() => setNotif(!notif)} style={{ position: "relative", padding: "7px 12px" }}>
                       {"\uD83D\uDD14"}
                       {totalBadge > 0 && (
-                        <span style={{ position: "absolute", top: -3, right: -3, background: unread > 0 ? "#f59e0b" : T.red, color: "white", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                        <span style={{ position: "absolute", top: -3, right: -3, background: unread > 0 ? "#f59e0b" : T.red, color: "white", fontSize: 9, fontWeight: 700, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
                           {totalBadge}
                         </span>
                       )}
@@ -270,7 +242,7 @@ export const MainLayout = () => {
                 {notif && (
                   <div className="notif-drop" style={{ width: 320 }}>
                     <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, background: T.surface, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, ...gText() }}>Notifikasi</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, ...gText() }}>Notifikasi</div>
                       <div style={{ display: "flex", gap: 6 }}>
                         {notifTab === "notif" && notifHistory.filter(n => !n.read).length > 0 && (
                           <button onClick={() => { const marked = notifHistory.map(n => ({ ...n, read: true })); setNotifHistory(marked); localStorage.setItem("wms_notif_history", JSON.stringify(marked)); }}
@@ -291,7 +263,7 @@ export const MainLayout = () => {
                         <button key={tb.id} onClick={() => setNotifTab(tb.id)}
                           style={{ flex: 1, padding: "9px 0", fontSize: 11.5, fontWeight: 700, background: "transparent", border: "none", cursor: "pointer", color: notifTab === tb.id ? T.primary : T.muted, borderBottom: notifTab === tb.id ? `2px solid ${T.primary}` : "2px solid transparent", transition: "all .15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                           {tb.label}
-                          {tb.badge > 0 && <span style={{ background: tb.id === "notif" ? "#f59e0b" : T.red, color: "white", fontSize: 9, fontWeight: 800, borderRadius: 999, padding: "1px 5px", minWidth: 14, textAlign: "center" }}>{tb.badge}</span>}
+                          {tb.badge > 0 && <span style={{ background: tb.id === "notif" ? "#f59e0b" : T.red, color: "white", fontSize: 9, fontWeight: 700, borderRadius: 999, padding: "1px 5px", minWidth: 14, textAlign: "center" }}>{tb.badge}</span>}
                         </button>
                       ))}
                     </div>
@@ -339,7 +311,7 @@ export const MainLayout = () => {
                                       <span style={{ fontSize: 10, color: T.muted, whiteSpace: "nowrap", flexShrink: 0 }}>{it.stock}/{it.minStock} {it.unit}</span>
                                     </div>
                                   </div>
-                                  <div style={{ flexShrink: 0, padding: "3px 9px", borderRadius: 99, background: s.bg, color: s.text, fontSize: 10, fontWeight: 800, border: `1px solid ${s.border || "transparent"}` }}>{s.label}</div>
+                                  <div style={{ flexShrink: 0, padding: "3px 9px", borderRadius: 99, background: s.bg, color: s.text, fontSize: 10, fontWeight: 700, border: `1px solid ${s.border || "transparent"}` }}>{s.label}</div>
                                 </div>
                               </div>
                             );
@@ -368,3 +340,4 @@ export const MainLayout = () => {
     </>
   );
 };
+

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState, useEffect } from "react";
 import "./TransactionPage.css";
 
@@ -180,7 +180,6 @@ export function TransactionPage() {
       {/* ── Panel header ── */}
       <div className="trx-panel-header">
         <div className="trx-panel-title-wrap">
-          <div className="trx-panel-icon">📤</div>
           <div>
             <div className="trx-panel-title">Catat Pengambilan Barang</div>
             <div className="trx-panel-subtitle">Catat pengambilan barang oleh karyawan. Satu transaksi bisa beberapa barang.</div>
@@ -198,14 +197,14 @@ export function TransactionPage() {
               : <BtnG onClick={exportReturnsPdf} style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>
           )}
           <button onClick={() => setShowRetur(true)} className="trx-btn-catat-retur">↩ Catat Retur</button>
-          <BtnP onClick={() => setShowModal(true)} style={{ flexShrink: 0, padding: "12px 20px", borderRadius: 14, fontWeight: 800 }}>＋ Catat Pengambilan</BtnP>
+          <BtnP onClick={() => setShowModal(true)} style={{ flexShrink: 0, padding: "12px 20px", borderRadius: 14, fontWeight: 700 }}>＋ Catat Pengambilan</BtnP>
         </div>
       </div>
 
       {/* ── Sub-tabs ── */}
       <div className="trx-tabs-container">
         {[
-          { id: "log", icon: "📤", label: `Log Pengambilan (${trx.length})` },
+          { id: "log", icon: "", label: `Log Pengambilan (${trx.length})` },
           { id: "retur", icon: "↩", label: `Retur Barang (${returns.length})` },
         ].map(tb => (
           <button key={tb.id} onClick={() => setReturSubTab(tb.id)} className={`trx-tab-btn ${returSubTab === tb.id ? 'trx-tab-btn-active' : 'trx-tab-btn-inactive'}`}>
@@ -227,7 +226,7 @@ export function TransactionPage() {
             <span className="fbar-count">{filtTrx.length} transaksi</span>
           </div>
           {filtTrx.length === 0
-            ? <div className="trx-empty-state"><div className="trx-empty-icon">📂</div>Tidak ada transaksi ditemukan</div>
+            ? <div className="trx-empty-state"><div className="trx-empty-icon"></div>Tidak ada transaksi ditemukan</div>
             : pagedTrx.map(t => (
               <div key={t.id} className="trx-card">
                 <div className="trx-head">
@@ -238,8 +237,8 @@ export function TransactionPage() {
                     <div className="trx-info-name">{t.taker}</div>
                     <div className="trx-info-meta">{t.dept} · {fmtDate(t.date)} · {t.time}</div>
                     <div className="trx-info-badges">
-                      {t.workOrder && <Badge bg="var(--t-green-bg)" color="var(--t-green-text)" border="var(--t-green-border)">🔧 {t.workOrder}</Badge>}
-                      {t.note && <Badge bg="var(--t-surface)" color="var(--t-muted)" border="var(--t-border)">📝 {t.note}</Badge>}
+                      {t.workOrder && <Badge bg="var(--t-green-bg)" color="var(--t-green-text)" border="var(--t-green-border)">{t.workOrder}</Badge>}
+                      {t.note && <Badge bg="var(--t-surface)" color="var(--t-muted)" border="var(--t-border)">{t.note}</Badge>}
                       <Badge bg="var(--t-nav-active)" color="var(--t-nav-active-text)" border="var(--t-nav-active-border)">Admin: {t.admin}</Badge>
                     </div>
                   </div>
@@ -250,7 +249,7 @@ export function TransactionPage() {
                       <div className="trx-stat-unit">{t.items.reduce((a: number, i: any) => a + i.qty, 0)} unit</div>
                     </div>
                     {isAdmin && (
-                      <button onClick={() => deleteTransaction(t.id)} className="trx-btn-delete">🗑 Hapus</button>
+                      <button onClick={() => deleteTransaction(t.id)} className="trx-btn-delete">Hapus</button>
                     )}
                   </div>
                 </div>
@@ -276,7 +275,7 @@ export function TransactionPage() {
                 </button>
                 {Array.from({ length: totalPages }).map((_, i) => (
                   <button key={i} onClick={() => setTrxPage(i + 1)}
-                    style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentTrxPage === i + 1 ? T.primary : T.border}`, background: currentTrxPage === i + 1 ? T.primary : T.surface, color: currentTrxPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
+                    style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentTrxPage === i + 1 ? T.primary : T.border}`, background: currentTrxPage === i + 1 ? T.primary : T.surface, color: currentTrxPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .18s" }}>
                     {i + 1}
                   </button>
                 ))}
@@ -302,8 +301,8 @@ export function TransactionPage() {
             {(() => {
               const totalUnit = returns.reduce((a, r) => a + Number(r.qty || 0), 0);
               return [
-                { label: "Total Retur", val: returns.length, icon: "↩", color: "var(--t-amber)", bg: "var(--t-amber-bg)", sub: "total catatan" },
-                { label: "Unit Dikembalikan", val: totalUnit, icon: "📦", color: "var(--t-green)", bg: "var(--t-green-bg)", sub: "unit barang kembali" },
+                { label: "Total Retur", val: returns.length, color: "var(--t-amber)", sub: "total catatan" },
+                { label: "Unit Dikembalikan", val: totalUnit, color: "var(--t-green)", sub: "unit barang kembali" },
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card retur-stat-card">
@@ -313,7 +312,6 @@ export function TransactionPage() {
                     <div className="retur-stat-val">{s.val}</div>
                     <div className="retur-stat-sub">{s.sub}</div>
                   </div>
-                  <div className="retur-stat-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
                 </div>
               </div>
             ))}
@@ -335,14 +333,14 @@ export function TransactionPage() {
                       <span className="retur-emp-name">{r.employee}</span>
                     </div>
                     <div className="retur-item-row">
-                      <span className="retur-item-icon">📦</span>
+                      <span className="retur-item-icon"></span>
                       <span className="retur-item-name">{it?.name || r.itemName || `Item #${r.itemId}`}</span>
                       <span className="retur-item-qty">+{r.qty} {it?.unit || "pcs"}</span>
                     </div>
                     <div className="retur-badges">
-                      <Badge bg="var(--t-amber-bg)" color="var(--t-amber)" border="1px solid rgba(245, 158, 11, 0.2)">📋 {r.reason}</Badge>
-                      {r.note && <Badge bg="var(--t-surface)" color="var(--t-muted)" border="var(--t-border)">📝 {r.note}</Badge>}
-                      <Badge bg="var(--t-surface)" color="var(--t-muted)" border="var(--t-border)">🗓 {fmtDate(r.date)} {r.time || ""}</Badge>
+                      <Badge bg="var(--t-amber-bg)" color="var(--t-amber)" border="1px solid rgba(245, 158, 11, 0.2)">{r.reason}</Badge>
+                      {r.note && <Badge bg="var(--t-surface)" color="var(--t-muted)" border="var(--t-border)">{r.note}</Badge>}
+                      <Badge bg="var(--t-surface)" color="var(--t-muted)" border="var(--t-border)">{fmtDate(r.date)} {r.time || ""}</Badge>
                     </div>
                   </div>
                   {isAdmin && (
@@ -353,7 +351,7 @@ export function TransactionPage() {
                             await deleteReturn(r.id);
                           }, "Menghapus...");
                         }
-                      }} className="retur-btn-hapus">❌ Hapus</button>
+                      }} className="retur-btn-hapus">Hapus</button>
                     </div>
                   )}
                 </div>
@@ -372,7 +370,7 @@ export function TransactionPage() {
                 </button>
                 {Array.from({ length: totalReturPages }).map((_, i) => (
                   <button key={i} onClick={() => setReturPage(i + 1)}
-                    style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentReturPage === i + 1 ? T.primary : T.border}`, background: currentReturPage === i + 1 ? T.primary : T.surface, color: currentReturPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
+                    style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentReturPage === i + 1 ? T.primary : T.border}`, background: currentReturPage === i + 1 ? T.primary : T.surface, color: currentReturPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .18s" }}>
                     {i + 1}
                   </button>
                 ))}
@@ -397,3 +395,5 @@ export function TransactionPage() {
     </div>
   );
 }
+
+

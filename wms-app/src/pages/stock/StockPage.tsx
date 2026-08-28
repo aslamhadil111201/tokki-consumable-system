@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState, useEffect } from "react";
 import "./StockPage.css";
 import { Badge } from "../../components/ui/Badge";
@@ -223,7 +223,7 @@ export function StockPage() {
               <div className="stk-photo-box">
                 {itemPhotos[Number(it.id)]
                   ? <img src={itemPhotos[Number(it.id)]} alt={it.name} className="stk-photo-img" />
-                  : <div className="stk-photo-placeholder" style={{ background: s.bg, color: s.dot }}>📷</div>
+                  : <div className="stk-photo-placeholder" style={{ background: s.bg, color: s.dot }}></div>
                 }
               </div>
 
@@ -298,7 +298,7 @@ export function StockPage() {
               <button
                 key={i}
                 onClick={() => setStockPage(i + 1)}
-                style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentPage === i + 1 ? T.primary : T.border}`, background: currentPage === i + 1 ? T.primary : T.surface, color: currentPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}
+                style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentPage === i + 1 ? T.primary : T.border}`, background: currentPage === i + 1 ? T.primary : T.surface, color: currentPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .18s" }}
               >
                 {i + 1}
               </button>
@@ -331,3 +331,4 @@ export function StockPage() {
     </div>
   );
 }
+

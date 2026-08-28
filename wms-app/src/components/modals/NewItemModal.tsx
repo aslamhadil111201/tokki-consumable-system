@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { T, gText } from "../../theme/tokens";
@@ -63,7 +63,7 @@ export const NewItemModal = ({
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, ...gText(), marginBottom: 4 }}>➕ Add New Item</div>
+        <div style={{ fontSize: 22, fontWeight: 700, ...gText(), marginBottom: 4 }}>➕ Add New Item</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Input manual data barang baru beserta foto produk</div>
         <div className="sect-box">
           <div className="sect-lbl">📷 Foto Barang</div>
@@ -96,7 +96,7 @@ export const NewItemModal = ({
           </div>
         </div>
         <div className="sect-box">
-          <div className="sect-lbl">📋 Data Barang Baru</div>
+          <div className="sect-lbl"> Data Barang Baru</div>
           <div className="mgrid">
             <div className="mspan"><FL>Nama Barang *</FL><input className="ifield" placeholder="Nama barang..." value={newItemForm.name} onChange={e => setNewItemForm(p => ({ ...p, name: e.target.value }))} /></div>
             <div><FL>Item Kode</FL><input className="ifield" placeholder="Contoh: AS21205" value={newItemForm.itemCode} onChange={e => setNewItemForm(p => ({ ...p, itemCode: e.target.value }))} /></div>
@@ -112,10 +112,11 @@ export const NewItemModal = ({
           </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <BtnP onClick={submitNewItem} style={{ flex: 1, padding: "13px", fontSize: 14, borderRadius: 12 }}>💾 Simpan Item</BtnP>
+          <BtnP onClick={submitNewItem} style={{ flex: 1, padding: "13px", fontSize: 14, borderRadius: 12 }}>Simpan Item</BtnP>
           <BtnG onClick={() => { onClose(); setNewItemForm(emptyNewItem()); }}>Batal</BtnG>
         </div>
       </div>
     </div>
   );
 };
+

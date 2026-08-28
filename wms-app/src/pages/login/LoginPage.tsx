@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
@@ -89,26 +89,22 @@ export function LoginPage() {
             {dark ? "☀️" : "🌙"}
           </button>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
             <img src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki" style={{ height: dark ? 46 : 54, objectFit: "contain" }} />
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 20, padding: "5px 14px", fontSize: 11, fontWeight: 800, color: T.navActiveText }}>
-              🛡️ Warehouse Management System
+            <div style={{ fontSize: 9, fontWeight: 600, color: T.muted, letterSpacing: ".08em", textTransform: "uppercase", marginTop: 6 }}>
+              Warehouse Management System
             </div>
           </div>
 
-          <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.15, marginBottom: 4 }}>
-            <span style={{ color: T.text }}>Selamat </span>
-            <span style={{ color: T.primary }}>Datang</span>
+          <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2, marginBottom: 2, color: T.text }}>
+            Selamat <span style={{ color: T.primary }}>Datang</span>
           </div>
-          <div style={{ fontSize: 12, color: T.muted, marginBottom: 16, fontWeight: 500, lineHeight: 1.65 }}>
-            Masuk untuk mengelola inventaris barang gudang
+          <div style={{ fontSize: 12, color: T.muted, marginBottom: 12, fontWeight: 500, lineHeight: 1.65 }}>
+            Silakan masuk untuk mengelola inventaris gudang
           </div>
 
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: T.primary, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 5 }}>Username</div>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: T.muted, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 4 }}>Username</div>
             <div className="login-ifield-wrap">
               <span className="login-ifield-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
@@ -119,8 +115,8 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: T.primary, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 5 }}>Password</div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: T.muted, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 4 }}>Password</div>
             <div className="login-ifield-wrap" style={{ position: "relative" }}>
               <span className="login-ifield-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -147,13 +143,12 @@ export function LoginPage() {
 
           {/* Guest login info */}
           <div style={{
-            background: `linear-gradient(135deg, ${T.surface} 0%, ${dark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.05)"} 100%)`,
-            border: `1px solid ${T.primary}40`,
-            borderRadius: 14, padding: "12px 16px", marginBottom: 12,
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: 8, padding: "10px 14px", marginBottom: 12,
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.primary}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🚚</div>
               <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Akun Delivery Access</span>
             </div>
             <button
@@ -177,3 +172,4 @@ export function LoginPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { T, gText } from "../../theme/tokens";
@@ -106,7 +106,7 @@ export const AddStockModal = ({
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, ...gText(), marginBottom: 4 }}>📥 Receive New</div>
+        <div style={{ fontSize: 22, fontWeight: 700, ...gText(), marginBottom: 4 }}>📥 Receive New</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Catat penerimaan barang dan tambahkan stok ke inventaris</div>
         <div className="sect-box">
           <div className="sect-lbl">📄 Dokumen Penerimaan</div>
@@ -120,7 +120,7 @@ export const AddStockModal = ({
           </div>
         </div>
         <div className="sect-box">
-          <div className="sect-lbl">📦 Barang yang Diterima</div>
+          <div className="sect-lbl"> Barang yang Diterima</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div><FL>Nama Barang *</FL>
               <SearchSelect
@@ -134,11 +134,11 @@ export const AddStockModal = ({
               const it = items.find(i => i.id === +addForm.itemId); return it ? (
                 <div style={{ display: "flex", gap: 8 }}>
                   <div style={{ flex: 1, background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 10, padding: "10px 13px" }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Kategori</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Kategori</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: T.navActiveText }}>{it.category}</div>
                   </div>
                   <div style={{ flex: 1, background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 10, padding: "10px 13px" }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Stok Saat Ini</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Stok Saat Ini</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: T.navActiveText }}>{it.stock} {it.unit}</div>
                   </div>
                 </div>
@@ -156,11 +156,11 @@ export const AddStockModal = ({
               const it = items.find(i => i.id === +addForm.itemId); return it ? (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <div style={{ background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 10, padding: "10px 13px" }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Harga Avg Saat Ini</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Harga Avg Saat Ini</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: T.navActiveText }}>{fmtMoney(it.averageCost)}</div>
                   </div>
                   <div style={{ background: T.navActive, border: `1px solid ${T.navActiveBorder}`, borderRadius: 10, padding: "10px 13px" }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Last Price</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Last Price</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: T.navActiveText }}>{fmtMoney(it.lastPrice)}</div>
                   </div>
                 </div>
@@ -208,10 +208,11 @@ export const AddStockModal = ({
           </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <BtnP onClick={submitAdd} style={{ flex: 1, padding: "13px", fontSize: 14, borderRadius: 12 }}>💾 Simpan Penerimaan</BtnP>
+          <BtnP onClick={submitAdd} style={{ flex: 1, padding: "13px", fontSize: 14, borderRadius: 12 }}>Simpan Penerimaan</BtnP>
           <BtnG onClick={onClose}>Batal</BtnG>
         </div>
       </div>
     </div>
   );
 };
+
