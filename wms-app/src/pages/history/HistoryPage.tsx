@@ -818,9 +818,8 @@ export function HistoryPage() {
               ];
             })().map((s, i) => (
               <div key={i} className="stat-card" style={{ display: "flex", flexDirection: "column", padding: "16px 14px" }}>
-                <div style={{ marginBottom: 10 }}></div>
-                <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 4, lineHeight: 1.3 }}>{s.label}</div>
-                <div className="stat-val" style={{ fontSize: "clamp(15px,3.5vw,28px)", fontWeight: 900, lineHeight: 1.2, color: s.dot, marginBottom: 4 }}>{s.val}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 4, lineHeight: 1.3 }}>{s.label}</div>
+                <div className="stat-val" style={{ fontSize: "clamp(15px,3.5vw,28px)", fontWeight: 700, lineHeight: 1.2, color: s.dot, marginBottom: 4 }}>{s.val}</div>
                 <div style={{ fontSize: 10, color: T.muted, fontWeight: 500 }}>{s.sub}</div>
               </div>
             ))}
