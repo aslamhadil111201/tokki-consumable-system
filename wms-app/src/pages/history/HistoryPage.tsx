@@ -372,9 +372,14 @@ export function HistoryPage() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {isAdmin && historyTab === "all" && (
-            <button onClick={exportAllReportsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: "var(--t-primary)", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
-              Export Semua Laporan (Excel)
-            </button>
+            <>
+              <BtnG onClick={exportAllReportsExcel} style={{ fontWeight: 600, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                {EXCEL_ICON} Excel
+              </BtnG>
+              <BtnG onClick={exportTransactionsPdf} style={{ fontWeight: 600, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                {PDF_ICON} PDF
+              </BtnG>
+            </>
           )}
           {isAdmin && historyTab !== "all" && (
             <BtnG onClick={historyTab === "in" ? exportReceivesExcel : historyTab === "retur" ? exportReturnsExcel : exportTransactionsExcel} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{EXCEL_ICON}Excel</BtnG>
@@ -382,7 +387,7 @@ export function HistoryPage() {
           {isAdmin && historyTab !== "all" && (
             <BtnG onClick={historyTab === "in" ? exportReceivesPdf : historyTab === "retur" ? exportReturnsPdf : exportTransactionsPdf} style={{ fontWeight: 700, padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>{PDF_ICON}PDF</BtnG>
           )}
-          {isAdmin && historyTab !== "in" && historyTab !== "retur" && <BtnP onClick={() => setShowModal(true)} style={{ padding: "8px 16px", fontSize: 12, fontWeight: 700 }}>＋ Catat Pengambilan</BtnP>}
+          
         </div>
       </div>
 
