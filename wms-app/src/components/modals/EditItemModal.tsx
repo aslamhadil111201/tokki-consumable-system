@@ -88,7 +88,7 @@ export const EditItemModal = ({
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: T.text, marginBottom: 4 }}>✏️ Edit Barang</div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: T.text, marginBottom: 4 }}>Edit Barang</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Perbarui nama, kategori, stok, satuan, dan foto barang</div>
         <div className="sect-box">
           <div className="sect-lbl">📷 Foto Barang</div>
@@ -170,4 +170,5 @@ export const EditItemModal = ({
     </div>
   );
 };
+
 

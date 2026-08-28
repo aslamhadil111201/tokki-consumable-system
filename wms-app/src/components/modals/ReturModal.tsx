@@ -98,7 +98,7 @@ export const ReturModal = ({
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 4 }}>↩ Catat Retur Barang</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 4 }}>Catat Retur Barang</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 18 }}>Barang yang diretur akan langsung ditambahkan ke stok barang.</div>
         <div className="sect-box">
           <div className="sect-lbl">Data Pengembali</div>
@@ -110,7 +110,7 @@ export const ReturModal = ({
                 onClick={() => setShowAddEmployee(true)}
                 style={{ background: "none", border: "none", color: "var(--t-primary-light)", fontSize: "11px", fontWeight: "700", cursor: "pointer", padding: "0 0 4px 0", textDecoration: "underline" }}
               >
-                ＋ Tambah Karyawan Baru
+                Tambah Karyawan Baru
               </button>
             </div>
             <SearchSelect options={employees.map(e => ({ value: e.name, label: e.name }))} value={returForm.employee} onChange={v => setReturForm(p => ({ ...p, employee: v }))} placeholder="— Cari/pilih karyawan —" />
@@ -148,7 +148,7 @@ export const ReturModal = ({
       {showAddEmployee && (
         <div className="overlay" style={{ zIndex: 1100 }} onClick={() => setShowAddEmployee(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>＋ Tambah Karyawan Baru</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>Tambah Karyawan Baru</div>
             <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Tambahkan nama karyawan baru ke database</div>
 
             <div className="sect-box" style={{ marginBottom: 12 }}>
@@ -185,5 +185,6 @@ export const ReturModal = ({
     </div>
   );
 };
+
 
 
