@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
@@ -150,7 +150,7 @@ export function LoginPage() {
             </div>
             <button
               type="button"
-              onClick={() => setLoginForm({ username: "delivery", password: "tokki2026" })}
+              onClick={() => setLoginForm({ username: "aldessonny", password: "aldes123" })}
               style={{
                 background: T.primary, color: "white", border: "none",
                 borderRadius: 8, padding: "7px 16px", fontSize: 12,
