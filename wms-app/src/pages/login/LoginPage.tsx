@@ -134,31 +134,7 @@ export function LoginPage() {
             Masuk ke Dashboard
           </button>
 
-          <div className="login-divider">
-            <span style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>atau</span>
-          </div>
 
-          {/* Guest login info */}
-          <div style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: 8, padding: "10px 14px", marginBottom: 12,
-            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Akun Delivery Access</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setLoginForm({ username: "aldessonny", password: "aldes123" })}
-              style={{
-                background: T.primary, color: "white", border: "none",
-                borderRadius: 8, padding: "7px 16px", fontSize: 12,
-                fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-              }}>
-              Gunakan →
-            </button>
-          </div>
 
           <div style={{ textAlign: "center", fontSize: 12, color: T.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 500 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.primary }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
