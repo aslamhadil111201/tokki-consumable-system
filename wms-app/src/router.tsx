@@ -22,7 +22,6 @@ export const router = createBrowserRouter([
       { path: "/dashboard", element: <DashboardPage /> },
       { path: "/transaction", element: <TransactionPage /> },
       { path: "/stock", element: <StockPage /> },
-      { path: "/delivery", element: <DeliveryPage /> },
       { path: "/report", element: <ReportPage /> },
       { path: "/history", element: <HistoryPage /> }
     ]

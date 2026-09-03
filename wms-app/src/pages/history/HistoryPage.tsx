@@ -122,7 +122,7 @@ export function HistoryPage() {
           target: `Transaction #${id}`
         }]);
         setToast("Transaksi dihapus & stok barang telah bertambah kembali ✓");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) { setToast(e?.message || "Gagal menghapus", "err"); }
     }, "Sedang menghapus...");
   };
@@ -158,7 +158,7 @@ export function HistoryPage() {
         const { error } = await supabase.from("receives").delete().eq("id", id);
         if (error) throw new Error(error.message || "Gagal menghapus penerimaan");
         setToast("Penerimaan dihapus & stok disesuaikan ✓");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) { setToast(e?.message || "Gagal menghapus", "err"); }
     }, "Sedang menghapus...");
   };

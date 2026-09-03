@@ -80,7 +80,7 @@ export const EditItemModal = ({
 
         onClose();
         setToast("Item berhasil diperbarui \u2713");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) { setToast(e?.message || "Gagal memperbarui item", "err"); }
     }, "Sedang memperbarui item");
   };

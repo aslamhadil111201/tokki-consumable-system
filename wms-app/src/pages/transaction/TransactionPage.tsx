@@ -81,7 +81,7 @@ export function TransactionPage() {
         if (error) throw new Error(error.message || "Gagal menghapus transaksi");
 
         setToast("Transaksi dihapus & stok barang telah bertambah kembali ✓");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) { setToast(e?.message || "Gagal menghapus transaksi", "err"); }
     }, "Sedang menghapus transaksi...");
   };

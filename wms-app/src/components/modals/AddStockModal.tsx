@@ -98,7 +98,7 @@ export const AddStockModal = ({
         }
         setAddForm(emptyAddForm()); onClose();
         setToast("Stok berhasil ditambahkan \u2713");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (err: any) { setToast(err?.message || "Gagal menyimpan penerimaan", "err"); }
     }, "Sedang menyimpan penerimaan");
   };

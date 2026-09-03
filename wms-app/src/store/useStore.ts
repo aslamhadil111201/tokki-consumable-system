@@ -48,6 +48,14 @@ interface StoreState {
 
   // Actions
   fetchAll: () => Promise<void>;
+  fetchItems: () => Promise<void>;
+  fetchTransactions: () => Promise<void>;
+  fetchReceives: () => Promise<void>;
+  fetchReturns: () => Promise<void>;
+  fetchDeliveryNotes: () => Promise<void>;
+  fetchShippingAddresses: () => Promise<void>;
+  fetchMasters: () => Promise<void>;
+  
   saveDeliveryNote: (note: any) => Promise<any>;
   deleteDeliveryNote: (id: string | number) => Promise<any>;
   saveShippingAddress: (address: any) => Promise<any>;
@@ -169,128 +177,94 @@ export const useStore = create<StoreState>((set, get) => {
       return response;
     },
 
-    // === Fetch Data (Supabase) ===
-    fetchAll: async () => {
-      const { setToast } = get();
+    // === Specific Fetch Data Methods ===
+    fetchItems: async () => {
       try {
         const { supabase } = await import('../lib/supabase');
-
-        const [itemsRes, trxRes] = await Promise.all([
-          supabase.from('items').select('id, name, unit, minStock, stock, category, itemCode, averageCost, lastPrice, totalValue'),
-          supabase.from('transactions').select('id, taker, dept, workOrder, note, date, time, admin, items, approvalStatus, approvalNote, approvedBy, approvedAt, created_at').order('id', { ascending: false }),
-        ]);
-
-        const items = itemsRes.data || [];
-        const trx = trxRes.data || [];
+        const { data } = await supabase.from('items').select('id, name, unit, minStock, stock, category, itemCode, averageCost, lastPrice, totalValue');
+        const items = data || [];
         const map: Record<number, any> = {};
         items.forEach((i: any) => { map[Number(i.id)] = i; });
-        set({ items, trx, itemMap: map, dataReady: true, allHistory: trx });
+        set({ items, itemMap: map });
+      } catch (e) { console.error("fetchItems error", e); }
+    },
+    fetchTransactions: async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        // Added limit 500 to save egress
+        const { data } = await supabase.from('transactions').select('id, taker, dept, workOrder, note, date, time, admin, items, approvalStatus, approvalNote, approvedBy, approvedAt, created_at').order('id', { ascending: false }).limit(500);
+        const trx = data || [];
+        set({ trx, allHistory: trx });
+      } catch (e) { console.error("fetchTransactions error", e); }
+    },
+    fetchReceives: async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { data } = await supabase.from('receives_view').select('id, itemId, itemName, unit, qty, poNumber, doNumber, date, admin, time, buyPrice, created_at, hasAttachment').order('id', { ascending: false }).limit(500);
+        set({ receives: data || [] });
+      } catch (e) { console.error("fetchReceives error", e); }
+    },
+    fetchReturns: async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { data } = await supabase.from('returns').select('id, employee, itemId, itemName, unit, qty, reason, note, date, time, status').order('id', { ascending: false }).limit(500);
+        set({ returns: data || [] });
+      } catch (e) { console.error("fetchReturns error", e); }
+    },
+    fetchDeliveryNotes: async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { data } = await supabase.from('delivery_notes').select('id, batch, category, date, project_no, no_kendaraan, destination, attn, full_address, items').order('id', { ascending: false }).limit(500);
+        set({ deliveryNotes: data || [] });
+      } catch (e) { console.error("fetchDeliveryNotes error", e); }
+    },
+    fetchShippingAddresses: async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const { data } = await supabase.from('shipping_addresses').select('id, destination, attn, contact, full_address').order('destination', { ascending: true });
+        set({ shippingAddresses: data || [] });
+      } catch (e) { console.error("fetchShippingAddresses error", e); }
+    },
+    fetchMasters: async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const [admins, depts, emps, wos] = await Promise.all([
+          supabase.from('admins').select('id, name'),
+          supabase.from('departments').select('id, name'),
+          supabase.from('employees').select('id, name, dept'),
+          supabase.from('workOrders').select('id, code, project')
+        ]);
+        set({
+          admins: admins.data || [],
+          departments: depts.data || [],
+          employees: emps.data || [],
+          workOrders: wos.data || []
+        });
+      } catch (e) { console.error("fetchMasters error", e); }
+    },
 
-        // Fetch others async
-        supabase.from('admins').select('id, name').then(({ data }) => set({ admins: data || [] }));
-        supabase.from('departments').select('id, name').then(({ data }) => set({ departments: data || [] }));
-        supabase.from('employees').select('id, name, dept').then(({ data }) => set({ employees: data || [] }));
-        supabase.from('workOrders').select('id, code, project').then(({ data }) => set({ workOrders: data || [] }));
-        // Query the receives_view instead of the receives table to avoid downloading large base64 attachments in the list
-        supabase.from('receives_view').select('id, itemId, itemName, unit, qty, poNumber, doNumber, date, admin, time, buyPrice, created_at, hasAttachment').order('id', { ascending: false }).then(({ data }) => set({ receives: data || [] }));
-        supabase.from('returns').select('id, employee, itemId, itemName, unit, qty, reason, note, date, time, status').order('id', { ascending: false }).then(({ data }) => set({ returns: data || [] }));
-        supabase.from('delivery_notes').select('id, batch, category, date, project_no, no_kendaraan, destination, attn, full_address, items').order('id', { ascending: false }).then(({ data }) => set({ deliveryNotes: data || [] }));
-        supabase.from('shipping_addresses').select('id, destination, attn, contact, full_address').order('destination', { ascending: true }).then(({ data }) => set({ shippingAddresses: data || [] }));
+    // === Fetch Data (Supabase) ===
+    fetchAll: async () => {
+      const { setToast, fetchItems, fetchTransactions, fetchMasters, fetchReceives, fetchReturns } = get();
+      try {
+        await Promise.all([
+          fetchItems(),
+          fetchTransactions()
+        ]);
+        set({ dataReady: true });
+        
+        // Fetch others async without awaiting to speed up main render
+        fetchMasters();
+        fetchReceives();
+        fetchReturns();
       } catch (e: any) {
         setToast(e?.message || "Gagal terhubung ke Supabase", "err");
       }
     },
 
-    saveDeliveryNote: async (note: any) => {
-      const { fetchAll, setToast } = get();
-      try {
-        const { supabase } = await import('../lib/supabase');
-        let res;
-        const payload = {
-          batch: note.batch,
-          category: note.category,
-          date: note.date,
-          project_no: note.projectNo,
-          no_kendaraan: note.noKendaraan,
-          destination: note.destination,
-          attn: note.attn,
-          full_address: note.fullAddress,
-          items: note.items,
-        };
 
-        if (note.id && !note.isNew) {
-          res = await supabase.from('delivery_notes').update(payload).eq('id', note.id);
-        } else {
-          res = await supabase.from('delivery_notes').insert([payload]);
-        }
 
-        if (res.error) throw res.error;
-        setToast("Surat Jalan berhasil disimpan ✓", "ok");
-        await fetchAll();
-        return { ok: true };
-      } catch (e: any) {
-        setToast(e.message || "Gagal menyimpan surat jalan", "err");
-        return { ok: false, error: e };
-      }
-    },
 
-    deleteDeliveryNote: async (id: string | number) => {
-      const { fetchAll, setToast } = get();
-      try {
-        const { supabase } = await import('../lib/supabase');
-        const { error } = await supabase.from('delivery_notes').delete().eq('id', id);
-        if (error) throw error;
-        setToast("Surat Jalan berhasil dihapus ✓", "ok");
-        await fetchAll();
-        return { ok: true };
-      } catch (e: any) {
-        setToast(e.message || "Gagal menghapus surat jalan", "err");
-        return { ok: false, error: e };
-      }
-    },
-
-    saveShippingAddress: async (addr: any) => {
-      const { fetchAll, setToast } = get();
-      try {
-        const { supabase } = await import('../lib/supabase');
-        let res;
-        const payload = {
-          destination: addr.destination,
-          attn: addr.attn,
-          contact: addr.contact,
-          full_address: addr.fullAddress,
-        };
-
-        if (addr.id && !addr.isNew) {
-          res = await supabase.from('shipping_addresses').update(payload).eq('id', addr.id);
-        } else {
-          res = await supabase.from('shipping_addresses').insert([payload]);
-        }
-
-        if (res.error) throw res.error;
-        setToast("Alamat pengiriman berhasil disimpan ✓", "ok");
-        await fetchAll();
-        return { ok: true };
-      } catch (e: any) {
-        setToast(e.message || "Gagal menyimpan alamat pengiriman", "err");
-        return { ok: false, error: e };
-      }
-    },
-
-    deleteShippingAddress: async (id: string | number) => {
-      const { fetchAll, setToast } = get();
-      try {
-        const { supabase } = await import('../lib/supabase');
-        const { error } = await supabase.from('shipping_addresses').delete().eq('id', id);
-        if (error) throw error;
-        setToast("Alamat pengiriman berhasil dihapus ✓", "ok");
-        await fetchAll();
-        return { ok: true };
-      } catch (e: any) {
-        setToast(e.message || "Gagal menghapus alamat pengiriman", "err");
-        return { ok: false, error: e };
-      }
-    },
 
     deleteItem: async (id: string | number) => {
       const { fetchAll, setToast } = get();
@@ -299,7 +273,7 @@ export const useStore = create<StoreState>((set, get) => {
         const { error } = await supabase.from('items').delete().eq('id', id);
         if (error) throw error;
         setToast("Barang berhasil dihapus ✓", "ok");
-        await fetchAll();
+        // Realtime will handle refetch
         return { ok: true };
       } catch (e: any) {
         setToast(e.message || "Gagal menghapus barang", "err");
@@ -334,7 +308,7 @@ export const useStore = create<StoreState>((set, get) => {
         const { error } = await supabase.from('returns').delete().eq('id', id);
         if (error) throw error;
         setToast("Data retur dihapus & stok disesuaikan ✓", "ok");
-        await fetchAll();
+        // Realtime will handle refetch
         return { ok: true };
       } catch (e: any) {
         setToast(e.message || "Gagal menghapus data retur", "err");

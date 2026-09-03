@@ -68,7 +68,7 @@ export const TransactionModal = ({
         setShowAddEmployee(false);
         setNewEmployeeName("");
         setNewEmployeeDept("");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) {
         setToast(e.message || "Gagal menambahkan karyawan", "err");
       }
@@ -99,7 +99,7 @@ export const TransactionModal = ({
         setShowAddProject(false);
         setNewProjectCode("");
         setNewProjectName("");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) {
         setToast(e.message || "Gagal menambahkan project", "err");
       }
@@ -180,7 +180,7 @@ export const TransactionModal = ({
         }
         
         setForm(emptyForm()); setPickerItem(""); setPickerQty(""); onClose();
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) { setToast(e?.message || "Gagal menyimpan transaksi", "err"); }
     }, "Sedang menyimpan transaksi");
   };

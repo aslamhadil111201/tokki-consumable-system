@@ -43,7 +43,6 @@ export const TABS = [
   {id:"dashboard",label:"Dashboard",icon:NAV_ICONS.dashboard},
   {id:"transaction",label:"Pengambilan",icon:NAV_ICONS.transaction},
   {id:"stock",label:"Stok Barang",icon:NAV_ICONS.stock},
-  {id:"delivery",label:"Surat Jalan",icon:NAV_ICONS.delivery},
   {id:"history",label:"Riwayat",icon:NAV_ICONS.history},
   {id:"report",label:"Laporan",icon:NAV_ICONS.report},
 ];

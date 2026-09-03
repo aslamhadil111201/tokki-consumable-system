@@ -51,7 +51,7 @@ export const ReturModal = ({
         setShowAddEmployee(false);
         setNewEmployeeName("");
         setNewEmployeeDept("");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) {
         setToast(e.message || "Gagal menambahkan karyawan", "err");
       }
@@ -90,7 +90,7 @@ export const ReturModal = ({
         setToast("Retur berhasil dicatat & stok ditambahkan ✓");
         onClose();
         setReturForm(emptyReturForm());
-        fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) { setToast(e?.message || "Gagal menyimpan retur", "err"); }
     }, "Menyimpan retur...");
   };

@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { useStore } from "../../store/useStore";
@@ -23,7 +23,7 @@ const Toggle = ({ mini = false }) => {
 export const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loggedIn, logout, dark, items, trx, withLoading, setToast, fetchAll } = useStore();
+  const { user, loggedIn, logout, dark, items, trx, withLoading, setToast, fetchAll, fetchItems, fetchTransactions, fetchReturns, fetchReceives, fetchDeliveryNotes } = useStore();
   const T = getT(dark);
 
   const [sidebar, setSidebar] = useState(false);
@@ -96,21 +96,25 @@ export const MainLayout = () => {
       try {
         const { supabase } = await import('../../lib/supabase');
         const channelName = `wms-db-changes-${Math.random().toString(36).substring(2, 9)}`;
+        
+        const timers: Record<string, any> = {};
+        const debounce = (key: string, fn: () => void) => {
+          clearTimeout(timers[key]);
+          timers[key] = setTimeout(() => { fn(); }, 300);
+        };
+
         channel = supabase.channel(channelName)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
-            fetchAll();
+            debounce('items', fetchItems);
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-            fetchAll();
+            debounce('trx', fetchTransactions);
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'returns' }, () => {
-            fetchAll();
+            debounce('returns', fetchReturns);
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'receives' }, () => {
-            fetchAll();
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_notes' }, () => {
-            fetchAll();
+            debounce('receives', fetchReceives);
           })
           .subscribe();
       } catch (err) {
@@ -137,10 +141,8 @@ export const MainLayout = () => {
 
   if (!loggedIn) return null;
 
-  // Guest: hanya bisa akses Surat Jalan
-  const visibleTabs = isGuest
-    ? TABS.filter(t => t.id === "delivery")
-    : (isAdmin || isOperator)
+  // Guest: NO ACCESS to WMS directly anymore (since delivery is moved)
+  const visibleTabs = (isAdmin || isOperator)
       ? TABS
       : TABS.filter(t => t.id !== "history");
 

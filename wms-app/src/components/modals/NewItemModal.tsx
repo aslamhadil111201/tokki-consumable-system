@@ -55,7 +55,7 @@ export const NewItemModal = ({
         onClose();
         setNewItemForm(emptyNewItem());
         setToast("Item baru berhasil ditambahkan \u2713");
-        await fetchAll();
+        // Realtime will handle refetch
       } catch (e: any) { setToast(e?.message || "Gagal menambah item baru", "err"); }
     }, "Sedang menambahkan item baru");
   };
