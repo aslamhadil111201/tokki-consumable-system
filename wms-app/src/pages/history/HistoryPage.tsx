@@ -1,4 +1,5 @@
-﻿// @ts-nocheck
+// @ts-nocheck
+import { getPageIndices } from "../../utils/pagination";
 import { useState, useEffect } from "react";
 import "./HistoryPage.css";
 import { getT } from "../../theme/tokens";
@@ -545,7 +546,7 @@ export function HistoryPage() {
                 style={{ padding: "8px 18px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: historyOutPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: historyOutPage <= 1 ? "default" : "pointer", opacity: historyOutPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
                 ‹ Sebelumnya
               </button>
-              {Array.from({ length: allTotalPages }).map((_, i) => (
+              {getPageIndices(allTotalPages, historyOutPage).map(i => (
                 <button key={i} onClick={() => setHistoryOutPage(i + 1)}
                   style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${historyOutPage === i + 1 ? T.primary : T.border}`, background: historyOutPage === i + 1 ? T.primary : T.surface, color: historyOutPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
                   {i + 1}
@@ -656,7 +657,7 @@ export function HistoryPage() {
                   style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: historyOutPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: historyOutPage <= 1 ? "default" : "pointer", opacity: historyOutPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
                   ‹ Prev
                 </button>
-                {Array.from({ length: outTotalPages }).map((_, i) => (
+                {getPageIndices(outTotalPages, historyOutPage).map(i => (
                   <button key={i} onClick={() => setHistoryOutPage(i + 1)}
                     style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${historyOutPage === i + 1 ? T.primary : T.border}`, background: historyOutPage === i + 1 ? T.primary : T.surface, color: historyOutPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
                     {i + 1}
@@ -785,7 +786,7 @@ export function HistoryPage() {
                   style={{ padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: historyInPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: historyInPage <= 1 ? "default" : "pointer", opacity: historyInPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
                   ← Prev
                 </button>
-                {Array.from({ length: inTotalPages }).map((_, i) => (
+                {getPageIndices(inTotalPages, historyInPage).map(i => (
                   <button key={i} onClick={() => setHistoryInPage(i + 1)}
                     style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${historyInPage === i + 1 ? T.primary : T.border}`, background: historyInPage === i + 1 ? T.primary : T.surface, color: historyInPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
                     {i + 1}
@@ -890,7 +891,7 @@ export function HistoryPage() {
                   style={{ padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: historyReturPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: historyReturPage <= 1 ? "default" : "pointer", opacity: historyReturPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
                   ← Prev
                 </button>
-                {Array.from({ length: returTotalPages }).map((_, i) => (
+                {getPageIndices(returTotalPages, historyReturPage).map(i => (
                   <button key={i} onClick={() => setHistoryReturPage(i + 1)}
                     style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${historyReturPage === i + 1 ? T.primary : T.border}`, background: historyReturPage === i + 1 ? T.primary : T.surface, color: historyReturPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all .18s" }}>
                     {i + 1}

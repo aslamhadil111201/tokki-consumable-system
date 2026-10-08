@@ -67,7 +67,7 @@ interface StoreState {
 export const useStore = create<StoreState>((set, get) => {
   const getInitialDark = () => {
     try {
-      return localStorage.getItem("wms_dark") === "false" ? false : true;
+      return localStorage.getItem("wms_dark") === "true";
     } catch {
       return true;
     }

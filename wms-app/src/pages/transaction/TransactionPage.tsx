@@ -1,4 +1,5 @@
-﻿// @ts-nocheck
+// @ts-nocheck
+import { getPageIndices } from "../../utils/pagination";
 import { useState, useEffect } from "react";
 import "./TransactionPage.css";
 
@@ -230,7 +231,7 @@ export function TransactionPage() {
             : pagedTrx.map(t => (
               <div key={t.id} className="trx-card">
                 <div className="trx-head">
-                  <div className="trx-avatar" style={{ background: avatarColor(t.taker), boxShadow: `0 4px 10px ${avatarColor(t.taker)}55` }}>
+                  <div className="trx-avatar">
                     {initials(t.taker)}
                   </div>
                   <div className="trx-info">
@@ -273,7 +274,7 @@ export function TransactionPage() {
                   style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentTrxPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentTrxPage <= 1 ? "default" : "pointer", opacity: currentTrxPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
                   ‹ Prev
                 </button>
-                {Array.from({ length: totalPages }).map((_, i) => (
+                {getPageIndices(totalPages, currentTrxPage).map(i => (
                   <button key={i} onClick={() => setTrxPage(i + 1)}
                     style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentTrxPage === i + 1 ? T.primary : T.border}`, background: currentTrxPage === i + 1 ? T.primary : T.surface, color: currentTrxPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .18s" }}>
                     {i + 1}
@@ -368,7 +369,7 @@ export function TransactionPage() {
                   style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.surface, color: currentReturPage <= 1 ? T.muted : T.text, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12.5, fontWeight: 700, cursor: currentReturPage <= 1 ? "default" : "pointer", opacity: currentReturPage <= 1 ? 0.5 : 1, transition: "all .18s" }}>
                   ‹ Prev
                 </button>
-                {Array.from({ length: totalReturPages }).map((_, i) => (
+                {getPageIndices(totalReturPages, currentReturPage).map(i => (
                   <button key={i} onClick={() => setReturPage(i + 1)}
                     style={{ width: 36, height: 36, borderRadius: 9, border: `1px solid ${currentReturPage === i + 1 ? T.primary : T.border}`, background: currentReturPage === i + 1 ? T.primary : T.surface, color: currentReturPage === i + 1 ? "white" : T.muted, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .18s" }}>
                     {i + 1}

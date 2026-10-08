@@ -1,11 +1,12 @@
-﻿// @ts-nocheck
+// @ts-nocheck
+import { useLocation } from "react-router-dom";
+import { getPageIndices } from "../../utils/pagination";
 import { useState, useEffect } from "react";
 import "./StockPage.css";
 import { Badge } from "../../components/ui/Badge";
 import { BtnP } from "../../components/ui/BtnP";
 import { BtnG } from "../../components/ui/BtnG";
 import { UIIcon } from "../../components/ui/UIIcon";
-import { ProgBlocks } from "../../components/ui/Prog";
 import { StockSkeleton } from "../../components/ui/Skeleton";
 import { fmtMoney } from "../../utils/formatters";
 import { stockStatus, stockStatusKey, stockStatusIcon } from "../../utils/stockHelpers";
@@ -22,7 +23,11 @@ export function StockPage() {
   const T = getT(dark);
   
   const [catF, setCatF] = useState("Semua");
-  const [stockStatusF, setStockStatusF] = useState("Semua");
+  const location = useLocation();
+  const [stockStatusF, setStockStatusF] = useState(() => {
+    const incoming = location.state?.stockStatusFilter;
+    return ["Aman", "Mendekati", "Menipis", "Habis"].includes(incoming) ? incoming : "Semua";
+  });
   const [searchQ, setSearchQ] = useState("");
   
   const [stockPage, setStockPage] = useState(1);
@@ -49,7 +54,7 @@ export function StockPage() {
   const hasActiveStockFilters = catF !== "Semua" || stockStatusF !== "Semua" || searchQ.trim() !== "";
   
   const filtItems = items
-    .filter(i => (catF === "Semua" || i.category === catF) && i.name.toLowerCase().includes(searchQ.toLowerCase()))
+    .filter(i => (catF === "Semua" || i.category === catF) && `${i.name} ${i.itemCode || ""}`.toLowerCase().includes(searchQ.toLowerCase()))
     .filter(i => !statusFilterKey || stockStatusKey(i) === statusFilterKey);
     
   const totalPages = Math.ceil(filtItems.length / Math.max(1, stockPageSize));
@@ -125,11 +130,11 @@ export function StockPage() {
         <div className="stock-filter-top">
           <div className="stock-search-wrap">
             <span className="stock-search-icon"><UIIcon name="search" size={15} /></span>
-            <input className="ifield stock-search-input" placeholder="Cari barang..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
+            <input className="ifield stock-search-input" placeholder="Cari nama barang atau kode…" value={searchQ} onChange={e => setSearchQ(e.target.value)} />
           </div>
           <div className="stock-actions">
-            {canManage && <BtnG onClick={() => setShowNewItem(true)} className="stock-action-btn-new"><UIIcon name="plus" size={14} /> Add New Item</BtnG>}
-            {canManage && <BtnP onClick={() => { setQuickInItem(null); setShowAdd(true); }} className="stock-action-btn-recv"><UIIcon name="receive" size={14} /> Receive New</BtnP>}
+            {canManage && <BtnG onClick={() => setShowNewItem(true)} className="stock-action-btn-new"><UIIcon name="plus" size={14} /> Tambah barang</BtnG>}
+            {canManage && <BtnP onClick={() => { setQuickInItem(null); setShowAdd(true); }} className="stock-action-btn-recv"><UIIcon name="receive" size={14} /> Catat penerimaan</BtnP>}
           </div>
         </div>
 
@@ -199,85 +204,28 @@ export function StockPage() {
         </div>
       </div>
 
-      <div className="stock-g">
-        {filtItems.length === 0 && (
-          <div className="stock-empty-state">
-            <div className="stock-empty-icon"><UIIcon name="search" size={34} /></div>
-            Tidak ada barang ditemukan
-          </div>
-        )}
-        {pagedItems.map(it => {
-          const s = stockStatus(it, dark); const pct = it.minStock ? Math.min(100, it.stock / it.minStock * 100) : 100;
-          const cardBorder = s.dot;
-          return (
-            <div key={it.id} className="stk-card" style={{ border: `2px solid ${cardBorder}`, gap: 0 }}>
-              {isAdmin && (
-                <>
-                  <button onClick={e => { e.stopPropagation(); handleDeleteItem(it); }} className="stk-delete-btn" title="Hapus Barang">
-                    <UIIcon name="trash" size={14} />
-                  </button>
-                  <button onClick={e => { e.stopPropagation(); setEditItem({ ...it }); setShowEdit(true); }} className="stk-menu-btn" title="Edit Barang">⋮</button>
-                </>
-              )}
-
-              <div className="stk-photo-box">
-                {itemPhotos[Number(it.id)]
-                  ? <img src={itemPhotos[Number(it.id)]} alt={it.name} className="stk-photo-img" />
-                  : <div className="stk-photo-placeholder" style={{ background: s.bg, color: s.dot }}></div>
-                }
-              </div>
-
-              <div className="stk-name" title={it.name} style={{ paddingRight: isAdmin ? 76 : 0 }}>{it.name}</div>
-              {it.itemCode && <div className="stk-code" style={{ color: s.dot }}>Kode: {it.itemCode}</div>}
-              
-              <div className="stk-cat-row">
-                <span className="stk-cat-dot" style={{ background: s.dot }} />
-                <span className="stk-cat-text" style={{ color: T.muted }}>{it.category}</span>
-              </div>
-
-              <div className="stk-divider" />
-
-              <div className="stk-stock-row">
-                <div>
-                  <span className="stk-stock-val" style={{ color: cardBorder }}>{it.stock}</span>
-                  <span className="stk-stock-unit">{it.unit}</span>
-                </div>
-                <Badge bg={s.bg} color={s.text} border={s.border} className="stk-stock-badge">
-                  {s.icon} {s.label}
-                </Badge>
-              </div>
-              
-              <div className="stk-min-stock">Min: {it.minStock} {it.unit}</div>
-              <ProgBlocks pct={pct} color={cardBorder} />
-              <div className="stk-pct-text">{Math.round(pct)}% dari kebutuhan minimum</div>
-
-              <div className="stk-divider" />
-
-              <div className="stk-price-grid">
-                <div className="stk-price-box">
-                  <div className="stk-price-lbl">Avg</div>
-                  <div className="stk-price-val">{fmtMoney(it.averageCost)}</div>
-                </div>
-                <div className="stk-price-box">
-                  <div className="stk-price-lbl">Last</div>
-                  <div className="stk-price-val">{fmtMoney(it.lastPrice)}</div>
-                </div>
-              </div>
-
-              <div className="stk-val-wrap">
-                <div className="stk-price-lbl">Total Value</div>
-                <div className="stk-val-val">{fmtMoney(it.totalValue)}</div>
-              </div>
-
-              <div className="stk-btn-row">
-                {isAdmin && (
-                  <button onClick={() => openQuickIn(it)} className="stk-btn-in">↓ Masuk</button>
-                )}
-                <button onClick={() => openQuickOut(it)} className="stk-btn-out">↑ Keluar</button>
-              </div>
-            </div>
-          );
-        })}
+      <div className="workspace-stock-table">
+        <table>
+          <thead><tr><th>Kode barang</th><th>Nama barang</th><th className="number-cell">Stok</th><th className="number-cell">Minimum</th><th>Status</th><th className="number-cell">Nilai persediaan</th><th>Aksi</th></tr></thead>
+          <tbody>
+            {pagedItems.map(it => { const s = stockStatus(it, dark); return (
+              <tr key={it.id}>
+                <td className="workspace-code">{it.itemCode || "—"}</td>
+                <td><div className="workspace-stock-name">{itemPhotos[Number(it.id)] && <img src={itemPhotos[Number(it.id)]} alt="" loading="lazy" />}<div><strong>{it.name}</strong><span>{it.category}</span></div></div></td>
+                <td className="number-cell"><strong>{Number(it.stock).toLocaleString("id-ID")}</strong> <span>{it.unit}</span></td>
+                <td className="number-cell">{it.minStock} {it.unit}</td>
+                <td><Badge bg={s.bg} color={s.text} border={s.border}>{s.label}</Badge></td>
+                <td className="number-cell">{fmtMoney(it.totalValue)}</td>
+                <td><div className="workspace-stock-actions">
+                  {isAdmin && <button onClick={() => openQuickIn(it)}>Masuk</button>}
+                  <button onClick={() => openQuickOut(it)}>Keluar</button>
+                  {isAdmin && <details className="workspace-item-menu"><summary aria-label={`Aksi lainnya untuk ${it.name}`}>⋯</summary><div><button onClick={() => { setEditItem({ ...it }); setShowEdit(true); }}>Edit barang</button><button className="workspace-danger" onClick={() => handleDeleteItem(it)}>Hapus barang</button><span>Harga rata-rata: {fmtMoney(it.averageCost)}<br />Harga terakhir: {fmtMoney(it.lastPrice)}</span></div></details>}
+                </div></td>
+              </tr>
+            ); })}
+          </tbody>
+        </table>
+        {filtItems.length === 0 && <div className="stock-empty-state">Tidak ada barang yang sesuai.<button onClick={resetStockFilters}>Reset pencarian</button></div>}
       </div>
 
       {/* Pagination & page size selection */}
@@ -294,7 +242,7 @@ export function StockPage() {
             >
               ‹ Prev
             </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
+            {getPageIndices(totalPages, currentPage).map(i => (
               <button
                 key={i}
                 onClick={() => setStockPage(i + 1)}

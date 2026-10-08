@@ -163,13 +163,11 @@ export const MainLayout = () => {
         {/* SIDEBAR */}
         <aside className={`sidebar${sidebar ? " open" : ""}${sidebarCollapsed ? " collapsed" : ""}`}>
           <div className="sb-inner">
-            <Link to="/dashboard" className="brand" onClick={() => setSidebar(false)} style={{ width: "100%", border: "none", background: "transparent", cursor: "pointer", transition: "all .2s", borderRadius: 8, textDecoration: "none" }}>
-              <img src={dark ? "/Logo-Sidebar-DARK.png" : "/Logo-Sidebar.png"} alt="Tokki" style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.primaryLight, lineHeight: 1.2 }}>Warehouse</div>
-                <div style={{ fontSize: 8.5, color: T.muted, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, marginTop: 2 }}>Management System</div>
-              </div>
+            <Link to="/dashboard" className="brand workspace-brand" onClick={() => setSidebar(false)}>
+              <img className="workspace-logo" src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki Engineering and Fabrication" />
+              <span className="workspace-brand-caption">WAREHOUSE WORKSPACE</span>
             </Link>
+            <div className="nav-label">OPERASIONAL</div>
             <div className="sb-nav-scroll">
               {visibleTabs.map(t => (
                 <Link key={t.id} to={`/${t.id}`} className={`nav-item${currentTab === t.id ? " active" : ""}`} onClick={() => setSidebar(false)} style={{ textDecoration: "none" }}>
@@ -209,7 +207,7 @@ export const MainLayout = () => {
           {/* TOPBAR */}
           <header className="topbar">
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-              <button className="tb-btn" style={{ padding: "7px 10px", flexShrink: 0 }}
+              <button className="tb-btn" aria-label="Buka atau tutup navigasi" style={{ padding: "7px 10px", flexShrink: 0 }}
                 onClick={() => { if (window.innerWidth <= 660) { setSidebar(v => !v); } else { setSidebarCollapsed(v => !v); } }}>
                 <svg width="15" height="12" viewBox="0 0 15 12" fill="none">
                   <rect width="15" height="1.5" rx="1" fill="currentColor" />
@@ -217,7 +215,7 @@ export const MainLayout = () => {
                   <rect y="10.5" width="15" height="1.5" rx="1" fill="currentColor" />
                 </svg>
               </button>
-              <h1 className="page-title">{TABS.find(t => t.id === currentTab)?.label || "Dashboard"}</h1>
+              <span className="workspace-breadcrumb">Warehouse /</span><div className="page-title">{TABS.find(t => t.id === currentTab)?.label || "Dashboard"}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               <Toggle />
@@ -334,7 +332,7 @@ export const MainLayout = () => {
 
           {/* PAGE CONTENT */}
           <main className="body-area enter">
-            <Outlet />
+            <div className="workspace-page-heading"><div className="workspace-eyebrow">TOKKI / WAREHOUSE OPERATIONS</div><h1>{currentTab === "dashboard" ? "Kontrol persediaan" : TABS.find(t => t.id === currentTab)?.label || "Warehouse"}</h1><p>{({ dashboard: "Pantau stok dan pergerakan barang gudang hari ini.", stock: "Inventaris material dan consumable gudang.", transaction: "Catat pengambilan dan retur barang untuk pekerjaan.", history: "Telusuri setiap pergerakan barang gudang.", report: "Ringkasan penggunaan dan nilai persediaan." })[currentTab]}</p></div><Outlet />
           </main>
         </div>
       </div>
