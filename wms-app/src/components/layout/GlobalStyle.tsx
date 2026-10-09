@@ -1,16 +1,15 @@
 import workspaceCSS from "./Workspace.css?inline";
 import { useEffect } from "react";
-import { useStore } from "../../store/useStore";
 import { getT, updateT } from "../../theme/tokens";
 
 export const GlobalStyle = () => {
-  const { dark } = useStore();
+  const dark = false;
   const T = getT(dark);
   updateT(dark);
 
   useEffect(() => {
-    document.body.setAttribute("data-theme", dark ? "dark" : "light");
-  }, [dark]);
+    document.body.setAttribute("data-theme", "light");
+  }, []);
 
   const CSS = `
     :root {
@@ -87,15 +86,6 @@ export const GlobalStyle = () => {
     .nav-item.mobile-logout{display:none;border-color:${T.redBorder};color:${T.redText};background:${T.redBg}}
     .nav-item.mobile-logout:hover{background:${T.redBg};border-color:${T.redBorder};color:${T.redText}}
 
-    /* TOGGLE — smooth cubic */
-    .toggle-wrap{display:flex;align-items:center;gap:8px;background:${T.surface};border:1px solid ${T.border};border-radius:8px;padding:5px 10px 5px 13px;cursor:pointer;user-select:none;transition:all .2s;appearance:none;-webkit-appearance:none;font-family:'Plus Jakarta Sans',sans-serif;position:relative;z-index:2}
-    .toggle-wrap:hover{border-color:${T.borderHover}}
-    .toggle-wrap:focus-visible{outline:none;box-shadow:0 0 0 2px ${T.primaryGlow}}
-    .toggle-wrap.mini{min-width:72px;min-height:36px;padding:6px 11px;justify-content:center}
-    .toggle-wrap.mini .toggle-lbl{display:inline-flex !important;font-size:12px}
-    .toggle-lbl{font-size:11px;font-weight:700;color:${T.muted}}
-    .toggle-track{width:42px;height:23px;border-radius:12px;background:${dark ? `linear-gradient(135deg,${T.primary},${T.primaryLight})` : `rgba(100,116,139,0.25)`};position:relative;transition:background .35s ease;box-shadow:${dark ? `0 0 8px ${T.primaryGlow}` : "none"}}
-    .toggle-thumb{width:17px;height:17px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${dark ? "22px" : "3px"};transition:left .3s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 6px rgba(0,0,0,0.25)}
 
     .body-area{padding:28px 24px 52px;flex:1;overflow-y:auto;overflow-x:hidden;min-width:0}
     .enter{animation:fadeIn .32s ease}
@@ -343,8 +333,6 @@ export const GlobalStyle = () => {
       .audit-col-action{flex:1 1 auto}
       .audit-col-target{flex:0 0 110px}
       .cat-btn{padding:6px 10px;font-size:11px}
-      .toggle-lbl{display:none}
-      .toggle-wrap.mini .toggle-lbl{display:inline-flex !important}
       .stat-card{padding:16px 14px;min-width:0}
       .card{padding:16px 16px;min-width:0}
       .date-btn{display:none}

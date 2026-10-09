@@ -10,16 +10,6 @@ import { stockStatus, stockStatusIcon } from "../../utils/stockHelpers";
 import { GlobalStyle } from "./GlobalStyle";
 import { ToastNotification } from "../ui/ToastNotification";
 
-const Toggle = ({ mini = false }) => {
-  const { dark, toggleTheme } = useStore();
-  return (
-    <button type="button" className={`toggle-wrap${mini ? " mini" : ""}`} onClick={toggleTheme} style={mini ? { padding: "6px 11px" } : {}} aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}>
-      <span className="toggle-lbl">{dark ? "\uD83C\uDF19" : "\u2600\uFE0F"}{!mini && (dark ? " Dark" : " Light")}</span>
-      <div className="toggle-track"><div className="toggle-thumb" /></div>
-    </button>
-  );
-};
-
 export const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -164,7 +154,7 @@ export const MainLayout = () => {
         <aside className={`sidebar${sidebar ? " open" : ""}${sidebarCollapsed ? " collapsed" : ""}`}>
           <div className="sb-inner">
             <Link to="/dashboard" className="brand workspace-brand" onClick={() => setSidebar(false)}>
-              <img className="workspace-logo" src={dark ? "/tokki-logo dark mode.png" : "/tokki-logo.png"} alt="Tokki Engineering and Fabrication" />
+              <img className="workspace-logo" src="/tokki-logo dark mode.png" alt="Tokki Engineering and Fabrication" />
               <span className="workspace-brand-caption">WAREHOUSE WORKSPACE</span>
             </Link>
             <div className="nav-label">OPERASIONAL</div>
@@ -218,8 +208,6 @@ export const MainLayout = () => {
               <span className="workspace-breadcrumb">Warehouse /</span><div className="page-title">{TABS.find(t => t.id === currentTab)?.label || "Dashboard"}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-              <Toggle />
-
 
               {/* NOTIF */}
               <div className="notif-wrap" ref={notifRef}>
