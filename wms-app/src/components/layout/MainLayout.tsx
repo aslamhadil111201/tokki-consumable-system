@@ -9,6 +9,7 @@ import { triggerDownload, trxApprovalStatus, isApprovedOutTrx } from "../../util
 import { stockStatus, stockStatusIcon } from "../../utils/stockHelpers";
 import { GlobalStyle } from "./GlobalStyle";
 import { ToastNotification } from "../ui/ToastNotification";
+import { UIIcon } from "../ui/UIIcon";
 
 export const MainLayout = () => {
   const location = useLocation();
@@ -173,7 +174,7 @@ export const MainLayout = () => {
             </div>
             <div className="sb-footer">
               <div className="sb-user-row" style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 6px" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg,${T.primary},${T.primaryLight})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "white", flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "white", flexShrink: 0 }}>
                   {(user?.username || "A")[0].toUpperCase()}
                 </div>
                 <div className="sb-user-meta" style={{ minWidth: 0 }}>
@@ -215,8 +216,8 @@ export const MainLayout = () => {
                   const unread = notifHistory.filter(n => !n.read).length;
                   const totalBadge = unread + lowStock.length;
                   return (
-                    <button className="tb-btn" onClick={() => setNotif(!notif)} style={{ position: "relative", padding: "7px 12px" }}>
-                      {"\uD83D\uDD14"}
+                    <button className="tb-btn" aria-label="Notifikasi" aria-expanded={notif} onClick={() => setNotif(!notif)} style={{ position: "relative", padding: "7px 12px" }}>
+                      <UIIcon name="bell" size={17} />
                       {totalBadge > 0 && (
                         <span style={{ position: "absolute", top: -3, right: -3, background: unread > 0 ? "#f59e0b" : T.red, color: "white", fontSize: 9, fontWeight: 700, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
                           {totalBadge}
@@ -310,7 +311,7 @@ export const MainLayout = () => {
                 )}
               </div>
               <div className="tb-btn date-btn" style={{ cursor: "default", userSelect: "none", fontSize: 11 }}>
-                {"\uD83D\uDCC5"} {todayFmt()}
+                <UIIcon name="calendar" size={15} /> {todayFmt()}
               </div>
               <button className="tb-btn tb-logout" onClick={() => logout()} title="Keluar akun" style={{ padding: "7px 10px" }}>
                 {"\u238B"} Keluar
@@ -320,7 +321,7 @@ export const MainLayout = () => {
 
           {/* PAGE CONTENT */}
           <main className="body-area enter">
-            <div className="workspace-page-heading"><div className="workspace-eyebrow">TOKKI / WAREHOUSE OPERATIONS</div><h1>{currentTab === "dashboard" ? "Kontrol persediaan" : TABS.find(t => t.id === currentTab)?.label || "Warehouse"}</h1><p>{({ dashboard: "Pantau stok dan pergerakan barang gudang hari ini.", stock: "Inventaris material dan consumable gudang.", transaction: "Catat pengambilan dan retur barang untuk pekerjaan.", history: "Telusuri setiap pergerakan barang gudang.", report: "Ringkasan penggunaan dan nilai persediaan." })[currentTab]}</p></div><Outlet />
+            <div className="workspace-page-heading"><h1>{currentTab === "dashboard" ? "Kontrol persediaan" : TABS.find(t => t.id === currentTab)?.label || "Warehouse"}</h1><p>{({ dashboard: "Pantau stok dan pergerakan barang gudang hari ini.", stock: "Inventaris material dan consumable gudang.", transaction: "Catat pengambilan dan retur barang untuk pekerjaan.", history: "Telusuri setiap pergerakan barang gudang.", report: "Ringkasan penggunaan dan nilai persediaan." })[currentTab]}</p></div><Outlet />
           </main>
         </div>
       </div>

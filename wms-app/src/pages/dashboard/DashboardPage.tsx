@@ -1,47 +1,40 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState } from "react";
 import "./DashboardPage.css";
-import { gText } from "../../theme/tokens";
-import { Badge } from "../../components/ui/Badge";
 import { BtnP } from "../../components/ui/BtnP";
-import { BtnG } from "../../components/ui/BtnG";
-import { Prog } from "../../components/ui/Prog";
+import { UIIcon } from "../../components/ui/UIIcon";
 import { DashboardSkeleton } from "../../components/ui/Skeleton";
-import { stockStatus } from "../../utils/stockHelpers";
-import { fmtMoney, fmtMoneyShort, fmtDate, todayFmt, isoDate, todayStr } from "../../utils/formatters";
-import { trxApprovalStatus, isApprovedOutTrx } from "../../utils/helpers";
+import { stockStatus, stockStatusKey } from "../../utils/stockHelpers";
+import { fmtMoneyShort, isoDate, todayStr } from "../../utils/formatters";
+import { isApprovedOutTrx } from "../../utils/helpers";
 import { useStore } from "../../store/useStore";
 import { TransactionModal } from "../../components/modals/TransactionModal";
 import { useNavigate } from "react-router-dom";
 
 export function DashboardPage() {
-  const { dark, items, trx, receives, user, setToast, dataReady } = useStore();
+  const { dark, items, trx, receives, dataReady } = useStore();
   const navigate = useNavigate();
 
   const [dashTrendPointIdx, setDashTrendPointIdx] = useState(-1);
   const [showModal, setShowModal] = useState(false);
 
-  const isAdmin = (user?.role || "").toLowerCase() === "admin";
 
   // Core derivations
   const approvedOutTrx = trx.filter(isApprovedOutTrx);
   const todayTrx = approvedOutTrx.filter(t => t.date === todayStr());
   const todayUnits = todayTrx.reduce((a, t) => a + (t.items || []).reduce((b: number, i: any) => b + i.qty, 0), 0);
-  const lowStock = items.filter(i => i.stock <= i.minStock);
+  const lowStock = items.filter(i => Number(i.stock) <= Number(i.minStock));
   
   // Dashboard specific derivations
-  const dashStockAman = items.filter(i => Number(i.stock) > Number(i.minStock)).length;
+  const dashStockAman = items.filter(i => stockStatusKey(i) === "aman").length;
+  const dashStockMendekati = items.filter(i => stockStatusKey(i) === "mendekati").length;
   const dashStockMenipis = items.filter(i => Number(i.stock) > 0 && Number(i.stock) <= Number(i.minStock)).length;
   const dashStockHabis = items.filter(i => Number(i.stock) === 0).length;
   const dashTotalStokPcs = items.reduce((a, i) => a + Number(i.stock || 0), 0);
   const dashTotalNilaiStok = items.reduce((a, it) => a + (Number(it.stock || 0) * Number(it.averageCost || it.lastPrice || 0)), 0);
   
-  const _d7s = new Date(); _d7s.setDate(_d7s.getDate() - 6); const dashLast7Start = isoDate(_d7s);
   const dashLast7Days = Array.from({ length: 7 }).map((_, idx) => { const d = new Date(); d.setDate(d.getDate() - (6 - idx)); return isoDate(d); });
   const dashLast7OutQty = dashLast7Days.map(day => approvedOutTrx.filter(t => t.date === day).reduce((a, t) => a + (t.items || []).reduce((b: number, i: any) => b + Number(i.qty || 0), 0), 0));
-  
-  const dashItemUsageMap: any = {};
-  approvedOutTrx.filter(t => t.date >= dashLast7Start).forEach(t => (t.items || []).forEach((it: any) => { const k = String(it.itemName || ""); dashItemUsageMap[k] = (dashItemUsageMap[k] || 0) + Number(it.qty || 0); }));
   
   const dashRecentReceives = [...receives].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 4);
 
@@ -58,23 +51,12 @@ export function DashboardPage() {
 
       {/* Real content – shown after data is ready */}
       {dataReady && (<>
-      <div className="dash-hero">
-        <div className="dash-hero-content">
-          <div className="dash-hero-copy">
-            <div className="dash-hero-title">Ringkasan Hari Ini</div>
-            <div className="dash-hero-stats">
-              <span>{todayFmt()}</span>
-              <span className="dash-hero-dot">•</span>
-              <span><b className="dash-hero-highlight">{todayTrx.length}</b> transaksi</span>
-              <span className="dash-hero-dot">•</span>
-              <span><b className="dash-hero-highlight">{todayUnits}</b> unit keluar</span>
-            </div>
-          </div>
-          <BtnP onClick={() => setShowModal(true)} className="dash-hero-btn">＋ Catat Pengambilan</BtnP>
-        </div>
+      <div className="dash-toolbar">
+        <span>Stok terkini dan pengambilan yang telah disetujui.</span>
+        <BtnP onClick={() => setShowModal(true)}><UIIcon name="plus" size={15} /> Catat pengambilan</BtnP>
       </div>
 
-      {/* Charts 3-col */}
+      {/* Ringkasan persediaan */}
       <div className="workspace-metrics">
         {[
           { label: "Stok tersedia", value: dashTotalStokPcs.toLocaleString("id-ID"), unit: "unit", note: `${items.length} jenis barang` },
@@ -85,87 +67,64 @@ export function DashboardPage() {
       </div>
 
       {(() => {
-        const svgW = 220, svgH = 72;
-        const chartDateFontSize = (typeof window !== "undefined" && window.innerWidth >= 1500) ? 5.2 : 6.1;
+        const svgW = 600, svgH = 160;
         const maxQty = Math.max(...dashLast7OutQty, 1);
-        const linePoints = dashLast7OutQty.map((v, i) => `${(i / 6) * svgW},${svgH - (v / maxQty) * svgH * 0.85}`).join(" ");
+        const y = (value: number) => svgH - 6 - (value / maxQty) * (svgH - 18);
+        const linePoints = dashLast7OutQty.map((v, i) => `${(i / 6) * svgW},${y(v)}`).join(" ");
         const areaPoints = `0,${svgH} ${linePoints} ${svgW},${svgH}`;
-        const activeTrendPoint = dashLast7OutQty && dashLast7Days && dashTrendPointIdx >= 0 && dashLast7Days[dashTrendPointIdx] !== undefined ? {
-          idx: dashTrendPointIdx,
+        const activeTrendPoint = dashTrendPointIdx >= 0 ? {
           label: dashLast7Days[dashTrendPointIdx],
           value: dashLast7OutQty[dashTrendPointIdx],
-          x: (dashTrendPointIdx / 6) * svgW,
-          y: svgH - (dashLast7OutQty[dashTrendPointIdx] / maxQty) * svgH * 0.85,
+          x: (dashTrendPointIdx / 6) * 100,
         } : null;
+        const weekTotal = dashLast7OutQty.reduce((sum, qty) => sum + qty, 0);
         return (
           <div className="dash-charts-g">
             {/* Pengambilan mingguan dan status stok */}
             <div className="card dash-chart-card">
-              <div className="dash-chart-title" style={{ marginBottom: 6 }}>Trend Keluar (7 Hari Terakhir)</div>
-              <div className="dash-trend-hdr">
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 20, height: 2, background: "var(--t-primary)", display: "inline-block", borderRadius: 2 }} />Unit Keluar
-                </span>
+              <div className="dash-chart-heading">
+                <h2 className="dash-chart-title">Pengambilan 7 hari terakhir</h2>
+                <span className="dash-chart-total">{weekTotal.toLocaleString("id-ID")} unit</span>
               </div>
-              <div style={{ position: "relative", flex: 1 }} onMouseLeave={() => setDashTrendPointIdx(-1)}>
-                {activeTrendPoint && (
-                  <div className="dash-trend-tooltip" style={{ left: `${Math.min(Math.max((activeTrendPoint.x / svgW) * 100, 12), 88)}%` }}>
-                    <div style={{ fontSize: 10, color: "var(--t-muted)", fontWeight: 700 }}>{activeTrendPoint.label?.slice(5).replace("-", "/")}</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "var(--t-primary)", marginTop: 2 }}>{activeTrendPoint.value} unit</div>
-                  </div>
-                )}
-                <svg width="100%" viewBox={`0 0 ${svgW} ${svgH + 22}`} style={{ overflow: "visible", display: "block" }}>
-                  {[0, 1, 2].map(i => (
-                    <line key={i} x1="0" y1={(svgH * 0.85 / 2) * i} x2={svgW} y2={(svgH * 0.85 / 2) * i} stroke="var(--t-border)" strokeWidth="0.5" strokeDasharray="4 4" />
-                  ))}
-                  <polygon points={areaPoints} fill={dark ? "rgba(16,185,129,0.08)" : "var(--t-green-bg)"} />
-                  <polyline points={linePoints} fill="none" stroke="var(--t-primary)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-                  {dashLast7OutQty.map((v, i) => {
-                    const pointX = (i / 6) * svgW;
-                    const pointY = svgH - (v / maxQty) * svgH * 0.85;
-                    const isActive = i === dashTrendPointIdx;
-                    return (
-                      <g
-                        key={i}
-                        onMouseEnter={() => setDashTrendPointIdx(i)}
-                        onClick={() => setDashTrendPointIdx(i)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <circle cx={pointX} cy={pointY} r="14" fill="transparent" style={{ pointerEvents: "all" }} />
-                        <circle cx={pointX} cy={pointY} r={isActive ? 5 : 4} fill="var(--t-primary)" stroke="var(--t-card)" strokeWidth="2" />
-                      </g>
-                    );
-                  })}
-                  {dashLast7Days.map((d, i) => (
-                    <text key={i} x={(i / 6) * svgW} y={svgH + 18} textAnchor="middle" fontSize={chartDateFontSize} fill="var(--t-muted)">{d.slice(5).replace("-", "/")}</text>
-                  ))}
-                </svg>
+              <div className="dash-trend-chart" onMouseLeave={() => setDashTrendPointIdx(-1)}>
+                <div className="dash-trend-scale" aria-hidden="true"><span>{maxQty}</span><span>{(maxQty / 2).toLocaleString("id-ID", { maximumFractionDigits: 1 })}</span><span>0</span></div>
+                <div className="dash-trend-plot">
+                  <svg width="100%" height="160" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none" role="img" aria-label="Grafik jumlah barang keluar dalam tujuh hari terakhir">
+                    {[12, svgH / 2, svgH - 6].map(value => <line key={value} x1="0" y1={value} x2={svgW} y2={value} stroke="var(--t-border)" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
+                    <polygon points={areaPoints} fill="var(--t-green-bg)" opacity="0.65" />
+                    <polyline points={linePoints} fill="none" stroke="var(--t-primary)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+                  </svg>
+                  {dashLast7OutQty.map((value, i) => <button key={dashLast7Days[i]} type="button" className={`dash-trend-point${i === dashTrendPointIdx ? " active" : ""}`} style={{ left: `${(i / 6) * 100}%`, top: `${y(value) / svgH * 100}%` }} aria-label={`${dashLast7Days[i]}: ${value} unit keluar`} onMouseEnter={() => setDashTrendPointIdx(i)} onFocus={() => setDashTrendPointIdx(i)} onBlur={() => setDashTrendPointIdx(-1)} onClick={() => setDashTrendPointIdx(i)}><span /></button>)}
+                  {activeTrendPoint && <div className="dash-trend-tooltip" style={{ left: `${Math.min(Math.max(activeTrendPoint.x, 15), 85)}%` }} role="status"><span>{activeTrendPoint.label?.slice(5).split("-").reverse().join("/")}</span><strong>{activeTrendPoint.value} unit</strong></div>}
+                  <div className="dash-trend-dates" aria-hidden="true">{dashLast7Days.map(date => <span key={date}>{date.slice(5).split("-").reverse().join("/")}</span>)}</div>
+                </div>
               </div>
-              <div className="dash-table-link" onClick={() => navigate("/report")}>Lihat laporan lengkap →</div>
+              <button type="button" className="dash-table-link" onClick={() => navigate("/report")}>Lihat laporan lengkap →</button>
             </div>
             {/* Status stok */}
-            <div className="card dash-chart-card">
-              <div className="dash-chart-title">Status Stok</div>
+            <div className="card dash-chart-card dash-stock-status">
+              <h2 className="dash-chart-title">Status stok</h2>
               {[
-                { dot: "#10b981", name: "Aman", sub: "> Min Stok", count: dashStockAman, color: "var(--t-primary-light)", filter: "Aman" },
+                { dot: "#10b981", name: "Aman", sub: "> 1,5 × stok minimum", count: dashStockAman, color: "var(--t-primary-light)", filter: "Aman" },
+                { dot: "#f97316", name: "Mendekati", sub: "Di atas minimum, hingga 1,5 × minimum", count: dashStockMendekati, color: "#c2410c", filter: "Mendekati" },
                 { dot: "#f59e0b", name: "Menipis", sub: "≤ Min Stok", count: dashStockMenipis, color: "#f59e0b", filter: "Menipis" },
                 { dot: "#ef4444", name: "Habis", sub: "Stok = 0", count: dashStockHabis, color: "#ef4444", filter: "Habis" },
               ].map((row, i) => (
-                <div key={i} className="dash-status-row" style={{ borderBottom: i < 2 ? "1px solid var(--t-border)" : "none" }}>
-                  <div className="dash-status-info">
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: row.dot, flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontSize: 13, color: "var(--t-text)", fontWeight: 600 }}>{row.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--t-muted)" }}>{row.sub}</div>
-                    </div>
-                  </div>
-                  <div className="dash-status-val">
-                    <div style={{ fontSize: 14, fontWeight: 700, color: row.color }}>{row.count} Item</div>
-                    <div style={{ color: "var(--t-primary)", fontSize: 16, cursor: "pointer", lineHeight: 1 }} onClick={() => openStockWithFilter(row.filter)}>›</div>
-                  </div>
-                </div>
+                <button type="button" key={row.name} className="dash-status-row" onClick={() => openStockWithFilter(row.filter)} style={{ borderBottom: i < 3 ? "1px solid var(--t-border)" : "none" }}>
+                  <span className="dash-status-info">
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: row.dot, flexShrink: 0 }} />
+                    <span>
+                      <span style={{ display: "block", fontSize: 13, color: "var(--t-text)", fontWeight: 600 }}>{row.name}</span>
+                      <span style={{ display: "block", fontSize: 11, color: "var(--t-muted)" }}>{row.sub}</span>
+                    </span>
+                  </span>
+                  <span className="dash-status-val">
+                    <span style={{ fontSize: 14, fontWeight: 700, color: row.color }}>{row.count} Item</span>
+                    <span aria-hidden="true">›</span>
+                  </span>
+                </button>
               ))}
-              <div className="dash-table-link" onClick={() => openStockWithFilter("Semua")}>Lihat semua item →</div>
+              <button type="button" className="dash-table-link" onClick={() => openStockWithFilter("Semua")}>Lihat semua item →</button>
             </div>
           </div>
         );
@@ -202,7 +161,7 @@ export function DashboardPage() {
                   </div>
                 );
               })}
-              <div className="dash-table-link" onClick={() => openStockWithFilter("Menipis")}>Lihat semua barang yang perlu restock →</div>
+              <button type="button" className="dash-table-link" onClick={() => openStockWithFilter("Perlu restock")}>Lihat semua barang yang perlu restock →</button>
             </>)
           }
         </div>
@@ -234,13 +193,12 @@ export function DashboardPage() {
                   <span className="dash-col-oleh" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.admin || r.receivedBy || "-"}</span>
                 </div>
               ))}
-              <div className="dash-table-link" onClick={() => navigate("/history")}>Lihat riwayat penerimaan →</div>
+              <button type="button" className="dash-table-link" onClick={() => navigate("/history")}>Lihat riwayat penerimaan →</button>
             </>)
           }
         </div>
       </div>
 
-      <div className="workspace-footer"><span>TOKKI · Warehouse Management</span><span>Diperbarui {todayFmt()}</span></div>
 
       <TransactionModal open={showModal} onClose={() => setShowModal(false)} />
       </>)}
