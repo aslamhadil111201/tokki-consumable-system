@@ -157,7 +157,7 @@ export const MainLayout = () => {
             <Link to="/dashboard" className="brand workspace-brand" onClick={() => setSidebar(false)}>
               <img className="workspace-logo" src="/tokki-logo dark mode.png" alt="Tokki Engineering and Fabrication" />
             </Link>
-            <div className="nav-label">OPERASIONAL</div>
+            <div className="nav-label">MENU UTAMA</div>
             <div className="sb-nav-scroll">
               {visibleTabs.map(t => (
                 <Link key={t.id} to={`/${t.id}`} className={`nav-item${currentTab === t.id ? " active" : ""}`} onClick={() => setSidebar(false)} style={{ textDecoration: "none" }}>
@@ -177,15 +177,15 @@ export const MainLayout = () => {
                   {(user?.username || "A")[0].toUpperCase()}
                 </div>
                 <div className="sb-user-meta" style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: T.text }}>{user?.username || "Admin"}</div>
-                  <div style={{ fontSize: 10, color: T.green, fontWeight: 700 }}>{"\u25CF"} Online {"\u00B7"} {(user?.role || "operator").toLowerCase()}</div>
+                  <div className="workspace-user-name" style={{ fontSize: 12.5, fontWeight: 700, color: T.text }}>{user?.username || "Admin"}</div>
+                  <div className="workspace-user-role" style={{ fontSize: 10, color: T.green, fontWeight: 700 }}>{"\u25CF"} Online {"\u00B7"} {(user?.role || "operator").toLowerCase()}</div>
                 </div>
               </div>
               <button className="sb-logout-btn" onClick={() => logout()} title="Keluar"
                 style={{ marginTop: 8, width: "100%", padding: "9px", background: "transparent", border: `1px solid ${T.border}`, borderRadius: 10, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 700, color: T.muted, cursor: "pointer", transition: "all .2s" }}
                 onMouseEnter={e => { e.currentTarget.style.background = T.redBg; e.currentTarget.style.borderColor = T.redBorder; e.currentTarget.style.color = T.redText; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.muted; }}>
-                <span className="sb-logout-text">Keluar {"\u2192"}</span>
+                <span className="sb-logout-text"><UIIcon name="logout" size={16} /> Keluar akun</span>
                 <span aria-hidden="true" style={{ display: sidebarCollapsed ? "inline" : "none" }}>{"\u238B"}</span>
               </button>
             </div>
@@ -205,7 +205,7 @@ export const MainLayout = () => {
                   <rect y="10.5" width="15" height="1.5" rx="1" fill="currentColor" />
                 </svg>
               </button>
-              <span className="workspace-breadcrumb">Warehouse /</span><div className="page-title">{TABS.find(t => t.id === currentTab)?.label || "Dashboard"}</div>
+              <span className="workspace-breadcrumb">TOKKI</span><div className="page-title">{TABS.find(t => t.id === currentTab)?.label || "Dashboard"}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
 

@@ -358,7 +358,7 @@ export function HistoryPage() {
       {dataReady && (<>
       {/* Sub-tab toggle + actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-        <div style={{ display: "flex", gap: 4, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+        <div className="hist-tabs" style={{ display: "flex", gap: 4, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           {(() => {
             const subTabs = [
               { id: "all", label: `Semua (${allHistory.length})` },
@@ -367,7 +367,7 @@ export function HistoryPage() {
               { id: "retur", label: `Retur (${returns.length})` }
             ];
             return subTabs.map(tb => (
-              <button key={tb.id} onClick={() => setHistoryTab(tb.id)} style={{ padding: "8px 14px", borderRadius: 8, border: "none", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s", background: historyTab === tb.id ? T.primary : "transparent", color: historyTab === tb.id ? "white" : T.muted, whiteSpace: "nowrap", flexShrink: 0 }}>{tb.label}</button>
+              <button key={tb.id} className={`hist-tab${historyTab === tb.id ? " active" : ""}`} onClick={() => setHistoryTab(tb.id)} style={{ padding: "8px 14px", borderRadius: 8, border: "none", fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s", background: historyTab === tb.id ? T.primary : "transparent", color: historyTab === tb.id ? "white" : T.muted, whiteSpace: "nowrap", flexShrink: 0 }}>{tb.label}</button>
             ));
           })()}
         </div>
