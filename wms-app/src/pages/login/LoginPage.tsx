@@ -7,7 +7,7 @@ import { GlobalStyle } from "../../components/layout/GlobalStyle";
 import { ToastNotification } from "../../components/ui/ToastNotification";
 
 export function LoginPage() {
-  const { dark, toggleTheme, login: storeLogin, setToast, withLoading, loadingCount } = useStore();
+  const { login: storeLogin, setToast, withLoading, loadingCount } = useStore();
   const navigate = useNavigate();
   
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
@@ -93,7 +93,6 @@ export function LoginPage() {
         <div className="login-form-content">
           <div className="login-form-top">
             <span className="login-eyebrow">TOKKI WAREHOUSE</span>
-            <button type="button" className="login-theme-btn" onClick={toggleTheme} aria-label={dark ? "Pindah ke mode terang" : "Pindah ke mode gelap"}>{dark ? "Mode terang" : "Mode gelap"}</button>
           </div>
           <div className="login-welcome"><h2>Selamat datang.</h2><p>Masuk untuk melanjutkan pekerjaan gudang.</p></div>
           <form className="login-form" onSubmit={e => { e.preventDefault(); if (!loadingCount) login(); }}>

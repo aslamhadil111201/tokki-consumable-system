@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { create } from 'zustand';
-import { updateT } from '../theme/tokens';
 
 interface User {
   id: number;
@@ -42,9 +41,8 @@ interface StoreState {
   setToast: (msg: string, type?: 'ok' | 'err') => void;
   withLoading: <T>(task: () => Promise<T>, message?: string) => Promise<T>;
   
-  // Theme
-  dark: boolean;
-  toggleTheme: () => void;
+  // Fixed light appearance; retained for existing component color helpers.
+  readonly dark: false;
 
   // Actions
   fetchAll: () => Promise<void>;
@@ -65,14 +63,6 @@ interface StoreState {
 }
 
 export const useStore = create<StoreState>((set, get) => {
-  const getInitialDark = () => {
-    try {
-      return localStorage.getItem("wms_dark") === "true";
-    } catch {
-      return true;
-    }
-  };
-
   const getInitialAuth = () => {
     const token = sessionStorage.getItem("wms_token") || "";
     let user = null;
@@ -83,8 +73,6 @@ export const useStore = create<StoreState>((set, get) => {
   };
 
   const initialAuth = getInitialAuth();
-  const initialDark = getInitialDark();
-  updateT(initialDark);
 
   return {
     // === Auth State ===
@@ -152,16 +140,7 @@ export const useStore = create<StoreState>((set, get) => {
       }
     },
 
-    // === Theme ===
-    dark: initialDark,
-    toggleTheme: () => {
-      set((state) => {
-        const next = !state.dark;
-        try { localStorage.setItem("wms_dark", String(next)); } catch {}
-        updateT(next);
-        return { dark: next };
-      });
-    },
+    dark: false,
 
     // === API Utilities ===
     apiFetch: async (path, options = {}) => {

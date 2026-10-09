@@ -1,18 +1,8 @@
 // @ts-nocheck
 // ─── Design Tokens ───────────────────────────────────────────────
 
-export const getT = (dark) => dark ? {
-  bg:"#152320", surface:"rgba(16,24,20,0.8)", surfaceSolid:"#1c2e29",
-  card:"#1c2e29", border:"rgba(255,255,255,0.08)", borderHover:"rgba(16,185,129,0.4)",
-  text:"#e8f5ee", muted:"#a0b5ab", sub:"#9ab5a8",
-  primary:"#10b981", primaryLight:"#34d399", primaryGlow:"rgba(16,185,129,0.15)",
-  green:"#10b981", greenBg:"rgba(16,185,129,0.08)", greenBorder:"rgba(16,185,129,0.2)", greenText:"#d4e6dc",
-  amber:"#f59e0b", amberBg:"rgba(245,158,11,0.08)", amberBorder:"rgba(245,158,11,0.2)", amberText:"#fcd34d",
-  red:"#ef4444", redBg:"rgba(239,68,68,0.08)", redBorder:"rgba(239,68,68,0.2)", redText:"#fca5a5",
-  inputBg:"#182924", sidebarBg:"#182924", topbarBg:"rgba(13,20,16,0.95)",
-  navActive:"rgba(16,185,129,0.1)", navActiveBorder:"rgba(16,185,129,0.25)", navActiveText:"#34d399",
-  shadowCard:"0 4px 16px rgba(0,0,0,0.3)", shadowSm:"0 2px 8px rgba(0,0,0,0.2)",
-} : {
+// Optional argument preserves existing color-helper call sites.
+export const getT = (_dark?: boolean) => ({
   bg:"#f4f7f7", surface:"#ffffff", surfaceSolid:"#ffffff",
   card:"#ffffff", border:"#dde5e5", borderHover:"#10b981",
   text:"#182b32", muted:"#60747b", sub:"#3c555d",
@@ -23,15 +13,15 @@ export const getT = (dark) => dark ? {
   inputBg:"#ffffff", sidebarBg:"#ffffff", topbarBg:"#ffffff",
   navActive:"#eaf3ee", navActiveBorder:"#d4e6dc", navActiveText:"#065f46",
   shadowCard:"0 2px 3px rgba(22,60,47,0.02)", shadowSm:"0 1px 2px rgba(22,60,47,0.02)",
-};
+});
 
 // T is a mutable reference - updated by App component on each render
 // All components that import T will get the current value at render time
-export let T = getT(true);
+export let T = getT();
 
-// updateT is called by App component to update T when dark mode changes
-export const updateT = (dark: boolean) => {
-  T = getT(dark);
+// Refresh the shared light palette used by existing components.
+export const updateT = (_dark?: boolean) => {
+  T = getT();
   return T;
 };
 
