@@ -1,3 +1,4 @@
+import workspaceCSS from "./Workspace.css?inline";
 import { useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import { getT, updateT } from "../../theme/tokens";
@@ -404,5 +405,5 @@ export const GlobalStyle = () => {
     }
   `;
 
-  return <style>{CSS}</style>;
+  return <style>{CSS + workspaceCSS}</style>;
 };

@@ -187,7 +187,7 @@ export const TransactionModal = ({
 
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal workspace-operation-modal" onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>Catat Pengambilan</div>
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 22 }}>Satu transaksi bisa mencakup beberapa barang sekaligus</div>
         <div className="sect-box">
@@ -245,7 +245,7 @@ export const TransactionModal = ({
               />
             </div>
             <div style={{ flex: "0 0 80px" }}><FL>Jumlah</FL><input className="ifield" type="number" min="1" placeholder="0" value={pickerQty} onChange={e => setPickerQty(e.target.value)} onKeyDown={e => e.key === "Enter" && addToCart()} /></div>
-            <BtnP onClick={addToCart} style={{ padding: "10px 14px", flexShrink: 0, fontSize: 12, borderRadius: 10 }}>+ Add</BtnP>
+            <BtnP onClick={addToCart} style={{ padding: "10px 14px", flexShrink: 0, fontSize: 12, borderRadius: 10 }}>Tambah</BtnP>
           </div>
         </div>
         <div style={{ marginBottom: 20 }}>
@@ -279,7 +279,7 @@ export const TransactionModal = ({
 
       {showAddEmployee && (
         <div className="overlay" style={{ zIndex: 1100 }} onClick={() => setShowAddEmployee(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
+          <div className="modal workspace-operation-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 4 }}>Tambah Karyawan Baru</div>
             <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Tambahkan nama karyawan baru ke database</div>
 
@@ -317,7 +317,7 @@ export const TransactionModal = ({
 
       {showAddProject && (
         <div className="overlay" style={{ zIndex: 1100 }} onClick={() => setShowAddProject(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
+          <div className="modal workspace-operation-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400, border: `1.5px solid ${T.primary}` }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 4 }}>Tambah Project Baru</div>
             <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Tambahkan nomor proyek baru ke database</div>
             

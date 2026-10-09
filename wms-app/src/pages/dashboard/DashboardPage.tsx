@@ -18,7 +18,6 @@ export function DashboardPage() {
   const { dark, items, trx, receives, user, setToast, dataReady } = useStore();
   const navigate = useNavigate();
 
-  const [dashDonutSegIdx, setDashDonutSegIdx] = useState(-1);
   const [dashTrendPointIdx, setDashTrendPointIdx] = useState(-1);
   const [showModal, setShowModal] = useState(false);
 
@@ -49,7 +48,7 @@ export function DashboardPage() {
 
 
   const openStockWithFilter = (filter: string) => {
-    navigate("/stock");
+    navigate("/stock", { state: { stockStatusFilter: filter } });
   };
 
   return (
@@ -76,22 +75,16 @@ export function DashboardPage() {
       </div>
 
       {/* Charts 3-col */}
+      <div className="workspace-metrics">
+        {[
+          { label: "Stok tersedia", value: dashTotalStokPcs.toLocaleString("id-ID"), unit: "unit", note: `${items.length} jenis barang` },
+          { label: "Nilai persediaan", value: fmtMoneyShort(dashTotalNilaiStok), unit: "", note: "Estimasi harga rata-rata" },
+          { label: "Pengambilan hari ini", value: todayTrx.length, unit: "transaksi", note: `${todayUnits} unit barang keluar` },
+          { label: "Perlu restock", value: lowStock.length, unit: "item", note: "Stok mencapai batas minimum" },
+        ].map(m => <div key={m.label} className="workspace-metric"><span>{m.label}</span><strong>{m.value} <small>{m.unit}</small></strong><p>{m.note}</p></div>)}
+      </div>
+
       {(() => {
-        const R = 42, C2 = 2 * Math.PI * R;
-        const dTotal = dashStockAman + dashStockMenipis + dashStockHabis || 1;
-        const donutSegs = [
-          { label: "Aman", count: dashStockAman, color: "#10b981", sub: "> Min Stok" },
-          { label: "Menipis", count: dashStockMenipis, color: "#f59e0b", sub: "≤ Min Stok" },
-          { label: "Habis", count: dashStockHabis, color: "#ef4444", sub: "Stok = 0" },
-        ];
-        let cumLen = 0;
-        const renderedSegs = donutSegs.map(s => {
-          const len = (s.count / dTotal) * C2;
-          const da = `${len} ${C2 - len}`;
-          const doff = -cumLen;
-          cumLen += len;
-          return { ...s, color: s.color, da, doff };
-        });
         const svgW = 220, svgH = 72;
         const chartDateFontSize = (typeof window !== "undefined" && window.innerWidth >= 1500) ? 5.2 : 6.1;
         const maxQty = Math.max(...dashLast7OutQty, 1);
@@ -104,66 +97,9 @@ export function DashboardPage() {
           x: (dashTrendPointIdx / 6) * svgW,
           y: svgH - (dashLast7OutQty[dashTrendPointIdx] / maxQty) * svgH * 0.85,
         } : null;
-        const activeDonutSeg = dashDonutSegIdx >= 0 ? renderedSegs[dashDonutSegIdx] : null;
         return (
           <div className="dash-charts-g">
-            {/* Donut ringkasan stok */}
-            <div className="card dash-chart-card" onMouseLeave={() => setDashDonutSegIdx(-1)}>
-              <div className="dash-chart-title">Ringkasan Stok</div>
-              <div className="dash-donut-wrap">
-                <div className="dash-donut-svg">
-                  <svg width="150" height="150" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r={R} fill="none" stroke="var(--t-border)" strokeWidth="13" />
-                    {renderedSegs.map((s, i) => {
-                      const isActive = i === dashDonutSegIdx;
-                      return (
-                        <g key={i}>
-                          <circle cx="50" cy="50" r={R} fill="none" stroke={s.color} strokeWidth={isActive ? 15 : 13} strokeDasharray={s.da} strokeDashoffset={s.doff} transform="rotate(-90 50 50)" style={{ transition: "stroke-width .18s ease, opacity .18s ease", opacity: dashDonutSegIdx === -1 || isActive ? 1 : 0.45 }} />
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r={R}
-                            fill="none"
-                            stroke="transparent"
-                            strokeWidth="24"
-                            strokeDasharray={s.da}
-                            strokeDashoffset={s.doff}
-                            transform="rotate(-90 50 50)"
-                            onMouseEnter={() => setDashDonutSegIdx(i)}
-                            onClick={() => setDashDonutSegIdx(i)}
-                            style={{ cursor: "pointer" }}
-                          />
-                        </g>
-                      );
-                    })}
-                  </svg>
-                  <div className="dash-donut-center">
-                    {activeDonutSeg ? (
-                      <div style={{ fontSize: 9.5, color: activeDonutSeg.color, lineHeight: 1.1, fontWeight: 800, letterSpacing: 0.1, marginBottom: 3 }}>{activeDonutSeg.label}</div>
-                    ) : (
-                      <div style={{ fontSize: 9.2, color: "var(--t-muted)", lineHeight: 1.12, fontWeight: 800, letterSpacing: 0.1, marginBottom: 3 }}>
-                        <div>Total Stok</div>
-                        <div>Saat Ini</div>
-                      </div>
-                    )}
-                    <div style={{ fontSize: 18.5, fontWeight: 800, color: "var(--t-text)", lineHeight: 1 }}>{activeDonutSeg ? activeDonutSeg.count.toLocaleString("id-ID") : dashTotalStokPcs.toLocaleString("id-ID")}</div>
-                    <div style={{ fontSize: 10, color: "var(--t-muted)", lineHeight: 1.15, marginTop: 2 }}>{activeDonutSeg ? "item" : "pcs"}</div>
-                  </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  {renderedSegs.map((l, i) => (
-                    <div key={i} className="dash-donut-legend" onMouseEnter={() => setDashDonutSegIdx(i)} onClick={() => setDashDonutSegIdx(i)} style={{ opacity: dashDonutSegIdx === -1 || dashDonutSegIdx === i ? 1 : 0.65 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.color, flexShrink: 0, boxShadow: dashDonutSegIdx === i ? `0 0 0 4px ${l.color}22` : "none" }} />
-                      <div style={{ flex: 1 }}>{l.label}</div>
-                      <div style={{ fontWeight: 700, color: "var(--t-text)" }}>{l.count}<span style={{ fontSize: 10, fontWeight: 400, color: "var(--t-muted)", marginLeft: 3 }}>item</span></div>
-                    </div>
-                  ))}
-                  <div style={{ fontSize: 10.5, color: "var(--t-muted)", marginTop: 2, minHeight: 16 }}>{activeDonutSeg ? activeDonutSeg.sub : "Tap warna chart untuk detail"}</div>
-                </div>
-              </div>
-              <div className="dash-table-link" onClick={() => navigate("/report")}>Lihat laporan lengkap →</div>
-            </div>
-            {/* Line chart 7 hari */}
+            {/* Pengambilan mingguan dan status stok */}
             <div className="card dash-chart-card">
               <div className="dash-chart-title" style={{ marginBottom: 6 }}>Trend Keluar (7 Hari Terakhir)</div>
               <div className="dash-trend-hdr">
@@ -304,21 +240,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Footer bar */}
-      <div className="dash-footer-g">
-        {[
-          { label: "Update Terakhir", val: todayFmt() },
-          { label: "Total Transaksi Hari Ini", val: `${todayTrx.length} Transaksi` },
-          { label: "Total Nilai Stok (Est.)", val: fmtMoneyShort(dashTotalNilaiStok) },
-        ].map((f, i) => (
-          <div key={i} className="stat-card dash-footer-card">
-            <div>
-              <div className="dash-footer-lbl">{f.label}</div>
-              <div className="dash-footer-val">{f.val}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <div className="workspace-footer"><span>TOKKI · Warehouse Management</span><span>Diperbarui {todayFmt()}</span></div>
 
       <TransactionModal open={showModal} onClose={() => setShowModal(false)} />
       </>)}
