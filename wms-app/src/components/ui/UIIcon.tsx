@@ -1,7 +1,9 @@
 // @ts-nocheck
-import { Search, Plus, PackageOpen, Filter, Check, ShieldCheck, Clock, AlertTriangle, XCircle, Boxes, RotateCcw, Trash2 } from "lucide-react";
+import { Search, Plus, PackageOpen, Filter, Check, ShieldCheck, Clock, AlertTriangle, XCircle, Boxes, RotateCcw, Trash2, Bell, CalendarDays } from "lucide-react";
 
 const iconMap = {
+  bell: Bell,
+  calendar: CalendarDays,
   search: Search,
   plus: Plus,
   receive: PackageOpen,

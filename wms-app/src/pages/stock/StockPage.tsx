@@ -26,7 +26,7 @@ export function StockPage() {
   const location = useLocation();
   const [stockStatusF, setStockStatusF] = useState(() => {
     const incoming = location.state?.stockStatusFilter;
-    return ["Aman", "Mendekati", "Menipis", "Habis"].includes(incoming) ? incoming : "Semua";
+    return ["Aman", "Mendekati", "Menipis", "Habis", "Perlu restock"].includes(incoming) ? incoming : "Semua";
   });
   const [searchQ, setSearchQ] = useState("");
   
@@ -55,7 +55,7 @@ export function StockPage() {
   
   const filtItems = items
     .filter(i => (catF === "Semua" || i.category === catF) && `${i.name} ${i.itemCode || ""}`.toLowerCase().includes(searchQ.toLowerCase()))
-    .filter(i => !statusFilterKey || stockStatusKey(i) === statusFilterKey);
+    .filter(i => stockStatusF === "Perlu restock" ? Number(i.stock) <= Number(i.minStock) : !statusFilterKey || stockStatusKey(i) === statusFilterKey);
     
   const totalPages = Math.ceil(filtItems.length / Math.max(1, stockPageSize));
   const currentPage = stockPage > totalPages ? 1 : stockPage;
@@ -142,9 +142,9 @@ export function StockPage() {
           <div className="stock-filter-row">
             <div className="stock-filter-label">Status</div>
             <div className="stock-filter-group">
-              {["Semua", "Aman", "Mendekati", "Menipis", "Habis"].map(s => {
+              {["Semua", "Aman", "Mendekati", "Menipis", "Habis", "Perlu restock"].map(s => {
                 const active = stockStatusF === s;
-                const statusKey = s === "Aman" ? "aman" : s === "Mendekati" ? "mendekati" : s === "Menipis" ? "menipis" : s === "Habis" ? "habis" : "semua";
+                const statusKey = s === "Aman" ? "aman" : s === "Mendekati" ? "mendekati" : s === "Menipis" || s === "Perlu restock" ? "menipis" : s === "Habis" ? "habis" : "semua";
                 return (
                   <button key={s} onClick={() => setStockStatusF(s)} className={`stk-filter-btn stk-status-btn--${statusKey}${active ? ' active' : ''}`}>
                     {stockStatusIcon(statusKey, 14)}
