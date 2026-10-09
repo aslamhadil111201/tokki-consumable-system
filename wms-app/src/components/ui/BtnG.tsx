@@ -6,7 +6,7 @@ export const BtnG = ({ children, style, ...r }) => {
   const { dark } = useStore();
   const T = getT(dark);
   return (
-    <button {...r} style={{
+    <button {...r} className={`ui-btn-secondary ${r.className || ""}`} style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
       background: T.surface, color: T.muted, border: `1px solid ${T.border}`,
       borderRadius: 8, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 600,
