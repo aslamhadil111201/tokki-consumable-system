@@ -80,7 +80,7 @@ export function LoginPage() {
       <div className="login-access-card">
       <section className="login-form-panel">
         <div className="login-form-content">
-          <div className="login-welcome"><span className="login-eyebrow">AKSES KARYAWAN</span><h1>Masuk ke akun</h1><p>Gunakan akun TOKKI Anda.</p></div>
+          <div className="login-welcome"><h1>Selamat datang.</h1><p>Masuk untuk mengelola persediaan gudang.</p></div>
           <form className="login-form" onSubmit={e => { e.preventDefault(); if (!loadingCount) login(); }}>
             <div className="login-field"><label htmlFor="login-username">Username</label><input id="login-username" type="text" autoComplete="username" required placeholder="Masukkan username" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} /></div>
             <div className="login-field"><label htmlFor="login-password">Password</label><div className="login-password-wrap"><input id="login-password" type={showLoginPassword ? "text" : "password"} autoComplete="current-password" required placeholder="Masukkan password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} /><button type="button" onClick={() => setShowLoginPassword(v => !v)} aria-pressed={showLoginPassword}>{showLoginPassword ? "Tutup" : "Lihat"}</button></div></div>
@@ -91,7 +91,7 @@ export function LoginPage() {
       </section>
       <section className="login-photo-panel">
         <img className="login-factory-photo" src="/login-bg-new.webp" alt="Gedung PT Tokki Engineering and Fabrication" />
-        <div className="login-photo-copy"><span>PT TOKKI</span><p>Engineering and Fabrication</p></div>
+        <div className="login-photo-copy"><span>Engineering<br />&amp; Fabrication</span><p>PT TOKKI</p></div>
       </section>
       </div>
       <footer className="login-company-note">PT Tokki Engineering and Fabrication</footer>

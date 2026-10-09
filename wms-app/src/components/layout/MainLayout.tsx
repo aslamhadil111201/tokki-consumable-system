@@ -320,7 +320,7 @@ export const MainLayout = () => {
 
           {/* PAGE CONTENT */}
           <main className="body-area enter">
-            <div className="workspace-page-heading"><h1>{currentTab === "dashboard" ? "Kontrol persediaan" : TABS.find(t => t.id === currentTab)?.label || "Warehouse"}</h1><p>{({ dashboard: "Pantau stok dan pergerakan barang gudang hari ini.", stock: "Inventaris material dan consumable gudang.", transaction: "Catat pengambilan dan retur barang untuk pekerjaan.", history: "Telusuri setiap pergerakan barang gudang.", report: "Ringkasan penggunaan dan nilai persediaan." })[currentTab]}</p></div><Outlet />
+            <div className="workspace-page-heading"><h1>{TABS.find(t => t.id === currentTab)?.label || "Warehouse"}</h1></div><Outlet />
           </main>
         </div>
       </div>

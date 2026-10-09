@@ -1,21 +1,19 @@
+/* A full-height editorial split: quiet form, real TOKKI facility photograph. */
 html.login-page-active,body.login-page-active{height:100%;overflow:auto}
-.tokki-login{height:100dvh;min-height:540px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:24px;padding:28px clamp(24px,5vw,80px);background:#172b3a;color:var(--t-text)}
-.login-brand-header{display:flex;align-items:center;justify-content:space-between;gap:20px;width:min(1080px,100%);margin:0 auto}
-.login-logo-plate{background:#fff;padding:10px 16px;border-radius:4px}.login-logo-plate img{display:block;width:156px;height:34px;object-fit:contain}
-.login-brand-header>span{font-size:13px;color:#c4d1db}
-.login-access-card{display:grid;grid-template-columns:1.05fr 1fr;width:min(1080px,100%);height:100%;max-height:600px;align-self:center;justify-self:center;border-radius:12px;overflow:hidden;background:white;box-shadow:0 24px 60px #07172440}
-.login-form-panel{display:flex;align-items:center;justify-content:center;padding:36px 48px;min-width:0}
-.login-form-content{width:100%;max-width:340px}.login-eyebrow{display:block;font-size:12px;font-weight:600;letter-spacing:1px;color:#617382;margin-bottom:14px}
-.login-welcome h1{font-size:32px;font-weight:600;line-height:1.2;letter-spacing:-.7px;margin:0;color:var(--t-text)}.login-welcome p{font-size:14px;line-height:1.5;color:var(--t-muted);margin:10px 0 0}
-.login-form{display:grid;gap:20px;margin-top:30px}.login-field{display:grid;gap:8px}.login-field label{font-size:14px;font-weight:600}
-.login-field input{width:100%;height:46px;padding:11px 14px;font-size:14px;line-height:1.5;border:1px solid #cbd5df;border-radius:6px;background:white;color:var(--t-text);transition:border-color .15s,box-shadow .15s}
-.login-field input:focus{border-color:var(--t-primary);outline:0;box-shadow:0 0 0 3px #08765518}.login-field input::placeholder{color:#83929e}
-.login-password-wrap{position:relative}.login-password-wrap input{padding-right:70px}.login-password-wrap button{position:absolute;right:8px;top:5px;height:36px;padding:0 8px;background:none;border:0;color:var(--t-primary);font-size:12px;cursor:pointer}
-.login-submit{height:46px;margin-top:4px;border:0;border-radius:6px;background:#087655;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}.login-submit:hover{background:#075f46}.login-submit:disabled{opacity:.6;cursor:wait}
-.login-account-note{margin-top:24px;font-size:12px;color:var(--t-muted);line-height:1.5}
-.login-photo-panel{position:relative;min-width:0;overflow:hidden;background:#cad3da}.login-factory-photo{position:absolute;inset:0;height:100%;width:100%;object-fit:cover;object-position:40% center}
-.login-photo-panel:after{content:"";position:absolute;inset:40% 0 0;background:linear-gradient(transparent,#142734df)}.login-photo-copy{position:absolute;bottom:32px;left:32px;right:28px;z-index:1;color:#fff;border-left:3px solid #72c3a2;padding-left:16px}.login-photo-copy span{font-size:22px;font-weight:600;letter-spacing:.4px}.login-photo-copy p{font-size:14px;color:#d9e1e7;margin-top:4px}
-.login-company-note{text-align:center;font-size:12px;line-height:1.5;color:#a7b8c5}
-@media(max-height:700px) and (min-width:761px){.tokki-login{gap:16px;padding-top:20px;padding-bottom:20px}.login-form-panel{padding:24px 40px}.login-form{margin-top:22px;gap:16px}.login-account-note{margin-top:20px}}
-@media(max-width:760px){.tokki-login{height:auto;min-height:100dvh;padding:20px 18px;gap:20px}.login-brand-header>span{display:none}.login-logo-plate img{width:140px;height:30px}.login-access-card{height:auto;max-height:none;grid-template-columns:1fr;max-width:460px}.login-form-panel{padding:28px 26px}.login-welcome h1{font-size:28px}.login-form{margin-top:24px;gap:17px}.login-photo-panel{height:130px;grid-row:1}.login-factory-photo{object-position:center 47%}.login-photo-copy{bottom:17px;left:24px}.login-photo-copy span{font-size:16px}.login-photo-copy p{font-size:12px}.login-photo-panel:after{inset:0;background:linear-gradient(transparent,#142734aa)}.login-account-note{margin-top:20px}}
-@media(prefers-reduced-motion:reduce){.login-field input,.login-submit{transition:none}}
+.tokki-login{position:relative;height:100dvh;min-height:560px;background:#fff;color:var(--t-text);padding:0;isolation:isolate}
+.login-brand-header{position:absolute;top:36px;left:clamp(30px,5vw,80px);right:54%;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.login-logo-plate img{display:block;width:174px;height:42px;object-fit:contain}.login-brand-header>span{font-size:11px;color:#7b8580;letter-spacing:.5px}
+.login-access-card{height:100%;display:grid;grid-template-columns:46% 54%;background:#fff}
+.login-form-panel{display:flex;align-items:center;justify-content:center;padding:125px 40px 70px;min-width:0}
+.login-form-content{width:100%;max-width:350px}.login-welcome h1{font-size:36px;font-weight:600;letter-spacing:-1.1px;line-height:1.2;margin:0}.login-welcome p{margin:12px 0 0;font-size:14px;color:#7b8580;line-height:1.6}
+.login-form{display:grid;gap:22px;margin-top:36px}.login-field{display:grid;gap:9px}.login-field label{font-size:13px;font-weight:500;color:#38463e}
+.login-field input{width:100%;height:48px;padding:12px 14px;border:1px solid #dce3de;border-radius:8px;background:#fff;color:var(--t-text);font-size:14px;line-height:1.5}.login-field input::placeholder{color:#a0a9a4}.login-field input:focus{outline:0;border-color:#087655;box-shadow:0 0 0 3px #08765512}
+.login-password-wrap{position:relative}.login-password-wrap input{padding-right:65px}.login-password-wrap button{position:absolute;right:10px;top:6px;height:36px;border:0;background:transparent;color:#66766d;font-size:12px;cursor:pointer;padding:0 6px}
+.login-submit{height:48px;border:0;border-radius:8px;background:#087655;color:white;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}.login-submit:hover{background:#065f46}.login-submit:disabled{opacity:.6;cursor:wait}.login-submit:focus-visible,.login-password-wrap button:focus-visible{outline:2px solid #087655;outline-offset:3px}
+.login-account-note{font-size:12px;color:#8b958f;margin-top:25px;line-height:1.6}
+.login-photo-panel{position:relative;overflow:hidden;margin:20px 20px 20px 0;border-radius:16px;background:#e6ece8}.login-factory-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:43% center}
+.login-photo-panel:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#152c2010 25%,#132a2199 100%)}
+.login-photo-copy{position:absolute;z-index:1;left:clamp(28px,4vw,64px);bottom:52px;right:32px;color:white}.login-photo-copy span{font-size:clamp(30px,3.5vw,52px);line-height:1.16;letter-spacing:-1px;font-weight:500}.login-photo-copy p{margin:22px 0 0;font-size:12px;letter-spacing:.3px;color:#e0eae3}
+.login-company-note{position:absolute;bottom:30px;left:clamp(30px,5vw,80px);font-size:11px;color:#98a09c}
+@media(max-height:700px) and (min-width:761px){.login-brand-header{top:24px}.login-form-panel{padding-top:110px;padding-bottom:60px}.login-form{margin-top:24px;gap:16px}.login-welcome h1{font-size:30px}.login-account-note{margin-top:18px}.login-company-note{bottom:20px}}
+@media(max-width:760px){.tokki-login{height:auto;min-height:100dvh;padding:24px;display:flex;flex-direction:column}.login-brand-header{position:static;gap:8px}.login-logo-plate img{width:150px;height:36px}.login-access-card{display:flex;flex-direction:column;flex:1;height:auto}.login-form-panel{padding:40px 8px;flex:1}.login-form-content{max-width:380px}.login-welcome h1{font-size:30px}.login-photo-panel{height:180px;margin:0;border-radius:12px;flex-shrink:0}.login-photo-copy{left:24px;bottom:24px}.login-photo-copy span{font-size:24px}.login-photo-copy span br{display:none}.login-photo-copy span br:after{content:" "}.login-photo-copy p{margin-top:10px}.login-company-note{position:static;margin-top:20px;font-size:10px}}
