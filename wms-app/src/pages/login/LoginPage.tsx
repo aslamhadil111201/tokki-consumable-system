@@ -76,7 +76,7 @@ export function LoginPage() {
     <main className="tokki-login">
       <GlobalStyle />
       <ToastNotification />
-      <header className="login-brand-header"><div className="login-logo-plate"><img src="/tokki-logo dark mode.png" alt="Tokki Engineering and Fabrication" /></div><span>Warehouse Management System</span></header>
+      <header className="login-brand-header"><div className="login-logo-plate"><img src="/tokki-logo dark mode.png" alt="Tokki Engineering and Fabrication" /></div></header>
       <div className="login-access-card">
       <section className="login-form-panel">
         <div className="login-form-content">
@@ -91,7 +91,6 @@ export function LoginPage() {
       </section>
       <section className="login-photo-panel">
         <img className="login-factory-photo" src="/login-bg-new.webp" alt="Gedung PT Tokki Engineering and Fabrication" />
-        <div className="login-photo-copy"><span>Engineering<br />&amp; Fabrication</span><p>PT TOKKI</p></div>
       </section>
       </div>
       <footer className="login-company-note">PT Tokki Engineering and Fabrication</footer>
