@@ -206,7 +206,8 @@ export function StockPage() {
 
       <div className="workspace-stock-table">
         <table>
-          <thead><tr><th>Kode barang</th><th>Nama barang</th><th className="number-cell">Stok</th><th className="number-cell">Minimum</th><th>Status</th><th className="number-cell">Nilai persediaan</th><th>Aksi</th></tr></thead>
+          <colgroup><col className="stock-col-code" /><col /><col className="stock-col-qty" /><col className="stock-col-min" /><col className="stock-col-status" /><col className="stock-col-value" /><col className="stock-col-actions" /></colgroup>
+          <thead><tr><th>Kode barang</th><th>Nama barang</th><th className="number-cell">Stok</th><th className="number-cell">Minimum</th><th>Status</th><th className="number-cell">Nilai persediaan</th><th className="stock-action-cell">Aksi</th></tr></thead>
           <tbody>
             {pagedItems.map(it => { const s = stockStatus(it, dark); return (
               <tr key={it.id}>
@@ -216,10 +217,16 @@ export function StockPage() {
                 <td className="number-cell">{it.minStock} {it.unit}</td>
                 <td><Badge bg={s.bg} color={s.text} border={s.border}>{s.label}</Badge></td>
                 <td className="number-cell">{fmtMoney(it.totalValue)}</td>
-                <td><div className="workspace-stock-actions">
+                <td className="stock-action-cell"><div className="workspace-stock-actions">
                   {isAdmin && <button onClick={() => openQuickIn(it)}>Masuk</button>}
                   <button onClick={() => openQuickOut(it)}>Keluar</button>
-                  {isAdmin && <details className="workspace-item-menu"><summary aria-label={`Aksi lainnya untuk ${it.name}`}>⋯</summary><div><button onClick={() => { setEditItem({ ...it }); setShowEdit(true); }}>Edit barang</button><button className="workspace-danger" onClick={() => handleDeleteItem(it)}>Hapus barang</button><span>Harga rata-rata: {fmtMoney(it.averageCost)}<br />Harga terakhir: {fmtMoney(it.lastPrice)}</span></div></details>}
+                  {isAdmin && <div className="workspace-item-menu"><button type="button" popoverTarget={`stock-menu-${it.id}`} aria-label={`Aksi lainnya untuk ${it.name}`}>⋯</button><div id={`stock-menu-${it.id}`} popover="auto" className="stock-item-popover" onToggle={e => {
+                    if (e.newState !== "open") return;
+                    const menu = e.currentTarget;
+                    const anchor = menu.previousElementSibling.getBoundingClientRect();
+                    menu.style.left = `${Math.max(8, Math.min(anchor.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8))}px`;
+                    menu.style.top = `${Math.max(8, anchor.bottom + 6 + menu.offsetHeight > window.innerHeight - 8 ? anchor.top - menu.offsetHeight - 6 : anchor.bottom + 6)}px`;
+                  }}><button onClick={e => { e.currentTarget.parentElement.hidePopover(); setEditItem({ ...it }); setShowEdit(true); }}>Edit barang</button><button className="workspace-danger" onClick={e => { e.currentTarget.parentElement.hidePopover(); handleDeleteItem(it); }}>Hapus barang</button><span>Harga rata-rata: {fmtMoney(it.averageCost)}<br />Harga terakhir: {fmtMoney(it.lastPrice)}</span></div></div>}
                 </div></td>
               </tr>
             ); })}
