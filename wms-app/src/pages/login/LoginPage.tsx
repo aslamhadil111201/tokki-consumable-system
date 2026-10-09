@@ -91,6 +91,7 @@ export function LoginPage() {
       </section>
       <section className="login-photo-panel">
         <img className="login-factory-photo" src="/login-bg-new.webp" alt="Gedung PT Tokki Engineering and Fabrication" />
+        <p className="login-photo-tagline">Persediaan terjaga.<br />Operasional lancar.</p>
       </section>
       </div>
       <footer className="login-company-note">PT Tokki Engineering and Fabrication</footer>
