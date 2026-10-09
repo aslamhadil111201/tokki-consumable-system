@@ -362,13 +362,12 @@ export function ReportPage() {
         <div className="report-filters">
           <span className="report-filter-label">Periode</span>
           <div className="report-period-pill">
-            <div className="pill-indicator" style={{ transform: reportPeriod === "week" ? "translateX(0%)" : reportPeriod === "month" ? "translateX(100%)" : "translateX(200%)" }} />
             {[
               { id: "week", label: "Minggu" },
               { id: "month", label: "Bulan" },
               { id: "year", label: "Tahun" },
             ].map(p => (
-              <button key={p.id} className={`period-btn${reportPeriod === p.id ? " active" : ""}`} onClick={() => setReportPeriod(p.id)}>
+              <button key={p.id} type="button" aria-pressed={reportPeriod === p.id} className={`period-btn${reportPeriod === p.id ? " active" : ""}`} onClick={() => setReportPeriod(p.id)}>
                 {p.label}
               </button>
             ))}
