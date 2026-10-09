@@ -156,7 +156,6 @@ export const MainLayout = () => {
           <div className="sb-inner">
             <Link to="/dashboard" className="brand workspace-brand" onClick={() => setSidebar(false)}>
               <img className="workspace-logo" src="/tokki-logo dark mode.png" alt="Tokki Engineering and Fabrication" />
-              <span className="workspace-brand-caption">WAREHOUSE WORKSPACE</span>
             </Link>
             <div className="nav-label">OPERASIONAL</div>
             <div className="sb-nav-scroll">

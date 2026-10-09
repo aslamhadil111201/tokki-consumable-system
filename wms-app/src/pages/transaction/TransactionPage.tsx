@@ -180,12 +180,6 @@ export function TransactionPage() {
       {dataReady && (<>
       {/* ── Panel header ── */}
       <div className="trx-panel-header">
-        <div className="trx-panel-title-wrap">
-          <div>
-            <div className="trx-panel-title">Catat Pengambilan Barang</div>
-            <div className="trx-panel-subtitle">Catat pengambilan barang oleh karyawan. Satu transaksi bisa beberapa barang.</div>
-          </div>
-        </div>
         <div className="trx-panel-actions">
           {isAdmin && (
             returSubTab === "log"
