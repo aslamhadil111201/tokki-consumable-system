@@ -52,7 +52,6 @@ export function DashboardPage() {
       {/* Real content – shown after data is ready */}
       {dataReady && (<>
       <div className="dash-toolbar">
-        <span>Stok terkini dan pengambilan yang telah disetujui.</span>
         <BtnP onClick={() => setShowModal(true)}><UIIcon name="plus" size={15} /> Catat pengambilan</BtnP>
       </div>
 
