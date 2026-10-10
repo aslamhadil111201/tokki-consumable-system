@@ -76,10 +76,10 @@ export function LoginPage() {
     <main className="tokki-login">
       <GlobalStyle />
       <ToastNotification />
-      <header className="login-brand-header"><div className="login-logo-plate"><img src="/tokki-logo dark mode.png" alt="Tokki Engineering and Fabrication" /></div></header>
       <div className="login-access-card">
       <section className="login-form-panel">
         <div className="login-form-content">
+          <header className="login-brand-header"><div className="login-logo-plate"><img src="/tokki-logo dark mode.png" alt="Tokki Engineering and Fabrication" /></div></header>
           <div className="login-welcome"><h1>Selamat datang.</h1><p>Masuk untuk mengelola persediaan gudang.</p></div>
           <form className="login-form" onSubmit={e => { e.preventDefault(); if (!loadingCount) login(); }}>
             <div className="login-field"><label htmlFor="login-username">Username</label><input id="login-username" type="text" autoComplete="username" required placeholder="Masukkan username" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} /></div>
@@ -87,14 +87,14 @@ export function LoginPage() {
             <button type="submit" className="login-submit" disabled={loadingCount > 0}>{loadingCount > 0 ? "Sedang masuk…" : "Masuk"}</button>
           </form>
           <div className="login-account-note">Butuh akses? Hubungi administrator gudang.</div>
+          <footer className="login-company-note">PT Tokki Engineering and Fabrication</footer>
         </div>
       </section>
+      </div>
       <section className="login-photo-panel">
         <img className="login-factory-photo" src="/login-bg-new.webp" alt="Gedung PT Tokki Engineering and Fabrication" />
         <p className="login-photo-tagline">Persediaan terjaga.<br />Operasional lancar.</p>
       </section>
-      </div>
-      <footer className="login-company-note">PT Tokki Engineering and Fabrication</footer>
     </main>
   );
 }
