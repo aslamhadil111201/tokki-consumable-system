@@ -87,13 +87,12 @@ export function LoginPage() {
             <button type="submit" className="login-submit" disabled={loadingCount > 0}>{loadingCount > 0 ? "Sedang masuk…" : "Masuk"}</button>
           </form>
           <div className="login-account-note">Butuh akses? Hubungi administrator gudang.</div>
-          <footer className="login-company-note">PT Tokki Engineering and Fabrication</footer>
         </div>
       </section>
       </div>
       <section className="login-photo-panel">
         <img className="login-factory-photo" src="/login-bg-new.webp" alt="Gedung PT Tokki Engineering and Fabrication" />
-        <p className="login-photo-tagline">Persediaan terjaga.<br />Operasional lancar.</p>
+        <p className="login-photo-copyright">Copyright © 2026 PT. Tokki Engineering and Fabrication</p>
       </section>
     </main>
   );
